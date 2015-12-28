@@ -1,0 +1,123 @@
+// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
+// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+// list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation and/or
+// other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+// ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+package sippy
+
+import (
+    "sync"
+    "time"
+
+    "sippy/conf"
+    "sippy/headers"
+    "sippy/types"
+)
+
+type sip_transaction_state int
+
+const (
+    TRYING = iota
+    RINGING
+    COMPLETED
+    CONFIRMED
+    TERMINATED
+    UACK
+)
+
+func (self sip_transaction_state) String() string {
+    switch self {
+    case TRYING:        return "TRYING"
+    case RINGING:       return "RINGING"
+    case COMPLETED:     return "COMPLETED"
+    case CONFIRMED:     return "CONFIRMED"
+    case TERMINATED:    return "TERMINATED"
+    default:            return "UNKNOWN"
+    }
+}
+
+type baseTransaction struct {
+    lock            sync.Locker
+    userv           sippy_types.UdpServer
+    sip_tm          *sipTransactionManager
+    state           sip_transaction_state
+    tid             *sippy_header.TID
+    teA             *timeout
+    address         *sippy_conf.HostPort
+    needack         bool
+    tout            time.Duration
+    data            []byte
+}
+
+func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager, address *sippy_conf.HostPort, data []byte, needack bool) baseTransaction {
+    return baseTransaction{
+        tout    : time.Duration(0.5 * float64(time.Second)),
+        userv   : userv,
+        tid     : tid,
+        state   : TRYING,
+        sip_tm  : sip_tm,
+        address : address,
+        data    : data,
+        needack : needack,
+        lock    : lock,
+    }
+}
+
+func (self *baseTransaction) cleanup() {
+    self.sip_tm = nil
+    self.userv = nil
+    self.tid = nil
+    self.address = nil
+    if self.teA != nil { self.teA.cancel(); self.teA = nil }
+}
+
+func (self *baseTransaction) cancelTeA() {
+    if self.teA != nil {
+        self.teA.cancel()
+        self.teA = nil
+    }
+}
+
+func (self *baseTransaction) startTeA() {
+    if self.teA != nil {
+        self.teA.cancel()
+    }
+    self.teA = NewTimeout(self.timerA, self.lock, self.tout, 1, nil)
+    self.teA.Start()
+}
+
+func (self *baseTransaction) timerA() {
+    //print("timerA", t.GetTID())
+    if self.sip_tm == nil {
+        return
+    }
+    self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id*/ self.tid.CallId)
+    self.tout *= 2
+    self.teA = NewTimeout(self.timerA, self.lock, self.tout, 1, nil)
+    self.teA.Start()
+}
+
+func (self *baseTransaction) GetHost() string {
+    return self.address.Host.String()
+}
