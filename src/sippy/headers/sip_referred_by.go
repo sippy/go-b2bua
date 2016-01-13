@@ -57,12 +57,20 @@ func NewSipReferredBy(addr *sipAddress) *SipReferredBy {
     }
 }
 
+func (self *SipReferredBy) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipReferredBy) LocalBody(hostport *sippy_conf.HostPort) string {
+    return self.Address.LocalStr(hostport)
+}
+
 func (self *SipReferredBy) String() string {
     return self.LocalStr(nil, false)
 }
 
 func (self *SipReferredBy) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.Address.LocalStr(hostport)
+    return self.Name() + ": " + self.LocalBody(hostport)
 }
 
 func (self *SipReferredBy) GetCopy() *SipReferredBy {

@@ -47,6 +47,10 @@ func ParseSipCiscoGUID(body string) ([]SipHeader, error) {
     } }, nil
 }
 
+func (self *SipCiscoGUID) Body() string {
+    return self.body
+}
+
 func (self *SipCiscoGUID) String() string {
     return self.Name() + ": " + self.body
 }

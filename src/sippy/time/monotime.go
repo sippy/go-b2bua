@@ -51,7 +51,10 @@ import "C"
 import (
     "errors"
     "fmt"
+    "strings"
+    "strconv"
     "time"
+
     "sippy/math"
 )
 
@@ -66,7 +69,7 @@ type GoroutineCtx interface {
 
 type monoGlobals struct {
     monot_max time.Time
-    rec_filter sippy_math.RecFilter
+    realt_flt sippy_math.RecFilter
 }
 
 var globals *monoGlobals
@@ -85,16 +88,54 @@ func init() {
     }
     globals = &monoGlobals{
         monot_max : monot,
-        rec_filter : sippy_math.NewRecFilter(0.99, realt.Sub(monot).Seconds()),
+        realt_flt : sippy_math.NewRecFilter(0.99, realt.Sub(monot).Seconds()),
     }
 }
 
 func (self *monoGlobals) Apply(realt, monot time.Time) time.Duration {
-    diff_flt := self.rec_filter.Apply(realt.Sub(monot).Seconds())
+    diff_flt := self.realt_flt.Apply(realt.Sub(monot).Seconds())
     if self.monot_max.Before(monot) {
         self.monot_max = monot
     }
     return time.Duration(diff_flt * float64(time.Second))
+}
+
+func NewMonoTimeFromString(s string) (*MonoTime, error) {
+    parts := strings.SplitN(s, "-", 2)
+    realt0, err := strconv.ParseFloat(parts[0], 64)
+    if err != nil {
+        return nil, err
+    }
+    realt := FloatToTime(realt0)
+    if len(parts) == 1 {
+        return NewMonoTime1(realt)
+    }
+    monot0, err := strconv.ParseFloat(parts[1], 64)
+    if err != nil {
+        return nil, err
+    }
+    monot := FloatToTime(monot0)
+    return NewMonoTime2(monot, realt), nil
+}
+
+func NewMonoTime1(realt time.Time) (*MonoTime, error) {
+    monot := TimeToFloat(realt) - globals.realt_flt.GetLastval()
+    self := &MonoTime{
+        realt : realt,
+        monot : FloatToTime(monot),
+    }
+    if self.monot.After(globals.monot_max) {
+        res, _ := C.clock_getrealtime()
+        if res.res != 0 {
+            return nil, errors.New("Cannot read realtime clock")
+        }
+        monot_now := time.Unix(int64(res.ts.tv_sec), int64(res.ts.tv_nsec))
+        if monot_now.After(globals.monot_max) {
+            globals.monot_max = monot_now
+        }
+        self.monot = globals.monot_max
+    }
+    return self, nil
 }
 
 func NewMonoTime2(monot time.Time, realt time.Time) (*MonoTime) {

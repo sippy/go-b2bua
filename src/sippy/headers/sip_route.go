@@ -57,12 +57,20 @@ func ParseSipRoute(body string) ([]SipHeader, error) {
     return rval, nil
 }
 
+func (self *SipRoute) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipRoute) LocalBody(hostport *sippy_conf.HostPort) string {
+    return self.Address.LocalStr(hostport)
+}
+
 func (self *SipRoute) String() string {
-    return self.Name() + ": " + self.Address.String()
+    return self.LocalStr(nil, false)
 }
 
 func (self *SipRoute) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.Address.LocalStr(hostport)
+    return self.Name() + ": " + self.LocalBody(hostport)
 }
 
 func (self *SipRoute) GetAddr(config sippy_conf.Config) *sippy_conf.HostPort {

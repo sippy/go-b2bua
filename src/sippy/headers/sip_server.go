@@ -44,8 +44,12 @@ func ParseSipServer(body string) ([]SipHeader, error) {
     } }, nil
 }
 
+func (self *SipServer) Body() string {
+    return self.Server
+}
+
 func (self *SipServer) String() string {
-    return self.Name() + ": " + self.Server
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipServer) LocalStr(*sippy_conf.HostPort, bool) string {

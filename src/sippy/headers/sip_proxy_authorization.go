@@ -55,7 +55,7 @@ func ParseSipProxyAuthorization(body string) ([]SipHeader, error) {
 }
 
 func (self *SipProxyAuthorization) String() string {
-    return self.Name() + ": " + self._local_str()
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipProxyAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {

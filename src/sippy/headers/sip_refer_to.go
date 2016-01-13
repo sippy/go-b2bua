@@ -57,6 +57,14 @@ func NewSipReferTo(addr *sipAddress) *SipReferTo {
     }
 }
 
+func (self *SipReferTo) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipReferTo) LocalBody(hostport *sippy_conf.HostPort) string {
+    return self.Address.LocalStr(hostport)
+}
+
 func (self *SipReferTo) String() string {
     return self.LocalStr(nil, false)
 }
@@ -66,7 +74,7 @@ func (self *SipReferTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) st
     if compact {
         prefix = self.CompactName()
     }
-    return prefix + ": " + self.Address.LocalStr(hostport)
+    return prefix + ": " + self.LocalBody(hostport)
 }
 
 func (self *SipReferTo) AsSipAlso() *SipAlso {

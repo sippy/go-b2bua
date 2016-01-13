@@ -51,8 +51,12 @@ func ParseSipUserAgent(body string) ([]SipHeader, error) {
     } }, nil
 }
 
+func (self *SipUserAgent) Body() string {
+    return self.UserAgent
+}
+
 func (self *SipUserAgent) String() string {
-    return self.Name() + ": " + self.UserAgent
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipUserAgent) LocalStr(*sippy_conf.HostPort, bool) string {

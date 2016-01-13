@@ -57,8 +57,12 @@ func NewSipMaxForwards() *SipMaxForwards {
     }
 }
 
+func (self *SipMaxForwards) Body() string {
+    return strconv.Itoa(self.number)
+}
+
 func (self *SipMaxForwards) String() string {
-    return self.Name() + ": " + strconv.Itoa(self.number)
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipMaxForwards) LocalStr(*sippy_conf.HostPort, bool) string {

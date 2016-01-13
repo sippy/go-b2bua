@@ -34,8 +34,11 @@ type SipProxyAuthenticate struct {
     SipWWWAuthenticate
 }
 
+var _sip_proxy_authenticate_name normalName = newNormalName("Proxy-Authenticate")
+
 func ParseSipProxyAuthenticate(body string) ([]SipHeader, error) {
     super, err := NewSipWWWAuthenticateFromString(body)
+    super.normalName = _sip_proxy_authenticate_name
     if err != nil { return nil, err }
     return []SipHeader{ &SipProxyAuthenticate{
                                         SipWWWAuthenticate : *super,
@@ -48,13 +51,15 @@ func (self *SipProxyAuthenticate) String() string {
 }
 
 func (self *SipProxyAuthenticate) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return "Proxy-Authenticate: " + self._local_str(hostport)
+    return self.Name() + ": " + self.LocalBody(hostport)
 }
 
 func (self *SipProxyAuthenticate) GetCopy() *SipProxyAuthenticate {
-    return &SipProxyAuthenticate{
+    cself := &SipProxyAuthenticate{
         SipWWWAuthenticate : *self.SipWWWAuthenticate.GetCopy(),
     }
+    cself.normalName = _sip_proxy_authenticate_name
+    return cself
 }
 
 func (self *SipProxyAuthenticate) GetCopyAsIface() SipHeader {

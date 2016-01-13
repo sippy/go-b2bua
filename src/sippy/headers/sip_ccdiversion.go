@@ -50,12 +50,20 @@ func ParseSipCCDiversion(body string) ([]SipHeader, error) {
     return rval, nil
 }
 
+func (self *SipCCDiversion) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipCCDiversion) LocalBody(hostport *sippy_conf.HostPort) string {
+    return self.Address.LocalStr(hostport)
+}
+
 func (self *SipCCDiversion) String() string {
     return self.LocalStr(nil, false)
 }
 
 func (self *SipCCDiversion) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.Address.LocalStr(hostport)
+    return self.Name() + ": " + self.LocalBody(hostport)
 }
 
 func (self *SipCCDiversion) GetCopy() *SipCCDiversion {

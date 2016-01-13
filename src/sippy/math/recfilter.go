@@ -27,6 +27,7 @@ package sippy_math
 
 type RecFilter interface {
     Apply(float64) float64
+    GetLastval() float64
 }
 
 type rec_filter struct {
@@ -45,5 +46,9 @@ func NewRecFilter(fcoef float64, initval float64) (self *rec_filter) {
 
 func (self *rec_filter) Apply(x float64) float64 {
     self.lastval = self.a * x + self.b * self.lastval
+    return self.lastval
+}
+
+func (self *rec_filter) GetLastval() float64 {
     return self.lastval
 }

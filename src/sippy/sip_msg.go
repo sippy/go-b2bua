@@ -272,7 +272,7 @@ func (self *sipMsg) init_body() error {
     }
     if self.__mbody != nil {
         if self.content_type != nil {
-            self.body = NewMsgBody(*self.__mbody, strings.ToLower(self.content_type.Body))
+            self.body = NewMsgBody(*self.__mbody, strings.ToLower(self.content_type.Body()))
         } else {
             self.body = NewMsgBody(*self.__mbody, "application/sdp")
         }
@@ -520,11 +520,26 @@ func (self *sipMsg) GetSipAuthorization() *sippy_header.SipAuthorization {
 }
 
 func (self *sipMsg) GetFirstHF(name string) sippy_header.SipHeader {
-    for _, hf := range self.headers { //, self.content_length, self.content_type, self.vias..., self.routes... {
-        if strings.ToLower(hf.Name()) == strings.ToLower(name) ||
-            strings.ToLower(hf.CompactName()) == strings.ToLower(name) {
+    match_name := func(name string, hf sippy_header.SipHeader) bool {
+            return strings.ToLower(hf.Name()) == strings.ToLower(name) ||
+                strings.ToLower(hf.CompactName()) == strings.ToLower(name)
+        }
+    for _, hf := range self.headers {
+        if match_name(name, hf) {
             return hf
         }
+    }
+    if self.content_length != nil && match_name(name, self.content_length) {
+        return self.content_length
+    }
+    if self.content_type != nil && match_name(name, self.content_type) {
+        return self.content_type
+    }
+    if len(self.vias) > 0 && match_name(name, self.vias[0]) {
+        return self.vias[0]
+    }
+    if len(self.routes) > 0 && match_name(name, self.routes[0]) {
+        return self.routes[0]
     }
     return nil
 }

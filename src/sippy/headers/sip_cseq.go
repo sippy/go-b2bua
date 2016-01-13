@@ -78,6 +78,10 @@ func (self *SipCSeq) LocalStr(*sippy_conf.HostPort, bool) string {
     return self.String()
 }
 
+func (self *SipCSeq) Body() string {
+    return strconv.Itoa(self.CSeq) + " " + self.Method
+}
+
 func (self *SipCSeq) String() string {
-    return self.Name() + ": " + strconv.Itoa(self.CSeq) + " " + self.Method
+    return self.Name() + ": " + self.Body()
 }

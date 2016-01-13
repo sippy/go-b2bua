@@ -67,18 +67,22 @@ func ParseSipReason(body string) ([]SipHeader, error) {
     return []SipHeader{ self }, nil
 }
 
-func (self *SipReason) String() string {
-    return self.LocalStr(nil, false)
-}
-
-func (self *SipReason) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipReason) Body() string {
     var rval string
     if self.reason == "" {
         rval = self.protocol + "; cause=" + self.cause
     } else {
         rval = self.Name() + ": " + self.protocol + "; cause=" + self.cause + "; text=\"" + self.reason + "\""
     }
-    return self.Name() + ": " + rval
+    return rval
+}
+
+func (self *SipReason) String() string {
+    return self.LocalStr(nil, false)
+}
+
+func (self *SipReason) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+    return self.Name() + ": " + self.Body()
 }
 
 func NewSipReason(protocol, cause, reason string) *SipReason {

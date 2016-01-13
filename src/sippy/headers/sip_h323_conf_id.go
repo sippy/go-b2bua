@@ -53,8 +53,12 @@ func (self *SipH323ConfId) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
+func (self *SipH323ConfId) Body() string {
+    return self.body
+}
+
 func (self *SipH323ConfId) String() string {
-    return self.Name() + ": " + self.body
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipH323ConfId) LocalStr(*sippy_conf.HostPort, bool) string {

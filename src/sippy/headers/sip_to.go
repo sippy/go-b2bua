@@ -67,14 +67,18 @@ func (self *SipTo) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
+func (self *SipTo) Body() string {
+    return self.address.String()
+}
+
 func (self *SipTo) String() string {
-    return self.Name() + ": " + self.address.String()
+    return self.LocalStr(nil, false)
 }
 
 func (self *SipTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return self.CompactName() + ": " + self.address.String()
+        return self.CompactName() + ": " + self.Body()
     }
-    return self.String()
+    return self.Name() + ": " + self.Body()
 }
 

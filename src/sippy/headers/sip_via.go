@@ -138,15 +138,23 @@ func NewSipVia(config sippy_conf.Config) *SipVia {
     return self
 }
 
+func (self *SipVia) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipVia) LocalBody(hostport *sippy_conf.HostPort) string {
+    return self._local_str(hostport)
+}
+
 func (self *SipVia) String() string {
-    return self.Name() + ": " + self._local_str(nil)
+    return self.LocalStr(nil, false)
 }
 
 func (self *SipVia) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return self.CompactName() + ":" + self._local_str(hostport)
+        return self.CompactName() + ":" + self.LocalBody(hostport)
     }
-    return self.Name() + ":" + self._local_str(hostport)
+    return self.Name() + ":" + self.LocalBody(hostport)
 }
 
 func (self *SipVia) _local_str(hostport *sippy_conf.HostPort) string {

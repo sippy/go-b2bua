@@ -89,6 +89,17 @@ func ParseSipContact(body string) ([]SipHeader, error) {
     return rval, nil
 }
 
+func (self *SipContact) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipContact) LocalBody(hostport *sippy_conf.HostPort) string {
+    if self.Asterisk {
+        return "*"
+    }
+    return self.Address.LocalStr(hostport)
+}
+
 func (self *SipContact) String() string {
     return self.LocalStr(nil, false)
 }
@@ -98,9 +109,5 @@ func (self *SipContact) LocalStr(hostport *sippy_conf.HostPort, compact bool) st
     if compact {
         hname = self.CompactName()
     }
-    hname += ": "
-    if ! self.Asterisk {
-        return hname + self.Address.LocalStr(hostport)
-    }
-    return hname + "*"
+    return hname + ": " + self.LocalBody(hostport)
 }

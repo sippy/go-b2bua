@@ -48,12 +48,16 @@ func ParseSipGenericHF(name, body string) *sipGenericHF {
     return NewSipGenericHF(strings.Title(name), body)
 }
 
+func (self *sipGenericHF) Body() string {
+    return self.body
+}
+
 func (self *sipGenericHF) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     return self.String()
 }
 
 func (self *sipGenericHF) String() string {
-    return self.name + ": " + self.body
+    return self.name + ": " + self.Body()
 }
 
 func (self *sipGenericHF) GetCopy() *sipGenericHF {

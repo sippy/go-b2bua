@@ -57,12 +57,20 @@ func NewSipAlso(addr *sipAddress) *SipAlso {
     }
 }
 
+func (self *SipAlso) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipAlso) LocalBody(hostport *sippy_conf.HostPort) string {
+    return self.Address.LocalStr(hostport)
+}
+
 func (self *SipAlso) String() string {
-    return self.Name() + ": " + self.Address.String()
+    return self.LocalStr(nil, false)
 }
 
 func (self *SipAlso) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.Address.LocalStr(hostport)
+    return self.Name() + ": " + self.LocalBody(hostport)
 }
 
 func (self *SipAlso) GetCopy() *SipAlso {

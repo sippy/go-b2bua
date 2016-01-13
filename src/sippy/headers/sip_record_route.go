@@ -63,12 +63,20 @@ func (self *SipRecordRoute) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
+func (self *SipRecordRoute) Body() string {
+    return self.LocalBody(nil)
+}
+
+func (self *SipRecordRoute) LocalBody(hostport *sippy_conf.HostPort) string {
+    return self.Address.LocalStr(hostport)
+}
+
 func (self *SipRecordRoute) String() string {
-    return self.Name() + ": " + self.Address.String()
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipRecordRoute) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.Address.LocalStr(hostport)
+    return self.Name() + ": " + self.LocalBody(hostport)
 }
 
 func (self *SipRecordRoute) AsSipRoute() *SipRoute {

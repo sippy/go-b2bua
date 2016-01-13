@@ -50,13 +50,17 @@ func ParseSipContentLength(body string) ([]SipHeader, error) {
     } }, nil
 }
 
+func (self *SipContentLength) Body() string {
+    return strconv.Itoa(self.Length)
+}
+
 func (self *SipContentLength) String() string {
-    return self.Name() + ": " + strconv.Itoa(self.Length)
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipContentLength) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return self.CompactName() + ": " + strconv.Itoa(self.Length)
+        return self.CompactName() + ": " + self.Body()
     }
     return self.String()
 }

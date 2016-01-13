@@ -112,14 +112,14 @@ func NewSipAuthorizationFromString(body string) (*SipAuthorization, error) {
 }
 
 func (self *SipAuthorization) String() string {
-    return self.Name() + ": " + self._local_str()
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {
     return self.String()
 }
 
-func (self *SipAuthorization) _local_str() string {
+func (self *SipAuthorization) Body() string {
     rval := "Digest username=\"" + self.username + "\",realm=\"" + self.realm + "\",nonce=\"" + self.nonce +
         "\",uri=\"" + self.uri + "\",response=\"" + self.response + "\""
     if self.qop != "" {

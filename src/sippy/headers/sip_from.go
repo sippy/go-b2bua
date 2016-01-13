@@ -56,15 +56,19 @@ func NewSipFrom(address *sipAddress, config sippy_conf.Config) *SipFrom {
     }
 }
 
+func (self *SipFrom) Body() string {
+    return self.address.String()
+}
+
 func (self *SipFrom) String() string {
     return self.LocalStr(nil, false)
 }
 
 func (self *SipFrom) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return "f: " + self.address.String()
+        return "f: " + self.Body()
     }
-    return "From: " + self.address.String()
+    return "From: " + self.Body()
 }
 
 func (self *SipFrom) GetCopy() *SipFrom {

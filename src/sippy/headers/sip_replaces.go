@@ -65,16 +65,20 @@ func ParseSipReplaces(body string) ([]SipHeader, error) {
     return []SipHeader{ self }, nil
 }
 
+func (self *SipReplaces) Body() string {
+    res := self.call_id + ";from-tag=" + self.from_tag + ";to-tag=" + self.to_tag
+    if self.early_only {
+        res += ";early-only"
+    }
+    return res + self.otherparams
+}
+
 func (self *SipReplaces) String() string {
     return self.LocalStr(nil, false)
 }
 
 func (self *SipReplaces) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    res := self.call_id + ";from-tag=" + self.from_tag + ";to-tag=" + self.to_tag
-    if self.early_only {
-        res += ";early-only"
-    }
-    return self.Name() + ": " + res + self.otherparams
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipReplaces) GetCopy() *SipReplaces {

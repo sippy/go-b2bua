@@ -69,15 +69,19 @@ func NewSipWWWAuthenticateFromString(body string) (*SipWWWAuthenticate, error) {
     return self, nil
 }
 
+func (self *SipWWWAuthenticate) Body() string {
+    return self.LocalBody(nil)
+}
+
 func (self *SipWWWAuthenticate) String() string {
-    return self.Name() + ": " + self._local_str(nil)
+    return self.LocalStr(nil, false)
 }
 
 func (self *SipWWWAuthenticate) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self._local_str(hostport)
+    return self.Name() + ": " + self.LocalBody(hostport)
 }
 
-func (self *SipWWWAuthenticate) _local_str(hostport *sippy_conf.HostPort) string {
+func (self *SipWWWAuthenticate) LocalBody(hostport *sippy_conf.HostPort) string {
     if hostport != nil && self.realm.IsSystemDefault() {
         return "Digest realm=\"" + hostport.Host.String() + "\",nonce=\"" + self.nonce + "\""
     }

@@ -78,8 +78,12 @@ func (self *SipCallId) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
+func (self *SipCallId) Body() string {
+    return self.CallId
+}
+
 func (self *SipCallId) String() string {
-    return self.Name() + ": " + self.CallId
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipCallId) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {

@@ -57,8 +57,12 @@ func ParseSipExpires(body string) ([]SipHeader, error) {
     } }, nil
 }
 
+func (self *SipExpires) Body() string {
+    return strconv.Itoa(self.Number)
+}
+
 func (self *SipExpires) String() string {
-    return "Expires: " + strconv.Itoa(self.Number)
+    return self.Name() + ": " + self.Body()
 }
 
 func (self *SipExpires) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
