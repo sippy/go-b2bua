@@ -35,9 +35,12 @@ import (
 )
 
 type SipWWWAuthenticate struct {
+    normalName
     realm *sippy_conf.MyAddress
     nonce string
 }
+
+var _sip_www_authenticate_name normalName = newNormalName("WWW-Authenticate")
 
 func ParseSipWWWAuthenticate(body string) ([]SipHeader, error) {
     self, err := NewSipWWWAuthenticateFromString(body)
@@ -51,6 +54,7 @@ func NewSipWWWAuthenticateFromString(body string) (*SipWWWAuthenticate, error) {
         return nil, errors.New("Error parsing authentication (1)")
     }
     self := &SipWWWAuthenticate{
+        normalName : _sip_www_authenticate_name,
     }
     for _, part := range strings.Split(tmp[1], ",") {
         arr := strings.SplitN(strings.TrimSpace(part), "=", 2)
@@ -66,11 +70,11 @@ func NewSipWWWAuthenticateFromString(body string) (*SipWWWAuthenticate, error) {
 }
 
 func (self *SipWWWAuthenticate) String() string {
-    return "WWW-Authenticate: " + self._local_str(nil)
+    return self.Name() + ": " + self._local_str(nil)
 }
 
 func (self *SipWWWAuthenticate) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return "WWW-Authenticate: " + self._local_str(hostport)
+    return self.Name() + ": " + self._local_str(hostport)
 }
 
 func (self *SipWWWAuthenticate) _local_str(hostport *sippy_conf.HostPort) string {

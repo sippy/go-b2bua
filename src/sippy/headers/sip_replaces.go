@@ -33,6 +33,7 @@ import (
 )
 
 type SipReplaces struct {
+    normalName
     call_id     string
     from_tag    string
     to_tag      string
@@ -40,8 +41,12 @@ type SipReplaces struct {
     otherparams string
 }
 
+var _sip_replaces_name normalName = newNormalName("Replaces")
+
 func ParseSipReplaces(body string) ([]SipHeader, error) {
-    self := &SipReplaces{}
+    self := &SipReplaces{
+        normalName : _sip_replaces_name,
+    }
     params := strings.Split(body, ";")
     self.call_id = params[0]
     for _, param := range params[1:] {
@@ -69,7 +74,7 @@ func (self *SipReplaces) LocalStr(hostport *sippy_conf.HostPort, compact bool) s
     if self.early_only {
         res += ";early-only"
     }
-    return "Replaces: " + res + self.otherparams
+    return self.Name() + ": " + res + self.otherparams
 }
 
 func (self *SipReplaces) GetCopy() *SipReplaces {

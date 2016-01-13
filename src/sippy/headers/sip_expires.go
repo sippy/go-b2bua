@@ -33,11 +33,17 @@ import (
 )
 
 type SipExpires struct {
+    normalName
     Number int
 }
 
+var _sip_expires_name normalName = newNormalName("Expires")
+
 func NewSipExpires() *SipExpires {
-    return &SipExpires{ 300 }
+    return &SipExpires{
+        normalName  : _sip_expires_name,
+        Number      : 300,
+    }
 }
 
 func ParseSipExpires(body string) ([]SipHeader, error) {
@@ -45,7 +51,10 @@ func ParseSipExpires(body string) ([]SipHeader, error) {
     if err != nil {
         return nil, err
     }
-    return []SipHeader{ &SipExpires{ number } }, nil
+    return []SipHeader{ &SipExpires{
+        normalName  : _sip_expires_name,
+        Number      : number,
+    } }, nil
 }
 
 func (self *SipExpires) String() string {

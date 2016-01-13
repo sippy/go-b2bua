@@ -37,11 +37,15 @@ type sipGenericHF struct {
     body    string
 }
 
-func ParseSipGenericHF(name, body string) *sipGenericHF {
+func NewSipGenericHF(name, body string) *sipGenericHF {
     return &sipGenericHF{
-        name : strings.Title(name),
+        name : name,
         body : body,
     }
+}
+
+func ParseSipGenericHF(name, body string) *sipGenericHF {
+    return NewSipGenericHF(strings.Title(name), body)
 }
 
 func (self *sipGenericHF) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
@@ -59,4 +63,12 @@ func (self *sipGenericHF) GetCopy() *sipGenericHF {
 
 func (self *sipGenericHF) GetCopyAsIface() SipHeader {
     return self.GetCopy()
+}
+
+func (self *sipGenericHF) Name() string {
+    return self.name
+}
+
+func (self *sipGenericHF) CompactName() string {
+    return self.name
 }

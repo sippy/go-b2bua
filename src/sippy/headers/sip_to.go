@@ -31,11 +31,15 @@ import (
 )
 
 type SipTo struct {
+    compactName
     sipAddressWithTag
 }
 
+var _sip_to_name compactName = newCompactName("To", "t")
+
 func NewSipTo(address *sipAddress, config sippy_conf.Config) *SipTo {
     return &SipTo{
+        compactName : _sip_to_name,
         sipAddressWithTag : *NewSipAddressWithTag(address, config),
     }
 }
@@ -46,6 +50,7 @@ func ParseSipTo(body string) ([]SipHeader, error) {
         return nil, err
     }
     return []SipHeader{ &SipTo{
+                                    compactName : _sip_to_name,
                                     sipAddressWithTag : *addr,
                                 },
                             }, nil
@@ -53,6 +58,7 @@ func ParseSipTo(body string) ([]SipHeader, error) {
 
 func (self *SipTo) GetCopy() *SipTo {
     return &SipTo{
+        compactName : _sip_to_name,
         sipAddressWithTag : *self.sipAddressWithTag.getCopy(),
     }
 }
@@ -62,12 +68,12 @@ func (self *SipTo) GetCopyAsIface() SipHeader {
 }
 
 func (self *SipTo) String() string {
-    return "To: " + self.address.String()
+    return self.Name() + ": " + self.address.String()
 }
 
 func (self *SipTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return "t: " + self.address.String()
+        return self.CompactName() + ": " + self.address.String()
     }
     return self.String()
 }

@@ -34,16 +34,20 @@ import (
 )
 
 type SipCSeq struct {
+    normalName
     CSeq    int
     Method  string
 }
 
 func NewSipCSeq(cseq int, method string) *SipCSeq {
     return &SipCSeq{
-        CSeq : cseq,
-        Method : method,
+        normalName  : _sip_cseq_name,
+        CSeq        : cseq,
+        Method      : method,
     }
 }
+
+var _sip_cseq_name normalName = newNormalName("CSeq")
 
 func ParseSipCSeq(body string) ([]SipHeader, error) {
     arr := sippy_utils.FieldsN(body, 2)
@@ -52,6 +56,7 @@ func ParseSipCSeq(body string) ([]SipHeader, error) {
         return nil, err
     }
     self := &SipCSeq{
+        normalName  : _sip_cseq_name,
         CSeq        : cseq,
     }
     if len(arr) == 2 {
@@ -74,5 +79,5 @@ func (self *SipCSeq) LocalStr(*sippy_conf.HostPort, bool) string {
 }
 
 func (self *SipCSeq) String() string {
-    return "CSeq: " + strconv.Itoa(self.CSeq) + " " + self.Method
+    return self.Name() + ": " + strconv.Itoa(self.CSeq) + " " + self.Method
 }

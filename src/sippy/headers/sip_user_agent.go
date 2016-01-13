@@ -31,19 +31,28 @@ import (
 )
 
 type SipUserAgent struct {
-    Name    string
+    normalName
+    UserAgent    string
 }
 
+var _sip_user_agent normalName = newNormalName("User-Agent")
+
 func NewSipUserAgent(name string) *SipUserAgent {
-    return &SipUserAgent{ Name : name }
+    return &SipUserAgent{
+        normalName : _sip_user_agent,
+        UserAgent  : name,
+    }
 }
 
 func ParseSipUserAgent(body string) ([]SipHeader, error) {
-    return []SipHeader{ &SipUserAgent{ body } }, nil
+    return []SipHeader{ &SipUserAgent{
+        normalName : _sip_user_agent,
+        UserAgent  : body,
+    } }, nil
 }
 
 func (self *SipUserAgent) String() string {
-    return "User-Agent: " + self.Name
+    return self.Name() + ": " + self.UserAgent
 }
 
 func (self *SipUserAgent) LocalStr(*sippy_conf.HostPort, bool) string {
@@ -55,7 +64,7 @@ func (self *SipUserAgent) AsSipServer() *SipServer {
         return nil
     }
     return &SipServer{
-        Name : self.Name,
+        Server : self.UserAgent,
     }
 }
 

@@ -31,31 +31,38 @@ import (
 )
 
 type SipAlso struct {
+    normalName
     sipAddressHF
 }
+
+var _sip_also_name normalName = newNormalName("Also")
 
 func ParseSipAlso(body string) ([]SipHeader, error) {
     addresses, err := ParseSipAddressHF(body)
     if err != nil { return nil, err }
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
-        rval[i] = &SipAlso{ sipAddressHF : *addr }
+        rval[i] = &SipAlso{
+            normalName   : _sip_also_name,
+            sipAddressHF : *addr,
+        }
     }
     return rval, nil
 }
 
 func NewSipAlso(addr *sipAddress) *SipAlso {
     return &SipAlso{
+        normalName   : _sip_also_name,
         sipAddressHF : *NewSipAddressHF(addr),
     }
 }
 
 func (self *SipAlso) String() string {
-    return "Also: " + self.Address.String()
+    return self.Name() + ": " + self.Address.String()
 }
 
 func (self *SipAlso) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return "Also: " + self.Address.LocalStr(hostport)
+    return self.Name() + ": " + self.Address.LocalStr(hostport)
 }
 
 func (self *SipAlso) GetCopy() *SipAlso {
@@ -63,6 +70,7 @@ func (self *SipAlso) GetCopy() *SipAlso {
         return nil
     }
     return &SipAlso{
+        normalName   : _sip_also_name,
         sipAddressHF : *self.sipAddressHF.getCopy(),
     }
 }

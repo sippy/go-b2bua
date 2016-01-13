@@ -40,6 +40,7 @@ import (
 type NewSipXXXAuthorizationFunc func(realm, nonce, method, uri, username, password string) SipHeader
 
 type SipAuthorization struct {
+    normalName
     username    string
     realm       string
     nonce       string
@@ -51,10 +52,13 @@ type SipAuthorization struct {
     otherparams string
 }
 
+var _sip_authorization_name normalName = newNormalName("Authorization")
+
 func NewSipAuthorization(realm, nonce, method, uri, username, password string) *SipAuthorization {
     HA1 := DigestCalcHA1("md5", username, realm, password, nonce, "")
     response := DigestCalcResponse(HA1, nonce, 0, "", "", method, uri, "")
     return &SipAuthorization{
+        normalName : _sip_authorization_name,
         realm   : realm,
         nonce   : nonce,
         uri     : uri,
@@ -70,7 +74,9 @@ func ParseSipAuthorization(body string) ([]SipHeader, error) {
 }
 
 func NewSipAuthorizationFromString(body string) (*SipAuthorization, error) {
-    self := &SipAuthorization{}
+    self := &SipAuthorization{
+        normalName : _sip_authorization_name,
+    }
     arr := sippy_utils.FieldsN(body, 2)
     if len(arr) != 2 {
         return nil, errors.New("Error parsing authorization (1)")
@@ -106,7 +112,7 @@ func NewSipAuthorizationFromString(body string) (*SipAuthorization, error) {
 }
 
 func (self *SipAuthorization) String() string {
-    return "Authorization: " + self._local_str()
+    return self.Name() + ": " + self._local_str()
 }
 
 func (self *SipAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {

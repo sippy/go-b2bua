@@ -406,9 +406,9 @@ func (self *ua) DelayedRemoteSdpUpdate(event sippy_types.CCEvent, remote_sdp_bod
 
 func (self *ua) update_ua(msg sippy_types.SipMsg) {
     if msg.GetSipUserAgent() != nil {
-        self.remote_ua = msg.GetSipUserAgent().Name
+        self.remote_ua = msg.GetSipUserAgent().UserAgent
     } else if msg.GetSipServer() != nil {
-        self.remote_ua = msg.GetSipServer().Name
+        self.remote_ua = msg.GetSipServer().Server
     }
 }
 

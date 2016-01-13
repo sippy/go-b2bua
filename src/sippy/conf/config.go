@@ -49,7 +49,9 @@ type Config interface {
     SetAllowFormats(f []int)
 
     GetMyAddress() *MyAddress
+    SetMyAddress(*MyAddress)
     GetMyPort() *MyPort
+    SetMyPort(*MyPort)
 }
 
 type config struct {
@@ -132,8 +134,16 @@ func (self *config) GetMyAddress() (*MyAddress) {
     return self.my_address
 }
 
+func (self *config) SetMyAddress(addr *MyAddress) {
+    self.my_address = addr
+}
+
 func (self *config) GetMyPort() (*MyPort) {
     return self.my_port
+}
+
+func (self *config) SetMyPort(port *MyPort) {
+    self.my_port = port
 }
 
 func (self *config) GetMyUAName() string {

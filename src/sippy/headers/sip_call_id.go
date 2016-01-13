@@ -37,12 +37,16 @@ import (
 )
 
 type SipCallId struct {
+    compactName
     CallId string
 }
 
+var _sip_call_id_name compactName = newCompactName("Call-Id",  "i")
+
 func ParseSipCallId(body string) ([]SipHeader, error) {
     self := &SipCallId{
-        CallId : body,
+        compactName : _sip_call_id_name,
+        CallId      : body,
     }
     return []SipHeader{ self }, nil
 }
@@ -58,7 +62,9 @@ func (self *SipCallId) genCallId(config sippy_conf.Config) {
 }
 
 func NewSipCallId(config sippy_conf.Config) *SipCallId {
-    self := &SipCallId{}
+    self := &SipCallId{
+        compactName : _sip_call_id_name,
+    }
     self.genCallId(config)
     return self
 }
@@ -73,12 +79,12 @@ func (self *SipCallId) GetCopyAsIface() SipHeader {
 }
 
 func (self *SipCallId) String() string {
-    return "Call-Id: " + self.CallId
+    return self.Name() + ": " + self.CallId
 }
 
 func (self *SipCallId) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return "i: " + self.CallId
+        return self.CompactName() + ": " + self.CallId
     }
     return self.String()
 }

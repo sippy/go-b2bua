@@ -31,11 +31,15 @@ import (
 )
 
 type SipProxyAuthorization struct {
+    normalName
     SipAuthorization
 }
 
+var _sip_proxy_authorization_name normalName = newNormalName("Proxy-Authorization")
+
 func NewSipProxyAuthorization(realm, nonce, method, uri, username, password string) SipHeader {
     return &SipProxyAuthorization{
+        normalName       : _sip_proxy_authorization_name,
         SipAuthorization : *NewSipAuthorization(realm, nonce, method, uri, username, password),
     }
 }
@@ -44,13 +48,14 @@ func ParseSipProxyAuthorization(body string) ([]SipHeader, error) {
     super, err := NewSipAuthorizationFromString(body)
     if err != nil { return nil, err }
     return []SipHeader{ &SipProxyAuthorization{
+                                        normalName       : _sip_proxy_authorization_name,
                                         SipAuthorization : *super,
                                       },
                                   }, nil
 }
 
 func (self *SipProxyAuthorization) String() string {
-    return "Proxy-Authorization: " + self._local_str()
+    return self.Name() + ": " + self._local_str()
 }
 
 func (self *SipProxyAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {

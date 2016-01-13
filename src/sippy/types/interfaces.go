@@ -76,6 +76,7 @@ type SipMsg interface {
     GetCGUID() *sippy_header.SipCiscoGUID
     GetH323ConfId() *sippy_header.SipH323ConfId
     GetSipAuthorization() *sippy_header.SipAuthorization
+    GetSource() *sippy_conf.HostPort
 }
 
 type SipRequest interface {

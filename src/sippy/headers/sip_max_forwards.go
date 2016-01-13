@@ -33,25 +33,32 @@ import (
 )
 
 type SipMaxForwards struct {
+    normalName
     number  int
 }
+
+var _sip_max_forwards_name normalName = newNormalName("Max-Forwards")
 
 func ParseSipMaxForwards(body string) ([]SipHeader, error) {
     number, err := strconv.Atoi(body)
     if err != nil {
         return nil, err
     }
-    return []SipHeader{ &SipMaxForwards{ number : number } }, nil
+    return []SipHeader{ &SipMaxForwards{
+        normalName  : _sip_max_forwards_name,
+        number      : number,
+    } }, nil
 }
 
 func NewSipMaxForwards() *SipMaxForwards {
     return &SipMaxForwards{
-        number : 70,
+        normalName  : _sip_max_forwards_name,
+        number      : 70,
     }
 }
 
 func (self *SipMaxForwards) String() string {
-    return "Max-Forwards: " + strconv.Itoa(self.number)
+    return self.Name() + ": " + strconv.Itoa(self.number)
 }
 
 func (self *SipMaxForwards) LocalStr(*sippy_conf.HostPort, bool) string {

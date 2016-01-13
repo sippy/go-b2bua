@@ -350,7 +350,7 @@ func (self *sipMsg) SetTarget(address *sippy_conf.HostPort) {
     self.target = address
 }
 
-func (self *sipMsg) getSource() *sippy_conf.HostPort {
+func (self *sipMsg) GetSource() *sippy_conf.HostPort {
     return self.source
 }
 
@@ -517,4 +517,14 @@ func (self *sipMsg) GetH323ConfId() *sippy_header.SipH323ConfId {
 
 func (self *sipMsg) GetSipAuthorization() *sippy_header.SipAuthorization {
     return self.sip_authorization
+}
+
+func (self *sipMsg) GetFirstHF(name string) sippy_header.SipHeader {
+    for _, hf := range self.headers { //, self.content_length, self.content_type, self.vias..., self.routes... {
+        if strings.ToLower(hf.Name()) == strings.ToLower(name) ||
+            strings.ToLower(hf.CompactName()) == strings.ToLower(name) {
+            return hf
+        }
+    }
+    return nil
 }

@@ -31,13 +31,17 @@ import (
 )
 
 type SipContact struct {
+    compactName
     sipAddressHF
     Asterisk bool
 }
 
+var _sip_contact_name compactName = newCompactName("Contact", "m")
+
 func NewSipContact(config sippy_conf.Config) *SipContact {
     return &SipContact{
-        Asterisk : false,
+        compactName  : _sip_contact_name,
+        Asterisk     : false,
         sipAddressHF : *NewSipAddressHF(
                             NewSipAddress("Anonymous",
                                 NewSipURL("", config.GetMyAddress(), config.GetMyPort(), false))),
@@ -46,6 +50,7 @@ func NewSipContact(config sippy_conf.Config) *SipContact {
 
 func NewSipContactFromAddress(addr *sipAddress) *SipContact {
     return &SipContact{
+        compactName  : _sip_contact_name,
         Asterisk : false,
         sipAddressHF : *NewSipAddressHF(addr),
     }
@@ -53,6 +58,7 @@ func NewSipContactFromAddress(addr *sipAddress) *SipContact {
 
 func (self *SipContact) GetCopy() *SipContact {
     return &SipContact{
+        compactName  : _sip_contact_name,
         sipAddressHF : *self.sipAddressHF.getCopy(),
         Asterisk     : self.Asterisk,
     }
@@ -65,7 +71,10 @@ func (self *SipContact) GetCopyAsIface() SipHeader {
 func ParseSipContact(body string) ([]SipHeader, error) {
     rval := []SipHeader{}
     if body == "*" {
-        rval = append(rval, &SipContact{ Asterisk : true })
+        rval = append(rval, &SipContact{ 
+            Asterisk     : true,
+            compactName  : _sip_contact_name,
+        })
     } else {
         addresses, err := ParseSipAddressHF(body)
         if err != nil { return nil, err }
@@ -73,6 +82,7 @@ func ParseSipContact(body string) ([]SipHeader, error) {
             rval = append(rval, &SipContact{
                             sipAddressHF : *addr,
                             Asterisk : false,
+                            compactName  : _sip_contact_name,
                         })
         }
     }
@@ -84,10 +94,11 @@ func (self *SipContact) String() string {
 }
 
 func (self *SipContact) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    hname := "Contact : "
+    hname := self.Name()
     if compact {
-        hname = "m : "
+        hname = self.CompactName()
     }
+    hname += ": "
     if ! self.Asterisk {
         return hname + self.Address.LocalStr(hostport)
     }

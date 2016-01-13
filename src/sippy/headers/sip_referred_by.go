@@ -31,21 +31,28 @@ import (
 )
 
 type SipReferredBy struct {
+    normalName
     sipAddressHF
 }
+
+var _sip_referred_by_name normalName = newNormalName("Referred-By")
 
 func ParseSipReferredBy(body string) ([]SipHeader, error) {
     addresses, err := ParseSipAddressHF(body)
     if err != nil { return nil, err }
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
-        rval[i] = &SipReferredBy{ sipAddressHF : *addr }
+        rval[i] = &SipReferredBy{
+            normalName   : _sip_referred_by_name,
+            sipAddressHF : *addr,
+        }
     }
     return rval, nil
 }
 
 func NewSipReferredBy(addr *sipAddress) *SipReferredBy {
     return &SipReferredBy{
+        normalName   : _sip_referred_by_name,
         sipAddressHF : *NewSipAddressHF(addr),
     }
 }
@@ -55,11 +62,12 @@ func (self *SipReferredBy) String() string {
 }
 
 func (self *SipReferredBy) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return "Referred-By: " + self.Address.LocalStr(hostport)
+    return self.Name() + ": " + self.Address.LocalStr(hostport)
 }
 
 func (self *SipReferredBy) GetCopy() *SipReferredBy {
     return &SipReferredBy{
+        normalName   : _sip_referred_by_name,
         sipAddressHF : *self.sipAddressHF.getCopy(),
     }
 }

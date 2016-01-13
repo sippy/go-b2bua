@@ -34,15 +34,21 @@ import (
 )
 
 type SipCiscoGUID struct {
+    normalName
     body    string
 }
 
+var _sip_cisco_guid_name normalName = newNormalName("Cisco-GUID")
+
 func ParseSipCiscoGUID(body string) ([]SipHeader, error) {
-    return []SipHeader{ &SipCiscoGUID{ body } }, nil
+    return []SipHeader{ &SipCiscoGUID{
+        normalName : _sip_cisco_guid_name,
+        body       : body,
+    } }, nil
 }
 
 func (self *SipCiscoGUID) String() string {
-    return "Cisco-GUID: " + self.body
+    return self.Name() + ": " + self.body
 }
 
 func (self *SipCiscoGUID) LocalStr(*sippy_conf.HostPort, bool) string {
@@ -56,9 +62,8 @@ func (self *SipCiscoGUID) AsH323ConfId() *SipH323ConfId {
 }
 
 func (self *SipCiscoGUID) GetCopy() *SipCiscoGUID {
-    return &SipCiscoGUID{
-        body : self.body,
-    }
+    tmp := *self
+    return &tmp
 }
 
 func (self *SipCiscoGUID) GetCopyAsIface() SipHeader {
@@ -77,6 +82,7 @@ func NewSipCiscoGUID() *SipCiscoGUID {
         s += strconv.FormatUint(x, 10)
     }
     return &SipCiscoGUID{
+        normalName : _sip_cisco_guid_name,
         body : s,
     }
 }

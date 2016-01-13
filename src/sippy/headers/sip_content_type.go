@@ -31,20 +31,26 @@ import (
 )
 
 type SipContentType struct {
+    compactName
     Body string
 }
 
+var _sip_content_type_name compactName = newCompactName("Content-Type", "c")
+
 func ParseSipContentType(body string) ([]SipHeader, error) {
-    return []SipHeader{ &SipContentType{ body } }, nil
+    return []SipHeader{ &SipContentType{
+        compactName : _sip_content_type_name,
+        Body        : body,
+    } }, nil
 }
 
 func (self *SipContentType) String() string {
-    return "Content-Type: " + self.Body
+    return self.Name() + ": " + self.Body
 }
 
 func (self *SipContentType) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return "c: " + self.Body
+        return self.CompactName() + ": " + self.Body
     }
     return self.String()
 }

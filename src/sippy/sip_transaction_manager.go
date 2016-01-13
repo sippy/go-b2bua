@@ -374,7 +374,7 @@ func (self *sipTransactionManager) new_server_transaction(server *udpServer, req
     if server.uopts.laddress.Host.String() == "0.0.0.0" || server.uopts.laddress.Host.String() == "[::]" {
         // For messages received on the wildcard interface find
         // or create more specific server.
-        userv = self.l4r.getServer(req.getSource(), /*is_local*/ false)
+        userv = self.l4r.getServer(req.GetSource(), /*is_local*/ false)
     }
     t := NewServerTransaction(req, checksum, tid, userv, self)
     t.Lock()

@@ -31,15 +31,21 @@ import (
 )
 
 type SipServer struct {
-    Name    string
+    normalName
+    Server    string
 }
 
+var _sip_server_name normalName = newNormalName("Server")
+
 func ParseSipServer(body string) ([]SipHeader, error) {
-    return []SipHeader{ &SipServer{ body } }, nil
+    return []SipHeader{ &SipServer{
+        normalName  : _sip_server_name,
+        Server        : body,
+    } }, nil
 }
 
 func (self *SipServer) String() string {
-    return "Server: " + self.Name
+    return self.Name() + ": " + self.Server
 }
 
 func (self *SipServer) LocalStr(*sippy_conf.HostPort, bool) string {

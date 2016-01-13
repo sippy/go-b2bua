@@ -33,10 +33,13 @@ import (
 )
 
 type SipReason struct {
+    normalName
     reason  string
     cause   string
     protocol string
 }
+
+var _sip_reason_name normalName = newNormalName("Reason")
 
 func ParseSipReason(body string) ([]SipHeader, error) {
     arr := strings.SplitN(body, ";", 2)
@@ -45,6 +48,7 @@ func ParseSipReason(body string) ([]SipHeader, error) {
     }
     protocol, reason_params := arr[0], arr[1]
     self := &SipReason{
+        normalName : _sip_reason_name,
         protocol : strings.TrimSpace(protocol),
     }
     for _, reason_param := range strings.Split(reason_params, ";") {
@@ -72,13 +76,14 @@ func (self *SipReason) LocalStr(hostport *sippy_conf.HostPort, compact bool) str
     if self.reason == "" {
         rval = self.protocol + "; cause=" + self.cause
     } else {
-        rval = "Reason: " + self.protocol + "; cause=" + self.cause + "; text=\"" + self.reason + "\""
+        rval = self.Name() + ": " + self.protocol + "; cause=" + self.cause + "; text=\"" + self.reason + "\""
     }
-    return "Reason: " + rval
+    return self.Name() + ": " + rval
 }
 
 func NewSipReason(protocol, cause, reason string) *SipReason {
     return &SipReason{
+        normalName : _sip_reason_name,
         reason : reason,
         protocol : protocol,
         cause : cause,

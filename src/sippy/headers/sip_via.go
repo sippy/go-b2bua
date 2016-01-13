@@ -39,6 +39,7 @@ import (
 )
 
 type SipVia struct {
+    compactName
     sipver      string
     host        *sippy_conf.MyAddress
     port        *sippy_conf.MyPort
@@ -59,6 +60,8 @@ type SipVia struct {
     extension_exists   bool
 }
 
+var _sip_via_name compactName = newCompactName("Via", "v")
+
 func ParseSipVia(body string) ([]SipHeader, error) {
     vias := make([]SipHeader, 0)
     for _, via := range strings.Split(body, ",") {
@@ -67,6 +70,7 @@ func ParseSipVia(body string) ([]SipHeader, error) {
             return nil, errors.New("Bad via: '" + via + "'")
         }
         via := &SipVia{
+            compactName : _sip_via_name,
             sipver : arr[0],
         }
         arr = strings.Split(arr[1], ";")
@@ -119,6 +123,7 @@ func ParseSipVia(body string) ([]SipHeader, error) {
 
 func NewSipVia(config sippy_conf.Config) *SipVia {
     self := &SipVia{
+        compactName : _sip_via_name,
         rport_exists : true,
         sipver      : "SIP/2.0/UDP",
         host        : config.GetMyAddress(),
@@ -134,14 +139,14 @@ func NewSipVia(config sippy_conf.Config) *SipVia {
 }
 
 func (self *SipVia) String() string {
-    return "Via: " + self._local_str(nil)
+    return self.Name() + ": " + self._local_str(nil)
 }
 
 func (self *SipVia) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return "v:" + self._local_str(hostport)
+        return self.CompactName() + ":" + self._local_str(hostport)
     }
-    return "Via:" + self._local_str(hostport)
+    return self.Name() + ":" + self._local_str(hostport)
 }
 
 func (self *SipVia) _local_str(hostport *sippy_conf.HostPort) string {

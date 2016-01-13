@@ -31,21 +31,28 @@ import (
 )
 
 type SipReferTo struct {
+    compactName
     sipAddressHF
 }
+
+var _sip_refer_to_name compactName = newCompactName("Refer-To", "r")
 
 func ParseSipReferTo(body string) ([]SipHeader, error) {
     addresses, err := ParseSipAddressHF(body)
     if err != nil { return nil, err }
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
-        rval[i] = &SipReferTo{ sipAddressHF : *addr }
+        rval[i] = &SipReferTo{
+            compactName  : _sip_refer_to_name,
+            sipAddressHF : *addr,
+        }
     }
     return rval, nil
 }
 
 func NewSipReferTo(addr *sipAddress) *SipReferTo {
     return &SipReferTo{
+        compactName  : _sip_refer_to_name,
         sipAddressHF : *NewSipAddressHF(addr),
     }
 }
@@ -55,11 +62,11 @@ func (self *SipReferTo) String() string {
 }
 
 func (self *SipReferTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    prefix := "Refer-To: "
+    prefix := self.Name()
     if compact {
-        prefix = "r: "
+        prefix = self.CompactName()
     }
-    return prefix + self.Address.LocalStr(hostport)
+    return prefix + ": " + self.Address.LocalStr(hostport)
 }
 
 func (self *SipReferTo) AsSipAlso() *SipAlso {
@@ -70,6 +77,7 @@ func (self *SipReferTo) AsSipAlso() *SipAlso {
 
 func (self *SipReferTo) GetCopy() *SipReferTo {
     return &SipReferTo{
+        compactName  : _sip_refer_to_name,
         sipAddressHF : *self.sipAddressHF.getCopy(),
     }
 }
