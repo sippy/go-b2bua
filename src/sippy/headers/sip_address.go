@@ -207,3 +207,7 @@ func (self *sipAddress) setParam(name, value string) {
 func (self *sipAddress) GetName() string {
     return self.name
 }
+
+func (self *sipAddress) GetUrl() *SipURL {
+    return self.url
+}

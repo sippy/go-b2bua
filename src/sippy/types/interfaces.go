@@ -78,6 +78,7 @@ type SipMsg interface {
     GetSipAuthorization() *sippy_header.SipAuthorization
     GetSource() *sippy_conf.HostPort
     GetFirstHF(string) sippy_header.SipHeader
+    GetHFs(string) []sippy_header.SipHeader
 }
 
 type SipRequest interface {

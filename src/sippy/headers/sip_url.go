@@ -288,3 +288,7 @@ func (self *SipURL) GetAddr(config sippy_conf.Config) *sippy_conf.HostPort {
 func (self *SipURL) SetUserparams(userparams []string) {
     self.userparams = userparams
 }
+
+func (self *SipURL) GetUserparams() []string {
+    return self.userparams
+}

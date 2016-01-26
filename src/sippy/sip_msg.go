@@ -516,11 +516,12 @@ func (self *sipMsg) GetSipAuthorization() *sippy_header.SipAuthorization {
     return self.sip_authorization
 }
 
+func match_name (name string, hf sippy_header.SipHeader) bool {
+    return strings.ToLower(hf.Name()) == strings.ToLower(name) ||
+        strings.ToLower(hf.CompactName()) == strings.ToLower(name)
+}
+
 func (self *sipMsg) GetFirstHF(name string) sippy_header.SipHeader {
-    match_name := func(name string, hf sippy_header.SipHeader) bool {
-            return strings.ToLower(hf.Name()) == strings.ToLower(name) ||
-                strings.ToLower(hf.CompactName()) == strings.ToLower(name)
-        }
     for _, hf := range self.headers {
         if match_name(name, hf) {
             return hf
@@ -539,4 +540,14 @@ func (self *sipMsg) GetFirstHF(name string) sippy_header.SipHeader {
         return self.routes[0]
     }
     return nil
+}
+
+func (self *sipMsg) GetHFs(name string) []sippy_header.SipHeader {
+    rval := make([]sippy_header.SipHeader, 0)
+    for _, hf := range self.headers {
+        if match_name(name, hf) {
+            rval = append(rval, hf)
+        }
+    }
+    return rval
 }
