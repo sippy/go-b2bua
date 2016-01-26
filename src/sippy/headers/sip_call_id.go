@@ -28,10 +28,8 @@
 package sippy_header
 
 import (
-    "crypto/md5"
     "crypto/rand"
     "fmt"
-    "time"
 
     "sippy/conf"
 )
@@ -52,13 +50,9 @@ func ParseSipCallId(body string) ([]SipHeader, error) {
 }
 
 func (self *SipCallId) genCallId(config sippy_conf.Config) {
-    buf := make([]byte, 20)
+    buf := make([]byte, 16)
     rand.Read(buf)
-    buf2, err := time.Now().MarshalBinary()
-    if err == nil {
-        buf = append(buf, buf2...)
-    }
-    self.CallId = fmt.Sprintf("%x", md5.Sum(buf)) + "@" + config.GetMyAddress().String()
+    self.CallId = fmt.Sprintf("%x", buf) + "@" + config.GetMyAddress().String()
 }
 
 func NewSipCallId(config sippy_conf.Config) *SipCallId {

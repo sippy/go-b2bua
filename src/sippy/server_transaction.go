@@ -322,3 +322,7 @@ func (self *serverTransaction) UpgradeToSessionLock(session_lock sync.Locker) {
     session_lock.Lock()
     self.lock.Unlock()
 }
+
+func (self *serverTransaction) SetServer(server *sippy_header.SipServer) {
+    self.server = server
+}

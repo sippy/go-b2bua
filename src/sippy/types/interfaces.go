@@ -259,6 +259,7 @@ type ServerTransaction interface {
     SendResponse(resp SipResponse, retrans bool, ack_cb func(SipRequest))
     Cleanup()
     UpgradeToSessionLock(sync.Locker)
+    SetServer(*sippy_header.SipServer)
 }
 
 type SipTransactionManager interface {

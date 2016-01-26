@@ -27,7 +27,6 @@
 package sippy_utils
 
 import (
-    "crypto/md5"
     "crypto/rand"
     "fmt"
 )
@@ -35,5 +34,5 @@ import (
 func GenTag() string {
     ltag := make([]byte, 16)
     rand.Read(ltag)
-    return fmt.Sprintf("%x", md5.Sum(ltag))
+    return fmt.Sprintf("%x", ltag)
 }

@@ -27,7 +27,6 @@
 package sippy_header
 
 import (
-    "crypto/md5"
     "crypto/rand"
     "errors"
     "fmt"
@@ -205,9 +204,9 @@ func (self *SipVia) GetCopyAsIface() SipHeader {
 }
 
 func (self *SipVia) GenBranch() {
-    buf := make([]byte, 20)
+    buf := make([]byte, 16)
     rand.Read(buf)
-    tmp := "z9hG4bK" + fmt.Sprintf("%x", md5.Sum(buf))
+    tmp := "z9hG4bK" + fmt.Sprintf("%x", buf)
     self.branch = &tmp
     self.branch_exists = true
 }

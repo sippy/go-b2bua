@@ -27,7 +27,9 @@
 package sippy_header
 
 import (
+    "crypto/rand"
     "errors"
+    "fmt"
     "strings"
 
     "sippy/conf"
@@ -43,12 +45,22 @@ type SipWWWAuthenticate struct {
 var _sip_www_authenticate_name normalName = newNormalName("WWW-Authenticate")
 
 func ParseSipWWWAuthenticate(body string) ([]SipHeader, error) {
-    self, err := NewSipWWWAuthenticateFromString(body)
+    self, err := newSipWWWAuthenticateFromString(body)
     if err != nil { return nil, err }
     return []SipHeader{ self }, nil
 }
 
-func NewSipWWWAuthenticateFromString(body string) (*SipWWWAuthenticate, error) {
+func NewSipWWWAuthenticateWithRealm(realm string) *SipWWWAuthenticate {
+    buf := make([]byte, 20)
+    rand.Read(buf)
+    return &SipWWWAuthenticate{
+        normalName : _sip_www_authenticate_name,
+        realm : sippy_conf.NewMyAddress(realm),
+        nonce : fmt.Sprintf("%x", buf),
+    }
+}
+
+func newSipWWWAuthenticateFromString(body string) (*SipWWWAuthenticate, error) {
     tmp := sippy_utils.FieldsN(body, 2)
     if len(tmp) != 2 {
         return nil, errors.New("Error parsing authentication (1)")
