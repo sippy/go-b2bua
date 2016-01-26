@@ -62,7 +62,6 @@ type sipMsg struct {
     source              *sippy_conf.HostPort
     record_routes       []*sippy_header.SipRecordRoute
     routes              []*sippy_header.SipRoute
-    nated               bool
     target              *sippy_conf.HostPort
     me                  SipMsgDescendant
     reason_hf           *sippy_header.SipReason
@@ -85,7 +84,6 @@ func NewSipMsg(me SipMsgDescendant, rtime *sippy_time.MonoTime) *sipMsg {
         record_routes   : make([]*sippy_header.SipRecordRoute, 0),
         routes          : make([]*sippy_header.SipRoute, 0),
         maxforwards     : make([]*sippy_header.SipMaxForwards, 0),
-        nated           : false,
         also            : make([]*sippy_header.SipAlso, 0),
         me              : me,
         rtime           : rtime,
@@ -423,7 +421,6 @@ func (self *sipMsg) getCopy(me SipMsgDescendant) *sipMsg {
     cself.startline = self.startline
     cself.target = self.target
     cself.source = self.source
-    cself.nated = self.nated
     return cself
 }
 

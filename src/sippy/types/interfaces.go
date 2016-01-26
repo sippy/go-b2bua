@@ -91,6 +91,7 @@ type SipRequest interface {
     GetRURI() *sippy_header.SipURL
     SetRURI(ruri *sippy_header.SipURL)
     GetReferTo() *sippy_header.SipReferTo
+    GetNated() bool
 }
 
 type SipResponse interface {

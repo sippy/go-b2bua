@@ -43,10 +43,11 @@ type sipRequest struct {
     ruri    *sippy_header.SipURL
     expires *sippy_header.SipExpires
     user_agent *sippy_header.SipUserAgent
+    nated   bool
 }
 
 func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime) (*sipRequest, error) {
-    self := &sipRequest{}
+    self := &sipRequest{ nated : false }
     super, err := ParseSipMsg(buf, self, rtime)
     self.sipMsg = *super
     if err != nil {
@@ -78,7 +79,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
     if routes == nil {
         routes = make([]*sippy_header.SipRoute, 0)
     }
-    self := &sipRequest{}
+    self := &sipRequest{ nated : false }
     self.sipMsg = *NewSipMsg(self, nil)
     self.method = method
     self.ruri = ruri
@@ -213,4 +214,8 @@ func (self *sipRequest) GenCANCEL(config sippy_conf.Config) sippy_types.SipReque
 
 func (self *sipRequest) GetExpires() *sippy_header.SipExpires {
     return self.expires
+}
+
+func (self *sipRequest) GetNated() bool {
+    return self.nated
 }
