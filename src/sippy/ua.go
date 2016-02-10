@@ -606,6 +606,10 @@ func (self *ua) GetSourceAddress() *sippy_conf.HostPort {
     return self.source_address
 }
 
+func (self *ua) SetSourceAddress(addr *sippy_conf.HostPort) {
+    self.source_address = addr
+}
+
 func (self *ua) SetClientTransaction(tr sippy_types.ClientTransaction) {
     self.tr = tr
 }
@@ -709,6 +713,10 @@ func (self *ua) GetLocalUA() *sippy_header.SipUserAgent {
     return self.local_ua
 }
 
+func (self *ua) SetLocalUA(ua *sippy_header.SipUserAgent) {
+    self.local_ua = ua
+}
+
 func (self *ua) Enqueue(event sippy_types.CCEvent) {
     self.equeue = append(self.equeue, event)
 }
@@ -737,6 +745,10 @@ func (self *ua) GetPassword() string {
 
 func (self *ua) GetKaInterval() time.Duration {
     return self.kaInterval
+}
+
+func (self *ua) SetKaInterval(ka time.Duration) {
+    self.kaInterval = ka
 }
 
 func (self *ua) ResetOnLocalSdpChange() {

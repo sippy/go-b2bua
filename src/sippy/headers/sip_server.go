@@ -64,3 +64,12 @@ func (self *SipServer) GetCopy() *SipServer {
 func (self *SipServer) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
+
+func (self *SipServer) AsSipUserAgent() *SipUserAgent {
+    if self == nil {
+        return nil
+    }
+    return &SipUserAgent{
+        UserAgent : self.Server,
+    }
+}

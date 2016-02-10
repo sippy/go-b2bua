@@ -175,6 +175,7 @@ type UA interface {
     GenRequest(method string, body MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) SipRequest
     IncLCSeq()
     GetSourceAddress() *sippy_conf.HostPort
+    SetSourceAddress(*sippy_conf.HostPort)
     GetClientTransaction() ClientTransaction
     SetClientTransaction(ClientTransaction)
     GetOutboundProxy() *sippy_conf.HostPort
@@ -192,6 +193,7 @@ type UA interface {
     GetRingCbs() []OnRingingListener
     IsYours(SipRequest, bool) bool
     GetLocalUA() *sippy_header.SipUserAgent
+    SetLocalUA(*sippy_header.SipUserAgent)
     Enqueue(CCEvent)
     GetUasResp() SipResponse
     SetUasResp(SipResponse)
@@ -201,6 +203,7 @@ type UA interface {
     ShouldUseRefer() bool
     GetState() UaState
     Disconnect(*sippy_time.MonoTime)
+    SetKaInterval(time.Duration)
     GetKaInterval() time.Duration
     OnDead()
     GetGoDeadTimeout() time.Duration
