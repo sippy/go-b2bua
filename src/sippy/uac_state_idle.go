@@ -62,17 +62,16 @@ func (self *uacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             self.ua.SetSetupTs(event.rtime)
         }
         self.ua.SetOrigin("callee")
-        cId, cGUID, callingID, calledID, body, _, callingName := event.getData()
-        if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
-            self.ua.OnLocalSdpChange(body, event, func() { self.ua.RecvEvent(event) })
+        if event.GetBody() != nil && event.GetBody().NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
+            self.ua.OnLocalSdpChange(event.GetBody(), event, func() { self.ua.RecvEvent(event) })
             return nil, nil
         }
-        if cId == nil {
+        if event.GetSipCallId() == nil {
             self.ua.SetCallId(sippy_header.NewSipCallId(self.config))
         } else {
-            self.ua.SetCallId(cId.GetCopy())
+            self.ua.SetCallId(event.GetSipCallId().GetCopy())
         }
-        self.ua.SetRTarget(sippy_header.NewSipURL(calledID, self.ua.GetRAddr0().Host, self.ua.GetRAddr0().Port, false))
+        self.ua.SetRTarget(sippy_header.NewSipURL(event.GetCLD(), self.ua.GetRAddr0().Host, self.ua.GetRAddr0().Port, false))
         self.ua.SetRUri(sippy_header.NewSipTo(sippy_header.NewSipAddress("", self.ua.GetRTarget().GetCopy()), self.config))
         if self.ua.GetRuriUserparams() != nil {
             self.ua.GetRTarget().SetUserparams(self.ua.GetRuriUserparams())
@@ -81,7 +80,7 @@ func (self *uacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if self.ua.GetToUsername() != "" {
             self.ua.GetRUri().GetUrl().Username = self.ua.GetToUsername()
         }
-        self.ua.SetLUri(sippy_header.NewSipFrom(sippy_header.NewSipAddress(callingName, sippy_header.NewSipURL(callingID, self.config.GetMyAddress(), self.config.GetMyPort(), false)), self.config))
+        self.ua.SetLUri(sippy_header.NewSipFrom(sippy_header.NewSipAddress(event.GetCallerName(), sippy_header.NewSipURL(event.GetCLI(), self.config.GetMyAddress(), self.config.GetMyPort(), false)), self.config))
         self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
         self.ua.GetLUri().GetUrl().Port = nil
         if self.ua.GetFromDomain() != "" {
@@ -92,11 +91,11 @@ func (self *uacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if self.ua.GetLContact() == nil {
             self.ua.SetLContact(sippy_header.NewSipContact(self.config))
         }
-        self.ua.GetLContact().GetUrl().Username = callingID
+        self.ua.GetLContact().GetUrl().Username = event.GetCLI()
         self.ua.SetRoutes(make([]*sippy_header.SipRoute, 0))
-        self.ua.SetCGUID(cGUID)
-        self.ua.SetLSDP(body)
-        req := self.ua.GenRequest("INVITE", body, /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, /*extra_headers =*/ event.GetExtraHeaders()...)
+        self.ua.SetCGUID(event.GetSipCiscoGUID())
+        self.ua.SetLSDP(event.GetBody())
+        req := self.ua.GenRequest("INVITE", event.GetBody(), /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, /*extra_headers =*/ event.GetExtraHeaders()...)
         self.ua.IncLCSeq()
         var tr sippy_types.ClientTransaction
         tr, err = self.ua.SipTM().NewClientTransaction(req, self.ua, self.ua.GetSessionLock(), /*laddress =*/ self.ua.GetSourceAddress(), /*udp_server*/ nil)

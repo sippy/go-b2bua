@@ -103,8 +103,28 @@ func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.Sip
     }
 }
 
-func (self *CCEventTry) getData() (cId *sippy_header.SipCallId, cGUID *sippy_header.SipCiscoGUID, callingID, calledID string, body sippy_types.MsgBody, auth *sippy_header.SipAuthorization, callingName string) {
-    return self.call_id, self.cisco_guid, self.cli, self.cld, self.body, self.auth, self.caller_name
+func (self *CCEventTry) GetBody() sippy_types.MsgBody {
+    return self.body
+}
+
+func (self *CCEventTry) GetSipCallId() *sippy_header.SipCallId {
+    return self.call_id
+}
+
+func (self *CCEventTry) GetSipCiscoGUID() *sippy_header.SipCiscoGUID {
+    return self.cisco_guid
+}
+
+func (self *CCEventTry) GetCallerName() string {
+    return self.caller_name
+}
+
+func (self *CCEventTry) GetCLD() string {
+    return self.cld
+}
+
+func (self *CCEventTry) GetCLI() string {
+    return self.cli
 }
 
 func (self *CCEventTry) String() string { return "CCEventTry" }
