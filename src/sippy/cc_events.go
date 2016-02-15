@@ -107,6 +107,10 @@ func (self *CCEventTry) GetBody() sippy_types.MsgBody {
     return self.body
 }
 
+func (self *CCEventTry) GetSipAuthorization() *sippy_header.SipAuthorization {
+    return self.auth
+}
+
 func (self *CCEventTry) GetSipCallId() *sippy_header.SipCallId {
     return self.call_id
 }

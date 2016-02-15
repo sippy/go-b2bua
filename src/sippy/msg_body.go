@@ -140,13 +140,10 @@ func (self *msgBody) String() string {
 }
 
 func (self *msgBody) LocalStr(local_hostport *sippy_conf.HostPort) string {
-    if self.parsed_body == nil {
-        self.parse()
+    if self.parsed_body != nil {
+        return self.parsed_body.LocalStr(local_hostport)
     }
-    if self.parsed_body == nil {
-        return ""
-    }
-    return self.parsed_body.LocalStr(local_hostport)
+    return self.String()
 }
 
 func (self *msgBody) GetCopy() sippy_types.MsgBody {

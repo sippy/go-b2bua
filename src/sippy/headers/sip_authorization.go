@@ -136,6 +136,10 @@ func (self *SipAuthorization) GetCopy() *SipAuthorization {
     return &rval
 }
 
+func (self *SipAuthorization) GetUsername() string {
+    return self.username
+}
+
 func (self *SipAuthorization) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
