@@ -36,16 +36,15 @@ import (
 type msgBody struct {
     mtype                   string
     parsed_body             sippy_types.ParsedMsgBody
-    string_content          *string
+    string_content          string
     needs_update    bool
 }
 
 func NewMsgBody(content, mtype string) *msgBody {
-    tmp := content
     return &msgBody{
         mtype                   : mtype,
         parsed_body             : nil,
-        string_content          : &tmp,
+        string_content          : content,
         needs_update            : true,
     }
 }
@@ -71,7 +70,7 @@ func (self *genericMsgBody) GetCopy() sippy_types.ParsedMsgBody {
 }
 
 func (self *msgBody) parse() {
-    if self.string_content == nil {
+    if self.string_content == "" {
         return
     }
     if strings.HasPrefix(self.mtype, "multipart/mixed;") {
@@ -89,7 +88,7 @@ func (self *msgBody) parse() {
             return
         }
         boundary := "--" + *mth_boundary
-        for _, subsection := range strings.Split(*self.string_content, boundary) {
+        for _, subsection := range strings.Split(self.string_content, boundary) {
             subsection = strings.TrimSpace(subsection)
             if subsection == "" { continue }
             boff, bdel := -1, ""
@@ -116,27 +115,23 @@ func (self *msgBody) parse() {
             }
             if mtype == "application/sdp" {
                 self.mtype = mtype
-                self.string_content = &mbody
+                self.string_content = mbody
                 break
             }
         }
     }
     if self.mtype == "application/sdp" {
-        self.parsed_body = ParseSdpBody(*self.string_content)
+        self.parsed_body = ParseSdpBody(self.string_content)
     } else {
-        self.parsed_body = ParseGenericMsgBody(*self.string_content)
+        self.parsed_body = ParseGenericMsgBody(self.string_content)
     }
 }
 
 func (self *msgBody) String() string {
-    if self.string_content == nil {
-        if self.parsed_body == nil {
-            return "" // both parsed_body and string_content are empty. this shouldn't be
-        }
-        tmp := self.parsed_body.String()
-        self.string_content = &tmp
+    if self.parsed_body != nil {
+        self.string_content = self.parsed_body.String()
     }
-    return *self.string_content
+    return self.string_content
 }
 
 func (self *msgBody) LocalStr(local_hostport *sippy_conf.HostPort) string {
@@ -150,15 +145,18 @@ func (self *msgBody) GetCopy() sippy_types.MsgBody {
     if self == nil {
         return nil
     }
-    if self.string_content == nil {
-        return &msgBody{
-            mtype                   : self.mtype,
-            parsed_body             : self.parsed_body.GetCopy(),
-            string_content          : nil,
-            needs_update            : true,
-        }
+    var parsed_body sippy_types.ParsedMsgBody
+    if self.parsed_body != nil {
+        parsed_body = self.parsed_body.GetCopy()
+    } else {
+        parsed_body = nil
     }
-    return NewMsgBody(*self.string_content, self.mtype)
+    return &msgBody{
+        mtype                   : self.mtype,
+        parsed_body             : parsed_body,
+        string_content          : self.string_content,
+        needs_update            : self.needs_update,
+    }
 }
 
 func (self *msgBody) GetMtype() string {
