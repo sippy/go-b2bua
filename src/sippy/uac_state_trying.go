@@ -33,24 +33,24 @@ import (
     "sippy/time"
 )
 
-type uacStateTrying struct {
+type UacStateTrying struct {
     uaStateGeneric
 }
 
-func NewUacStateTrying(ua sippy_types.UA) *uacStateTrying {
-    return &uacStateTrying{
+func NewUacStateTrying(ua sippy_types.UA) *UacStateTrying {
+    return &UacStateTrying{
         uaStateGeneric : newUaStateGeneric(ua),
     }
 }
 
-func (self *uacStateTrying) OnActivation() {
+func (self *UacStateTrying) OnActivation() {
 }
 
-func (self *uacStateTrying) String() string {
+func (self *UacStateTrying) String() string {
     return "Trying(UAC)"
 }
 
-func (self *uacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
+func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
     body := resp.GetBody()
     code, reason := resp.GetSCode()
     //scode = (code, reason, body)
@@ -168,7 +168,7 @@ func (self *uacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code)
 }
 
-func (self *uacStateTrying) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UacStateTrying) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
     cancel_transaction := false
     switch event.(type) {
     case *CCEventFail: cancel_transaction = true

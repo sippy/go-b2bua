@@ -31,15 +31,15 @@ import (
     "sippy/types"
 )
 
-type uaStateFailed struct {
+type UaStateFailed struct {
     uaStateGeneric
     rtime   *sippy_time.MonoTime
     origin  string
     scode   int
 }
 
-func NewUaStateFailed(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *uaStateFailed {
-    self := &uaStateFailed{
+func NewUaStateFailed(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *UaStateFailed {
+    self := &UaStateFailed{
         uaStateGeneric  : newUaStateGeneric(ua),
         rtime           : rtime,
         origin          : origin,
@@ -50,7 +50,7 @@ func NewUaStateFailed(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin stri
     return self
 }
 
-func (self *uaStateFailed) OnActivation() {
+func (self *UaStateFailed) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetFailCbs() {
             listener.OnFailure(self.rtime, self.origin, self.scode)
@@ -60,11 +60,11 @@ func (self *uaStateFailed) OnActivation() {
     to.Start()
 }
 
-func (self *uaStateFailed) String() string {
+func (self *UaStateFailed) String() string {
     return "Failed"
 }
 
-func (self *uaStateFailed) goDead() {
+func (self *UaStateFailed) goDead() {
     //print 'Time in Failed state expired, going to the Dead state'
     self.ua.ChangeState(NewUaStateDead(self.ua, nil, ""))
 }

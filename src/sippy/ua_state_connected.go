@@ -32,16 +32,16 @@ import (
     "sippy/types"
 )
 
-type uaStateConnected struct {
+type UaStateConnected struct {
     uaStateGeneric
     ka_tr       sippy_types.ClientTransaction
     rtime       *sippy_time.MonoTime
     origin      string
 }
 
-func NewUaStateConnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string) *uaStateConnected {
+func NewUaStateConnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string) *UaStateConnected {
     ua.SetBranch("")
-    self := &uaStateConnected{
+    self := &UaStateConnected{
         uaStateGeneric : newUaStateGeneric(ua),
         ka_tr       : nil,
         rtime       : rtime,
@@ -52,7 +52,7 @@ func NewUaStateConnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin s
     return self
 }
 
-func (self *uaStateConnected) OnActivation() {
+func (self *UaStateConnected) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetConnCbs() {
             listener.OnConnect(self.rtime, self.origin)
@@ -60,11 +60,11 @@ func (self *uaStateConnected) OnActivation() {
     }
 }
 
-func (self *uaStateConnected) String() string {
+func (self *UaStateConnected) String() string {
     return "Connected"
 }
 
-func (self *uaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "REFER" {
         if req.GetReferTo() == nil {
             t.SendResponse(req.GenResponse(400, "Bad Request", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
@@ -134,7 +134,7 @@ func (self *uaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
     return nil
 }
 
-func (self *uaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
     eh := event.GetExtraHeaders()
     ok := false
     var redirect *sippy_header.SipURL = nil
@@ -228,7 +228,7 @@ func (self *uaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
     return nil, nil
 }
 
-func (self *uaStateConnected) OnStateChange() {
+func (self *UaStateConnected) OnStateChange() {
     if self.ka_tr != nil {
         self.ka_tr.Cancel()
         self.ka_tr = nil
@@ -240,7 +240,7 @@ func (self *uaStateConnected) OnStateChange() {
     self.ua.CancelExpireTimer()
 }
 
-func (self *uaStateConnected) RecvACK(req sippy_types.SipRequest) {
+func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
     body := req.GetBody()
     //scode = ('ACK', 'ACK', body)
     event := NewCCEventConnect(0, "ACK", nil, /*rtime*/ req.GetRtime(), /*origin*/ self.ua.GetOrigin())

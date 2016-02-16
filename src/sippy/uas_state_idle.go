@@ -32,26 +32,26 @@ import (
     "sippy/types"
 )
 
-type uasStateIdle struct {
+type UasStateIdle struct {
     uaStateGeneric
     config  sippy_conf.Config
 }
 
-func NewUasStateIdle(ua sippy_types.UA, config sippy_conf.Config) *uasStateIdle {
-    return &uasStateIdle{
+func NewUasStateIdle(ua sippy_types.UA, config sippy_conf.Config) *UasStateIdle {
+    return &UasStateIdle{
         uaStateGeneric  : newUaStateGeneric(ua),
         config          : config,
     }
 }
 
-func (self *uasStateIdle) OnActivation() {
+func (self *UasStateIdle) OnActivation() {
 }
 
-func (self *uasStateIdle) String() string {
+func (self *UasStateIdle) String() string {
     return "Idle(UAS)"
 }
 
-func (self *uasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() != "INVITE" {
         //print "wrong request %s in the Trying state" % req.getMethod()
         return nil

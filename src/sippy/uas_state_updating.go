@@ -34,26 +34,26 @@ import (
     "sippy/headers"
 )
 
-type uasStateUpdating struct {
+type UasStateUpdating struct {
     uaStateGeneric
 }
 
-func NewUasStateUpdating(ua sippy_types.UA) *uasStateUpdating {
-    self := &uasStateUpdating{
+func NewUasStateUpdating(ua sippy_types.UA) *UasStateUpdating {
+    self := &UasStateUpdating{
         uaStateGeneric : newUaStateGeneric(ua),
     }
     self.connected = true
     return self
 }
 
-func (self *uasStateUpdating) String() string {
+func (self *UasStateUpdating) String() string {
     return "Updating(UAS)"
 }
 
-func (self *uasStateUpdating) OnActivation() {
+func (self *UasStateUpdating) OnActivation() {
 }
 
-func (self *uasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "INVITE" {
         t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         return nil
@@ -84,7 +84,7 @@ func (self *uasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
     return nil
 }
 
-func (self *uasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
     eh := _event.GetExtraHeaders()
     switch event := _event.(type) {
     case *CCEventRing:
@@ -135,7 +135,7 @@ func (self *uasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
     return nil, fmt.Errorf("wrong event %s in the Updating state", _event.String())
 }
 
-func (self *uasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
+func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
     req := self.ua.GenRequest("BYE", nil, "", "", nil)
     self.ua.IncLCSeq()
     self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)

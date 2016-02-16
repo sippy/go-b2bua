@@ -34,15 +34,15 @@ import (
     "sippy/headers"
 )
 
-type uasStateRinging struct {
+type UasStateRinging struct {
     uaStateGeneric
     rtime   *sippy_time.MonoTime
     origin  string
     scode   int
 }
 
-func NewUasStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *uasStateRinging {
-    return &uasStateRinging{
+func NewUasStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *UasStateRinging {
+    return &UasStateRinging{
         uaStateGeneric  : newUaStateGeneric(ua),
         rtime           : rtime,
         origin          : origin,
@@ -50,7 +50,7 @@ func NewUasStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin st
     }
 }
 
-func (self *uasStateRinging) OnActivation() {
+func (self *UasStateRinging) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetRingCbs() {
             listener.OnRinging(self.rtime, self.origin, self.scode)
@@ -58,11 +58,11 @@ func (self *uasStateRinging) OnActivation() {
     }
 }
 
-func (self *uasStateRinging) String() string {
+func (self *UasStateRinging) String() string {
     return "Ringing(UAS)"
 }
 
-func (self *uasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
     eh := _event.GetExtraHeaders()
     switch event :=_event.(type) {
     case *CCEventRing:
@@ -136,7 +136,7 @@ func (self *uasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
     return nil, fmt.Errorf("wrong event %s in the Ringing state", _event.String())
 }
 
-func (self *uasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "BYE" {
         self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
         t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
@@ -155,7 +155,7 @@ func (self *uasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_typ
     return nil
 }
 
-func (self *uasStateRinging) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
+func (self *UasStateRinging) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
     event := NewCCEventDisconnect(nil, rtime, self.ua.GetOrigin())
     if req != nil {
         event.SetReason(req.GetReason())

@@ -34,24 +34,24 @@ import (
     "sippy/headers"
 )
 
-type uasStateTrying struct {
+type UasStateTrying struct {
     uaStateGeneric
 }
 
-func NewUasStateTrying(ua sippy_types.UA) *uasStateTrying {
-    return &uasStateTrying{
+func NewUasStateTrying(ua sippy_types.UA) *UasStateTrying {
+    return &UasStateTrying{
         uaStateGeneric : newUaStateGeneric(ua),
     }
 }
 
-func (self *uasStateTrying) OnActivation() {
+func (self *UasStateTrying) OnActivation() {
 }
 
-func (self *uasStateTrying) String() string {
+func (self *UasStateTrying) String() string {
     return "Trying(UAS)"
 }
 
-func (self *uasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
     eh := _event.GetExtraHeaders()
     switch event := _event.(type) {
     case *CCEventRing:
@@ -133,7 +133,7 @@ func (self *uasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
     return nil, fmt.Errorf("wrong event %s in the Trying state", _event.String())
 }
 
-func (self *uasStateTrying) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
+func (self *UasStateTrying) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
     event := NewCCEventDisconnect(nil, rtime, self.ua.GetOrigin())
     if req != nil {
         event.SetReason(req.GetReason())

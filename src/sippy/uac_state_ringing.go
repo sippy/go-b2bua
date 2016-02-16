@@ -33,7 +33,7 @@ import (
     "sippy/time"
 )
 
-type uacStateRinging struct {
+type UacStateRinging struct {
     uaStateGeneric
     triedauth   bool
     rtime       *sippy_time.MonoTime
@@ -42,7 +42,7 @@ type uacStateRinging struct {
 }
 
 func NewUacStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) sippy_types.UaState {
-    return &uacStateRinging{
+    return &UacStateRinging{
         uaStateGeneric  : newUaStateGeneric(ua),
         triedauth       : false,
         rtime           : rtime,
@@ -51,7 +51,7 @@ func NewUacStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin st
     }
 }
 
-func (self *uacStateRinging) OnActivation() {
+func (self *UacStateRinging) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetRingCbs() {
             listener.OnRinging(self.rtime, self.origin, self.scode)
@@ -59,11 +59,11 @@ func (self *uacStateRinging) OnActivation() {
     }
 }
 
-func (self *uacStateRinging) String() string {
+func (self *UacStateRinging) String() string {
     return "Ringing(UAC)"
 }
 
-func (self *uacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
+func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
     body := resp.GetBody()
     code, reason := resp.GetSCode()
     self.ua.SetLastScode(code)
@@ -153,7 +153,7 @@ func (self *uacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
     return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code)
 }
 
-func (self *uacStateRinging) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UacStateRinging) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
     switch event.(type) {
     case *CCEventFail:
     case *CCEventRedirect:

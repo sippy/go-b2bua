@@ -32,13 +32,13 @@ import (
     "sippy/types"
 )
 
-type uacStateUpdating struct {
+type UacStateUpdating struct {
     uaStateGeneric
     triedauth   bool
 }
 
-func NewUacStateUpdating(ua sippy_types.UA) *uacStateUpdating {
-    self := &uacStateUpdating{
+func NewUacStateUpdating(ua sippy_types.UA) *UacStateUpdating {
+    self := &UacStateUpdating{
         uaStateGeneric  : newUaStateGeneric(ua),
         triedauth       : false,
     }
@@ -46,14 +46,14 @@ func NewUacStateUpdating(ua sippy_types.UA) *uacStateUpdating {
     return self
 }
 
-func (self *uacStateUpdating) String() string {
+func (self *UacStateUpdating) String() string {
     return "Updating(UAC)"
 }
 
-func (self *uacStateUpdating) OnActivation() {
+func (self *UacStateUpdating) OnActivation() {
 }
 
-func (self *uacStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+func (self *UacStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "INVITE" {
         t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         return nil
@@ -72,7 +72,7 @@ func (self *uacStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
     return nil
 }
 
-func (self *uacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
+func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
     body := resp.GetBody()
     code, reason := resp.GetSCode()
     if code < 200 {
@@ -118,7 +118,7 @@ func (self *uacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
     return NewUaStateConnected(self.ua, nil, "")
 }
 
-func (self *uacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
     send_bye := false
     switch event.(type) {
     case *CCEventDisconnect:    send_bye = true

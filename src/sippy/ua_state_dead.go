@@ -31,26 +31,26 @@ import (
     "sippy/types"
 )
 
-type uaStateDead struct {
+type UaStateDead struct {
     uaStateGeneric
     rtime   *sippy_time.MonoTime
     origin  string
 }
 
-func NewUaStateDead(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string) *uaStateDead {
-    return &uaStateDead {
+func NewUaStateDead(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string) *UaStateDead {
+    return &UaStateDead {
         uaStateGeneric  : newUaStateGeneric(ua),
         rtime           : rtime,
         origin          : origin,
     }
 }
 
-func (self *uaStateDead) OnActivation() {
+func (self *UaStateDead) OnActivation() {
     self.ua.OnDead()
     // Break cross-ref chain
     self.ua = nil
 }
 
-func (self *uaStateDead) String() string {
+func (self *UaStateDead) String() string {
     return "Dead"
 }

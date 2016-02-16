@@ -31,15 +31,15 @@ import (
     "sippy/time"
 )
 
-type uaStateDisconnected struct {
+type UaStateDisconnected struct {
     uaStateGeneric
     rtime   *sippy_time.MonoTime
     origin  string
     scode   int
 }
 
-func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *uaStateDisconnected {
-    self := &uaStateDisconnected{
+func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *UaStateDisconnected {
+    self := &UaStateDisconnected{
         uaStateGeneric  : newUaStateGeneric(ua),
         rtime           : rtime,
         origin          : origin,
@@ -50,7 +50,7 @@ func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origi
     return self
 }
 
-func (self *uaStateDisconnected) OnActivation() {
+func (self *UaStateDisconnected) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetDiscCbs() {
             listener.OnDisconnect(self.rtime, self.origin, self.scode)
@@ -60,11 +60,11 @@ func (self *uaStateDisconnected) OnActivation() {
     to.Start()
 }
 
-func (self *uaStateDisconnected) String() string {
+func (self *UaStateDisconnected) String() string {
     return "Disconnected"
 }
 
-func (self *uaStateDisconnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+func (self *UaStateDisconnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "BYE" {
         //print "BYE received in the Disconnected state"
         t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
@@ -74,7 +74,7 @@ func (self *uaStateDisconnected) RecvRequest(req sippy_types.SipRequest, t sippy
     return nil
 }
 
-func (self *uaStateDisconnected) goDead() {
+func (self *UaStateDisconnected) goDead() {
     //print "Time in Disconnected state expired, going to the Dead state"
     self.ua.ChangeState(NewUaStateDead(self.ua, nil, ""))
 }

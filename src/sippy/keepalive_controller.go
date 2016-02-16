@@ -54,7 +54,7 @@ func newKeepaliveController(ua sippy_types.UA) *keepaliveController {
 
 func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
     var err error
-    if _, ok := self.ua.GetState().(*uaStateConnected); ! ok {
+    if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
         return
     }
     code, _ := resp.GetSCode()
@@ -102,7 +102,7 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
 
 func (self *keepaliveController) keepAlive() {
     var err error
-    if _, ok := self.ua.GetState().(*uaStateConnected); ! ok {
+    if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
         return
     }
     req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), "", "", nil)

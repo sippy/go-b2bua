@@ -33,7 +33,7 @@ import (
     "sippy/types"
 )
 
-type uacStateCancelling struct {
+type UacStateCancelling struct {
     uaStateGeneric
     te      *timeout
     rtime   *sippy_time.MonoTime
@@ -41,8 +41,8 @@ type uacStateCancelling struct {
     scode   int
 }
 
-func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *uacStateCancelling {
-    self := &uacStateCancelling{
+func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *UacStateCancelling {
+    self := &UacStateCancelling{
         uaStateGeneric  : newUaStateGeneric(ua),
         rtime           : rtime,
         origin          : origin,
@@ -58,7 +58,7 @@ func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin
     return self
 }
 
-func (self *uacStateCancelling) OnActivation() {
+func (self *UacStateCancelling) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetDiscCbs() {
             listener.OnDisconnect(self.rtime, self.origin, self.scode)
@@ -66,17 +66,17 @@ func (self *uacStateCancelling) OnActivation() {
     }
 }
 
-func (self *uacStateCancelling) String() string {
+func (self *UacStateCancelling) String() string {
     return "Cancelling(UAC)"
 }
 
-func (self *uacStateCancelling) goIdle() {
+func (self *UacStateCancelling) goIdle() {
     //print "Time in Cancelling state expired, going to the Dead state"
     self.te = nil
     self.ua.ChangeState(NewUaStateDead(self.ua, nil, ""))
 }
 
-func (self *uacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
+func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
     code, _ := resp.GetSCode()
     if code < 200 {
         return nil
@@ -111,6 +111,6 @@ func (self *uacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
     return NewUaStateDead(self.ua, nil, "")
 }
 
-func (self *uacStateCancelling) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UacStateCancelling) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
     return nil, fmt.Errorf("wrong event %s in the Cancelling state", event.String())
 }

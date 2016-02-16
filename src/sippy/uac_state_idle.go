@@ -35,26 +35,26 @@ import (
     "sippy/time"
 )
 
-type uacStateIdle struct {
+type UacStateIdle struct {
     uaStateGeneric
     config sippy_conf.Config
 }
 
-func NewUacStateIdle(ua sippy_types.UA, config sippy_conf.Config) *uacStateIdle {
-    return &uacStateIdle{
+func NewUacStateIdle(ua sippy_types.UA, config sippy_conf.Config) *UacStateIdle {
+    return &UacStateIdle{
         uaStateGeneric  : newUaStateGeneric(ua),
         config          : config,
     }
 }
 
-func (self *uacStateIdle) OnActivation() {
+func (self *UacStateIdle) OnActivation() {
 }
 
-func (self *uacStateIdle) String() string {
+func (self *UacStateIdle) String() string {
     return "Idle(UAC)"
 }
 
-func (self *uacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
     var err error
     switch event := _event.(type) {
     case *CCEventTry:

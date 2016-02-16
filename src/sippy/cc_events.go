@@ -58,6 +58,10 @@ func newCCEventGeneric(rtime *sippy_time.MonoTime, origin string, extra_headers 
     }
 }
 
+func (self *CCEventGeneric) AppendExtraHeader(eh sippy_header.SipHeader) {
+    self.extra_headers = append(self.extra_headers, eh)
+}
+
 func (self *CCEventGeneric) GetReason() *sippy_header.SipReason {
     return self.sip_reason
 }
@@ -231,7 +235,6 @@ type CCEventFail struct {
     challenge       sippy_header.SipHeader
     scode           int
     scode_reason    string
-    sip_reason      *sippy_header.SipReason
 }
 
 func NewCCEventFail(scode int, scode_reason string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventFail {
