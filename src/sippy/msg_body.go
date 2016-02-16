@@ -53,7 +53,7 @@ type genericMsgBody struct {
     body string
 }
 
-func ParseGenericMsgBody(body string) *genericMsgBody {
+func newGenericMsgBody(body string) *genericMsgBody {
     return &genericMsgBody{ body }
 }
 
@@ -69,7 +69,19 @@ func (self *genericMsgBody) GetCopy() sippy_types.ParsedMsgBody {
     return &genericMsgBody{ self.body }
 }
 
+func (self *genericMsgBody) SetCHeaderAddr(string) {
+    // NO OP
+}
+
+func (self *msgBody) GetParsedBody() sippy_types.ParsedMsgBody {
+    if self.parsed_body == nil {
+        self.parse()
+    }
+    return self.parsed_body
+}
+
 func (self *msgBody) parse() {
+    self.parsed_body = newGenericMsgBody(self.string_content)
     if self.string_content == "" {
         return
     }
@@ -122,8 +134,6 @@ func (self *msgBody) parse() {
     }
     if self.mtype == "application/sdp" {
         self.parsed_body = ParseSdpBody(self.string_content)
-    } else {
-        self.parsed_body = ParseGenericMsgBody(self.string_content)
     }
 }
 
@@ -162,7 +172,7 @@ func (self *msgBody) GetCopy() sippy_types.MsgBody {
 func (self *msgBody) GetMtype() string {
     return self.mtype
 }
-
+/*
 func (self *msgBody) SetCHeaderAddr(addr string) {
     if self.parsed_body == nil {
         self.parse()
@@ -171,7 +181,7 @@ func (self *msgBody) SetCHeaderAddr(addr string) {
         sdp_body.SetCHeaderAddr(addr)
     }
 }
-
+*/
 func (self *msgBody) NeedsUpdate() bool {
     return self.needs_update
 }

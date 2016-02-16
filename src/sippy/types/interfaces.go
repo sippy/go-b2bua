@@ -116,14 +116,15 @@ type MsgBody interface {
     GetMtype() string
     LocalStr(hostport *sippy_conf.HostPort) string
     GetCopy() MsgBody
-    SetCHeaderAddr(string)
     NeedsUpdate() bool
+    GetParsedBody() ParsedMsgBody
 }
 
 type ParsedMsgBody interface {
     String() string
     LocalStr(hostport *sippy_conf.HostPort) string
     GetCopy() ParsedMsgBody
+    SetCHeaderAddr(string)
 }
 
 type UA interface {
