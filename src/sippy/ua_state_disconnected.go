@@ -53,7 +53,7 @@ func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origi
 func (self *UaStateDisconnected) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetDiscCbs() {
-            listener.OnDisconnect(self.rtime, self.origin, self.scode)
+            listener(self.rtime, self.origin, self.scode)
         }
     }
     to := NewTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, nil)

@@ -53,7 +53,7 @@ func NewUaStateFailed(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin stri
 func (self *UaStateFailed) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetFailCbs() {
-            listener.OnFailure(self.rtime, self.origin, self.scode)
+            listener(self.rtime, self.origin, self.scode)
         }
     }
     to := NewTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, nil)

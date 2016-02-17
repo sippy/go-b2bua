@@ -675,6 +675,10 @@ func (self *ua) GetFailCbs() []sippy_types.OnFailureListener {
     return self.fail_cbs
 }
 
+func (self *ua) GetDeadCbs() []sippy_types.OnDeadListener {
+    return self.dead_cbs
+}
+
 func (self *ua) GetRAddr() *sippy_conf.HostPort {
     return self.rAddr
 }
@@ -703,7 +707,7 @@ func (self *ua) OnDead() {
     self.credit_timer = nil
     // Keep this at the very end of processing
     for _, listener := range self.dead_cbs {
-        listener.OnDead()
+        listener()
     }
     self.dead_cbs = make([]sippy_types.OnDeadListener, 0)
     self.sip_tm = nil

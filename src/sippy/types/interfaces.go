@@ -192,6 +192,7 @@ type UA interface {
     GetFailCbs() []OnFailureListener
     GetConnCbs() []OnConnectListener
     GetRingCbs() []OnRingingListener
+    GetDeadCbs() []OnDeadListener
     IsYours(SipRequest, bool) bool
     GetLocalUA() *sippy_header.SipUserAgent
     SetLocalUA(*sippy_header.SipUserAgent)
@@ -302,22 +303,8 @@ type StatefulProxy interface {
     RequestReceiver
 }
 
-type OnRingingListener interface {
-    OnRinging(*sippy_time.MonoTime, string, int)
-}
-
-type OnDisconnectListener interface {
-    OnDisconnect(*sippy_time.MonoTime, string, int)
-}
-
-type OnFailureListener interface {
-    OnFailure(*sippy_time.MonoTime, string, int)
-}
-
-type OnConnectListener interface {
-    OnConnect(*sippy_time.MonoTime, string)
-}
-
-type OnDeadListener interface {
-    OnDead()
-}
+type OnRingingListener func(*sippy_time.MonoTime, string, int)
+type OnDisconnectListener func(*sippy_time.MonoTime, string, int)
+type OnFailureListener func(*sippy_time.MonoTime, string, int)
+type OnConnectListener func(*sippy_time.MonoTime, string)
+type OnDeadListener func()
