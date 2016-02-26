@@ -80,3 +80,11 @@ func (self *sdpMedia) GetCopy() *sdpMedia {
         formats     : formats,
     }
 }
+
+func (self *sdpMedia) GetTransport() string {
+    return self.transport
+}
+
+func (self *sdpMedia) SetPort(port string) {
+    self.port = port
+}

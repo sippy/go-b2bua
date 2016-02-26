@@ -73,6 +73,17 @@ func (self *genericMsgBody) SetCHeaderAddr(string) {
     // NO OP
 }
 
+func (self *genericMsgBody) GetSections() []sippy_types.SdpMediaDescription {
+    return make([]sippy_types.SdpMediaDescription, 0)
+}
+
+func (self *genericMsgBody) SetSections([]sippy_types.SdpMediaDescription) {
+    // NO OP
+}
+
+func (self *genericMsgBody) RemoveSection(int) {
+}
+
 func (self *msgBody) GetParsedBody() sippy_types.ParsedMsgBody {
     if self.parsed_body == nil {
         self.parse()
@@ -172,16 +183,7 @@ func (self *msgBody) GetCopy() sippy_types.MsgBody {
 func (self *msgBody) GetMtype() string {
     return self.mtype
 }
-/*
-func (self *msgBody) SetCHeaderAddr(addr string) {
-    if self.parsed_body == nil {
-        self.parse()
-    }
-    if sdp_body, ok := self.parsed_body.(*sdpBody); ok {
-        sdp_body.SetCHeaderAddr(addr)
-    }
-}
-*/
+
 func (self *msgBody) NeedsUpdate() bool {
     return self.needs_update
 }

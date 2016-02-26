@@ -28,18 +28,19 @@ package sippy
 
 import (
     "sippy/conf"
+    "sippy/types"
 )
 
 type sdpMediaDescription struct {
     m_header *sdpMedia
     i_header *sdpGeneric
-    c_header *sdpConnecton
+    c_header sippy_types.SdpConnecton
     b_header *sdpGeneric
     k_header *sdpGeneric
     a_headers []string
 }
 
-func (self *sdpMediaDescription) GetCopy() *sdpMediaDescription {
+func (self *sdpMediaDescription) GetCopy() sippy_types.SdpMediaDescription {
     a_headers := make([]string, len(self.a_headers))
     copy(a_headers, self.a_headers)
     return &sdpMediaDescription{
@@ -52,7 +53,7 @@ func (self *sdpMediaDescription) GetCopy() *sdpMediaDescription {
     }
 }
 
-func NewSdpMediaDescription() *sdpMediaDescription {
+func NewSdpMediaDescription() sippy_types.SdpMediaDescription {
     return &sdpMediaDescription{
         a_headers : make([]string, 0),
     }
@@ -93,7 +94,7 @@ func (self *sdpMediaDescription) LocalStr(hostport *sippy_conf.HostPort, noC boo
     return s
 }
 
-func (self *sdpMediaDescription) addHeader(name, header string) {
+func (self *sdpMediaDescription) AddHeader(name, header string) {
     if name == "a" {
         self.a_headers = append(self.a_headers, header)
     } else {
@@ -114,4 +115,33 @@ func (self *sdpMediaDescription) addHeader(name, header string) {
 
 func (self *sdpMediaDescription) SetCHeaderAddr(addr string) {
     self.c_header.SetAddr(addr)
+}
+
+func (self *sdpMediaDescription) GetMHeader() sippy_types.SdpMedia {
+    if self.m_header == nil {
+        return nil
+    }
+    return self.m_header
+}
+
+func (self *sdpMediaDescription) GetCHeader() sippy_types.SdpConnecton {
+    if self.c_header == nil {
+        return nil
+    }
+    return self.c_header
+}
+
+func (self *sdpMediaDescription) SetCHeader(c_header sippy_types.SdpConnecton) {
+    self.c_header = c_header
+}
+
+func (self *sdpMediaDescription) RemoveAHeader(hdr string) {
+    new_a_hdrs := []string{}
+    for _, h := range self.a_headers {
+        if h == hdr {
+            continue
+        }
+        new_a_hdrs = append(new_a_hdrs, h)
+    }
+    self.a_headers = new_a_hdrs
 }

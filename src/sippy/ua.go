@@ -49,7 +49,8 @@ type ua struct {
     connect_ts      *sippy_time.MonoTime
     disconnect_ts   *sippy_time.MonoTime
     origin          string
-    on_local_sdp_change func(sippy_types.MsgBody, sippy_types.CCEvent, func())
+    on_local_sdp_change sippy_types.OnLocalSdpChange
+    on_remote_sdp_change sippy_types.OnRemoteSdpChange
     cId             *sippy_header.SipCallId
     rTarget         *sippy_header.SipURL
     rAddr0          *sippy_conf.HostPort
@@ -90,7 +91,6 @@ type ua struct {
     disc_cbs        []sippy_types.OnDisconnectListener
     fail_cbs        []sippy_types.OnFailureListener
     ring_cbs        []sippy_types.OnRingingListener
-    on_remote_sdp_change func(sippy_types.MsgBody, sippy_types.SipMsg, func(sippy_types.MsgBody))
     credit_timer    *timeout
     uasResp         sippy_types.SipResponse
     useRefer        bool
@@ -534,12 +534,20 @@ func (self *ua) GetRuriUserparams() []string {
     return self.ruri_userparams
 }
 
+func (self *ua) SetRuriUserparams(ruri_userparams []string) {
+    self.ruri_userparams = ruri_userparams
+}
+
 func (self *ua) GetRUri() *sippy_header.SipTo {
     return self.rUri
 }
 
 func (self *ua) GetToUsername() string {
     return self.to_username
+}
+
+func (self *ua) SetToUsername(to_username string) {
+    self.to_username = to_username
 }
 
 func (self *ua) SetLUri(from *sippy_header.SipFrom) {
@@ -552,6 +560,10 @@ func (self *ua) GetLUri() *sippy_header.SipFrom {
 
 func (self *ua) GetFromDomain() string {
     return self.from_domain
+}
+
+func (self *ua) SetFromDomain(from_domain string) {
+    self.from_domain = from_domain
 }
 
 func (self *ua) GetLTag() string {
@@ -622,8 +634,16 @@ func (self *ua) GetOutboundProxy() *sippy_conf.HostPort {
     return self.outbound_proxy
 }
 
+func (self *ua) SetOutboundProxy(outbound_proxy *sippy_conf.HostPort) {
+    self.outbound_proxy = outbound_proxy
+}
+
 func (self *ua) GetNoReplyTime() time.Duration {
     return self.no_reply_time
+}
+
+func (self *ua) SetNoReplyTime(no_reply_time time.Duration) {
+    self.no_reply_time = no_reply_time
 }
 
 func (self *ua) GetExpireTime() time.Duration {
@@ -636,6 +656,10 @@ func (self *ua) SetExpireTime(expire_time time.Duration) {
 
 func (self *ua) GetNoProgressTime() time.Duration {
     return self.no_progress_time
+}
+
+func (self *ua) SetNoProgressTime(no_progress_time time.Duration) {
+    self.no_progress_time = no_progress_time
 }
 
 func (self *ua) StartNoReplyTimer(t *sippy_time.MonoTime) {
@@ -671,12 +695,24 @@ func (self *ua) GetDiscCbs() []sippy_types.OnDisconnectListener {
     return self.disc_cbs
 }
 
+func (self *ua) SetDiscCbs(disc_cbs []sippy_types.OnDisconnectListener) {
+    self.disc_cbs = disc_cbs
+}
+
 func (self *ua) GetFailCbs() []sippy_types.OnFailureListener {
     return self.fail_cbs
 }
 
+func (self *ua) SetFailCbs(fail_cbs []sippy_types.OnFailureListener) {
+    self.fail_cbs = fail_cbs
+}
+
 func (self *ua) GetDeadCbs() []sippy_types.OnDeadListener {
     return self.dead_cbs
+}
+
+func (self *ua) SetDeadCbs(dead_cbs []sippy_types.OnDeadListener) {
+    self.dead_cbs = dead_cbs
 }
 
 func (self *ua) GetRAddr() *sippy_conf.HostPort {
@@ -743,8 +779,16 @@ func (self *ua) GetUsername() string {
     return self.username
 }
 
+func (self *ua) SetUsername(username string) {
+    self.username = username
+}
+
 func (self *ua) GetPassword() string {
     return self.password
+}
+
+func (self *ua) SetPassword(passwd string) {
+    self.password = passwd
 }
 
 func (self *ua) GetKaInterval() time.Duration {
@@ -757,6 +801,22 @@ func (self *ua) SetKaInterval(ka time.Duration) {
 
 func (self *ua) ResetOnLocalSdpChange() {
     self.on_local_sdp_change = nil
+}
+
+func (self *ua) GetOnLocalSdpChange() sippy_types.OnLocalSdpChange {
+    return self.on_local_sdp_change
+}
+
+func (self *ua) SetOnLocalSdpChange(on_local_sdp_change sippy_types.OnLocalSdpChange) {
+    self.on_local_sdp_change = on_local_sdp_change
+}
+
+func (self *ua) GetOnRemoteSdpChange() sippy_types.OnRemoteSdpChange {
+    return self.on_remote_sdp_change
+}
+
+func (self *ua) SetOnRemoteSdpChange(on_remote_sdp_change sippy_types.OnRemoteSdpChange) {
+    self.on_remote_sdp_change = on_remote_sdp_change
 }
 
 func (self *ua) ResetOnRemoteSdpChange() {
@@ -841,6 +901,10 @@ func (self *ua) SetBranch(branch string) {
 
 func (self *ua) GetConnCbs() []sippy_types.OnConnectListener {
     return self.conn_cbs
+}
+
+func (self *ua) SetConnCbs(conn_cbs []sippy_types.OnConnectListener) {
+    self.conn_cbs = conn_cbs
 }
 
 func (self *ua) SetH323ConfId(h323_conf_id *sippy_header.SipH323ConfId) {

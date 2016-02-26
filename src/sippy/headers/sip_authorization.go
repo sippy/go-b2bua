@@ -30,7 +30,6 @@ import (
     "crypto/md5"
     "errors"
     "fmt"
-    "strconv"
     "strings"
 
     "sippy/conf"
@@ -56,7 +55,7 @@ var _sip_authorization_name normalName = newNormalName("Authorization")
 
 func NewSipAuthorization(realm, nonce, method, uri, username, password string) *SipAuthorization {
     HA1 := DigestCalcHA1("md5", username, realm, password, nonce, "")
-    response := DigestCalcResponse(HA1, nonce, 0, "", "", method, uri, "")
+    response := DigestCalcResponse(HA1, nonce, "", "", "", method, uri, "")
     return &SipAuthorization{
         normalName : _sip_authorization_name,
         realm   : realm,
@@ -158,16 +157,21 @@ func DigestCalcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNon
     return fmt.Sprintf("%x", HA1)
 }
 
-func DigestCalcResponse(HA1, pszNonce string, pszNonceCount int, pszCNonce, pszQop, pszMethod, pszDigestUri, pszHEntity string) string {
+func DigestCalcResponse(HA1, pszNonce string, pszNonceCount, pszCNonce, pszQop, pszMethod, pszDigestUri, pszHEntity string) string {
     s := pszMethod + ":" + pszDigestUri
     if pszQop == "auth-int" {
         s += ":" + pszHEntity
     }
     HA2 := fmt.Sprintf("%x", md5.Sum([]byte(s)))
     s = HA1 + ":" + pszNonce + ":"
-    if pszNonceCount != 0 && pszCNonce != "" { // pszQop:
-        s += strconv.Itoa(pszNonceCount) + ":" + pszCNonce + ":" + pszQop + ":"
+    if pszNonceCount != "" && pszCNonce != "" { // pszQop:
+        s += pszNonceCount + ":" + pszCNonce + ":" + pszQop + ":"
     }
     s += HA2
     return fmt.Sprintf("%x", md5.Sum([]byte(s)))
+}
+
+func (self *SipAuthorization) VerifyHA1(HA1, method string) bool {
+    response := DigestCalcResponse(HA1, self.nonce, self.nc, self.cnonce, self.qop, method, self.uri, "")
+    return response == self.response
 }

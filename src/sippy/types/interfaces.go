@@ -120,11 +120,37 @@ type MsgBody interface {
     GetParsedBody() ParsedMsgBody
 }
 
+type SdpConnecton interface {
+    String() string
+    SetAddr(string)
+    LocalStr(*sippy_conf.HostPort) string
+    GetCopy() SdpConnecton
+}
+
+type SdpMedia interface {
+    GetTransport() string
+    SetPort(string)
+}
+
+type SdpMediaDescription interface {
+    AddHeader(string, string)
+    GetCHeader() SdpConnecton
+    SetCHeader(SdpConnecton)
+    GetMHeader() SdpMedia
+    LocalStr(*sippy_conf.HostPort, bool) string
+    String() string
+    GetCopy() SdpMediaDescription
+    RemoveAHeader(string)
+}
+
 type ParsedMsgBody interface {
     String() string
     LocalStr(hostport *sippy_conf.HostPort) string
     GetCopy() ParsedMsgBody
     SetCHeaderAddr(string)
+    GetSections() []SdpMediaDescription
+    SetSections([]SdpMediaDescription)
+    RemoveSection(int)
 }
 
 type UA interface {
@@ -238,6 +264,8 @@ type UA interface {
     GetLateMedia() bool
     SetLateMedia(bool)
     GetPassAuth() bool
+    GetOnLocalSdpChange() OnLocalSdpChange
+    GetOnRemoteSdpChange() OnRemoteSdpChange
 }
 
 type baseTransaction interface {
@@ -308,3 +336,13 @@ type OnDisconnectListener func(*sippy_time.MonoTime, string, int)
 type OnFailureListener func(*sippy_time.MonoTime, string, int)
 type OnConnectListener func(*sippy_time.MonoTime, string)
 type OnDeadListener func()
+type OnLocalSdpChange func(MsgBody, CCEvent, func())
+type OnRemoteSdpChange func(MsgBody, SipMsg, func(MsgBody))
+
+type RtpProxyClient interface {
+    SendCommand(string, func(string))
+    SBindSupported() bool
+    IsLocal() bool
+    TNotSupported() bool
+    GetProxyAddress() string
+}

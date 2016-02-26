@@ -44,7 +44,7 @@ type sdp_header_and_name struct {
 }
 
 type sdpBody struct {
-    sections        []*sdpMediaDescription
+    sections        []sippy_types.SdpMediaDescription
     v_header        *sdpGeneric
     o_header        *sdpOrigin
     s_header        *sdpGeneric
@@ -58,13 +58,13 @@ type sdpBody struct {
     z_header        *sdpGeneric
     k_header        *sdpGeneric
     a_headers       []string
-    c_header        *sdpConnecton
+    c_header        sippy_types.SdpConnecton
 }
 
 func ParseSdpBody(body string) *sdpBody {
     self := &sdpBody{
         a_headers       : make([]string, 0),
-        sections        : make([]*sdpMediaDescription, 0),
+        sections        : make([]sippy_types.SdpMediaDescription, 0),
     }
     if body == "" {
         return self
@@ -115,13 +115,13 @@ func ParseSdpBody(body string) *sdpBody {
                 }
             }
         } else {
-            self.sections[len(self.sections)-1].addHeader(name, v)
+            self.sections[len(self.sections)-1].AddHeader(name, v)
         }
     }
     if c_header != nil {
         for _, section := range self.sections {
-            if section.c_header == nil {
-                section.c_header = c_header
+            if section.GetCHeader() == nil {
+                section.SetCHeader(c_header)
             }
         }
         if len(self.sections) == 0 {
@@ -161,11 +161,11 @@ func (self *sdpBody) all_headers() []*sdp_header_and_name {
 
 func (self *sdpBody) String() string {
     s := ""
-    if len(self.sections) == 1 && self.sections[0].c_header != nil {
+    if len(self.sections) == 1 && self.sections[0].GetCHeader() != nil {
         for _, it := range self.first_half() {
             s += it.name + "=" + it.header.String() + "\r\n"
         }
-        s += "c=" + self.sections[0].c_header.String() + "\r\n"
+        s += "c=" + self.sections[0].GetCHeader().String() + "\r\n"
         for _, it := range self.second_half() {
             s += it.name + "=" + it.header.String() + "\r\n"
         }
@@ -180,13 +180,13 @@ func (self *sdpBody) String() string {
     // the streams that match.
     optimize_c_headers := false
     sections_0_str := ""
-    if len(self.sections) > 1 && self.c_header == nil && self.sections[0].c_header != nil &&
-      *self.sections[0].c_header == *self.sections[1].c_header {
+    if len(self.sections) > 1 && self.c_header == nil && self.sections[0].GetCHeader() != nil &&
+      self.sections[0].GetCHeader().String() == self.sections[1].GetCHeader().String() {
         // Special code to optimize for the cases when there are many media streams pointing to
         // the same IP. Only include c= header into the top section of the SDP and remove it from
         // the streams that match.
         optimize_c_headers = true
-        sections_0_str = self.sections[0].c_header.String()
+        sections_0_str = self.sections[0].GetCHeader().String()
     }
     if optimize_c_headers {
         for _, it := range self.first_half() {
@@ -205,7 +205,7 @@ func (self *sdpBody) String() string {
         s += "a=" + header + "\r\n"
     }
     for _, section := range self.sections {
-        if optimize_c_headers && section.c_header != nil && section.c_header.String() == sections_0_str {
+        if optimize_c_headers && section.GetCHeader() != nil && section.GetCHeader().String() == sections_0_str {
             s += section.LocalStr(nil, true /* noC */)
         } else {
             s += section.String()
@@ -216,11 +216,11 @@ func (self *sdpBody) String() string {
 
 func (self *sdpBody) LocalStr(hostport *sippy_conf.HostPort) string {
     s := ""
-    if len(self.sections) == 1 && self.sections[0].c_header != nil {
+    if len(self.sections) == 1 && self.sections[0].GetCHeader() != nil {
         for _, it := range self.first_half() {
             s += it.name + "=" + it.header.LocalStr(hostport) + "\r\n"
         }
-        s += "c=" + self.sections[0].c_header.LocalStr(hostport) + "\r\n"
+        s += "c=" + self.sections[0].GetCHeader().String() + "\r\n"
         for _, it := range self.second_half() {
             s += it.name + "=" + it.header.LocalStr(hostport) + "\r\n"
         }
@@ -235,13 +235,13 @@ func (self *sdpBody) LocalStr(hostport *sippy_conf.HostPort) string {
     // the streams that match.
     optimize_c_headers := false
     sections_0_str := ""
-    if len(self.sections) > 1 && self.c_header == nil && self.sections[0].c_header != nil &&
-      self.sections[0].c_header.LocalStr(hostport) == self.sections[1].c_header.LocalStr(hostport) {
+    if len(self.sections) > 1 && self.c_header == nil && self.sections[0].GetCHeader() != nil &&
+      self.sections[0].GetCHeader().String() == self.sections[1].GetCHeader().String() {
         // Special code to optimize for the cases when there are many media streams pointing to
         // the same IP. Only include c= header into the top section of the SDP and remove it from
         // the streams that match.
         optimize_c_headers = true
-        sections_0_str = self.sections[0].c_header.LocalStr(hostport)
+        sections_0_str = self.sections[0].GetCHeader().String()
     }
     if optimize_c_headers {
         for _, it := range self.first_half() {
@@ -260,8 +260,8 @@ func (self *sdpBody) LocalStr(hostport *sippy_conf.HostPort) string {
         s += "a=" + header + "\r\n"
     }
     for _, section := range self.sections {
-        if optimize_c_headers && section.c_header != nil &&
-          section.c_header.LocalStr(hostport) == sections_0_str {
+        if optimize_c_headers && section.GetCHeader() != nil &&
+          section.GetCHeader().String() == sections_0_str {
             s += section.LocalStr(hostport, /*noC =*/ true)
         } else {
             s += section.LocalStr(hostport, /*noC =*/ false)
@@ -271,7 +271,7 @@ func (self *sdpBody) LocalStr(hostport *sippy_conf.HostPort) string {
 }
 
 func (self *sdpBody) GetCopy() sippy_types.ParsedMsgBody {
-    sections := make([]*sdpMediaDescription, len(self.sections))
+    sections := make([]sippy_types.SdpMediaDescription, len(self.sections))
     for i, s := range self.sections {
         sections[i] = s.GetCopy()
     }
@@ -298,6 +298,21 @@ func (self *sdpBody) GetCopy() sippy_types.ParsedMsgBody {
 
 func (self *sdpBody) SetCHeaderAddr(addr string) {
     for _, sect := range self.sections {
-        sect.SetCHeaderAddr(addr)
+        sect.GetCHeader().SetAddr(addr)
     }
+}
+
+func (self *sdpBody) GetSections() []sippy_types.SdpMediaDescription {
+    return self.sections
+}
+
+func (self *sdpBody) SetSections(sections []sippy_types.SdpMediaDescription) {
+    self.sections = sections
+}
+
+func (self *sdpBody) RemoveSection(idx int) {
+    if idx < 0 || idx >= len(self.sections) {
+        return
+    }
+    self.sections = append(self.sections[:idx], self.sections[idx + 1:]...)
 }

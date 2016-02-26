@@ -30,6 +30,7 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/types"
 )
 
 type sdpConnecton struct {
@@ -53,11 +54,12 @@ func ParseSdpConnecton(body string) *sdpConnecton {
 func (self *sdpConnecton) String() string {
     return self.ntype + " " + self.atype + " " + self.addr
 }
+
 func (self *sdpConnecton) LocalStr(hostport *sippy_conf.HostPort) string {
     return self.String()
 }
 
-func (self *sdpConnecton) GetCopy() *sdpConnecton {
+func (self *sdpConnecton) GetCopy() sippy_types.SdpConnecton {
     if self == nil {
         return nil
     }

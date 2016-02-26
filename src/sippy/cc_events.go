@@ -162,6 +162,9 @@ type CCEventConnect struct {
     body    sippy_types.MsgBody
 }
 
+func (self *CCEventRing) GetScode() int { return self.scode }
+func (self *CCEventRing) GetBody() sippy_types.MsgBody { return self.body }
+
 func NewCCEventConnect(scode int, scode_reason string, msg_body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventConnect {
     return &CCEventConnect{
         CCEventGeneric : newCCEventGeneric(rtime, origin, extra_headers...),
@@ -246,6 +249,8 @@ func NewCCEventFail(scode int, scode_reason string, rtime *sippy_time.MonoTime, 
 }
 
 func (self *CCEventFail) String() string { return "CCEventFail" }
+
+func (self *CCEventFail) GetScode() int { return self.scode }
 
 func (self *CCEventFail) GetExtraHeaders() []sippy_header.SipHeader {
     if self.challenge == nil {
