@@ -88,3 +88,16 @@ func (self *sdpMedia) GetTransport() string {
 func (self *sdpMedia) SetPort(port string) {
     self.port = port
 }
+
+func (self *sdpMedia) HasFormat(format string) bool {
+    for _, f := range self.formats {
+        if f == format {
+            return true
+        }
+    }
+    return false
+}
+
+func (self *sdpMedia) GetFormats() []string {
+    return self.formats
+}

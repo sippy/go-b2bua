@@ -27,6 +27,8 @@
 package sippy
 
 import (
+    "strings"
+
     "sippy/conf"
     "sippy/types"
 )
@@ -144,4 +146,28 @@ func (self *sdpMediaDescription) RemoveAHeader(hdr string) {
         new_a_hdrs = append(new_a_hdrs, h)
     }
     self.a_headers = new_a_hdrs
+}
+
+func (self *sdpMediaDescription) SetFormats(formats []string) {
+    if self.m_header != nil {
+        self.m_header.formats = formats
+        self.optimize_a()
+    }
+}
+
+func (self *sdpMediaDescription) optimize_a() {
+    new_a_headers := []string{}
+    for _, ah := range self.a_headers {
+        pt := ""
+        if strings.HasPrefix(ah, "rtpmap:") {
+            pt = strings.Split(ah[7:], " ")[0]
+        } else if strings.HasPrefix(ah, "fmtp:") {
+            pt = strings.Split(ah[5:], " ")[0]
+        }
+        if pt != "" && ! self.m_header.HasFormat(pt) {
+            continue
+        }
+        new_a_headers = append(new_a_headers, ah)
+    }
+    self.a_headers = new_a_headers
 }

@@ -130,6 +130,8 @@ type SdpConnecton interface {
 type SdpMedia interface {
     GetTransport() string
     SetPort(string)
+    HasFormat(string) bool
+    GetFormats() []string
 }
 
 type SdpMediaDescription interface {
@@ -141,6 +143,7 @@ type SdpMediaDescription interface {
     String() string
     GetCopy() SdpMediaDescription
     RemoveAHeader(string)
+    SetFormats([]string)
 }
 
 type ParsedMsgBody interface {
