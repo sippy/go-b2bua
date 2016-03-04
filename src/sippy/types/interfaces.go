@@ -132,6 +132,7 @@ type SdpMedia interface {
     SetPort(string)
     HasFormat(string) bool
     GetFormats() []string
+    SetFormats([]string)
 }
 
 type SdpMediaDescription interface {
@@ -231,6 +232,7 @@ type UA interface {
     CancelCreditTimer()
     StartCreditTimer(*sippy_time.MonoTime)
     SetCreditTime(time.Duration)
+    ResetCreditTime(*sippy_time.MonoTime, map[int64]*sippy_time.MonoTime)
     ShouldUseRefer() bool
     GetState() UaState
     Disconnect(*sippy_time.MonoTime)
@@ -269,6 +271,7 @@ type UA interface {
     GetPassAuth() bool
     GetOnLocalSdpChange() OnLocalSdpChange
     GetOnRemoteSdpChange() OnRemoteSdpChange
+    GetRemoteUA() string
 }
 
 type baseTransaction interface {

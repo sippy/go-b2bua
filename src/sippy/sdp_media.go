@@ -101,3 +101,9 @@ func (self *sdpMedia) HasFormat(format string) bool {
 func (self *sdpMedia) GetFormats() []string {
     return self.formats
 }
+
+// WARNING! Use this function only if know what you do!
+// Otherwise consider using the sdpMediaDescription.SetFormats() instead.
+func (self *sdpMedia) SetFormats(formats []string) {
+    self.formats = formats
+}

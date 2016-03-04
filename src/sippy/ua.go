@@ -969,3 +969,17 @@ func (self *ua) SetLateMedia(late_media bool) {
 func (self *ua) GetPassAuth() bool {
     return self.pass_auth
 }
+
+func (self *ua) GetRemoteUA() string {
+    return self.remote_ua
+}
+
+func (self *ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map[int64]*sippy_time.MonoTime) {
+    for k, v := range new_credit_times {
+        self.credit_times[k] = v
+    }
+    if self.state.IsConnected() {
+        self.CancelCreditTimer()
+        self.StartCreditTimer(rtime)
+    }
+}
