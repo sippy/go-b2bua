@@ -23,31 +23,31 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_sdp
 
 import (
     "sippy/conf"
 )
 
-type sdpGeneric struct {
+type SdpGeneric struct {
     body    string
 }
 
-func ParseSdpGeneric(body string) *sdpGeneric {
-    return &sdpGeneric{ body }
+func ParseSdpGeneric(body string) *SdpGeneric {
+    return &SdpGeneric{ body }
 }
 
-func (self *sdpGeneric) String() string {
+func (self *SdpGeneric) String() string {
     return self.body
 }
 
-func (self *sdpGeneric) LocalStr(hostport *sippy_conf.HostPort)  string {
+func (self *SdpGeneric) LocalStr(hostport *sippy_conf.HostPort)  string {
     return self.String()
 }
 
-func (self *sdpGeneric) GetCopy() *sdpGeneric {
+func (self *SdpGeneric) GetCopy() *SdpGeneric {
     if self == nil {
         return nil
     }
-    return &sdpGeneric{ self.body }
+    return &SdpGeneric{ self.body }
 }

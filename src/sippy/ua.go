@@ -891,6 +891,10 @@ func (self *ua) GetRingCbs() []sippy_types.OnRingingListener {
     return self.ring_cbs
 }
 
+func (self *ua) GetConnectTs() *sippy_time.MonoTime {
+    return self.connect_ts
+}
+
 func (self *ua) SetConnectTs(connect_ts *sippy_time.MonoTime) {
     self.connect_ts = connect_ts
 }
@@ -982,4 +986,11 @@ func (self *ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map
         self.CancelCreditTimer()
         self.StartCreditTimer(rtime)
     }
+}
+
+func (self *ua) SetExtraHeaders(extra_headers []sippy_header.SipHeader) {
+    self.extra_headers = extra_headers
+}
+
+func (self *ua) OnUnregister() {
 }

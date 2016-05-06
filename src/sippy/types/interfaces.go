@@ -29,8 +29,9 @@ import (
     "time"
 
     "sippy/conf"
-    "sippy/time"
     "sippy/headers"
+    "sippy/sdp"
+    "sippy/time"
 )
 
 type CallController interface {
@@ -117,18 +118,13 @@ type MsgBody interface {
     LocalStr(hostport *sippy_conf.HostPort) string
     GetCopy() MsgBody
     NeedsUpdate() bool
+    SetNeedsUpdate(bool)
     GetParsedBody() ParsedMsgBody
-}
-
-type SdpConnecton interface {
-    String() string
-    SetAddr(string)
-    LocalStr(*sippy_conf.HostPort) string
-    GetCopy() SdpConnecton
 }
 
 type SdpMedia interface {
     GetTransport() string
+    GetPort() string
     SetPort(string)
     HasFormat(string) bool
     GetFormats() []string
@@ -137,14 +133,16 @@ type SdpMedia interface {
 
 type SdpMediaDescription interface {
     AddHeader(string, string)
-    GetCHeader() SdpConnecton
-    SetCHeader(SdpConnecton)
+    GetCHeader() *sippy_sdp.SdpConnecton
+    SetCHeader(*sippy_sdp.SdpConnecton)
     GetMHeader() SdpMedia
     LocalStr(*sippy_conf.HostPort, bool) string
     String() string
     GetCopy() SdpMediaDescription
     RemoveAHeader(string)
     SetFormats([]string)
+    NeedsUpdate() bool
+    SetNeedsUpdate(bool)
 }
 
 type ParsedMsgBody interface {
@@ -155,9 +153,11 @@ type ParsedMsgBody interface {
     GetSections() []SdpMediaDescription
     SetSections([]SdpMediaDescription)
     RemoveSection(int)
+    SetOHeader(*sippy_sdp.SdpOrigin)
 }
 
 type UA interface {
+    OnUnregister()
     RequestReceiver
     ResponseReceiver
     GetSessionLock() sync.Locker
@@ -187,10 +187,13 @@ type UA interface {
     GetRUri() *sippy_header.SipTo
     GetToUsername() string
     GetUsername() string
+    SetUsername(string)
     GetPassword() string
+    SetPassword(string)
     SetLUri(*sippy_header.SipFrom)
     GetLUri() *sippy_header.SipFrom
     GetFromDomain() string
+    SetFromDomain(string)
     GetLTag() string
     SetLCSeq(int)
     SetLContact(*sippy_header.SipContact)
@@ -210,19 +213,26 @@ type UA interface {
     GetClientTransaction() ClientTransaction
     SetClientTransaction(ClientTransaction)
     GetOutboundProxy() *sippy_conf.HostPort
+    SetOutboundProxy(*sippy_conf.HostPort)
     GetNoReplyTime() time.Duration
+    SetNoReplyTime(time.Duration)
     GetExpireTime() time.Duration
     SetExpireTime(time.Duration)
     GetNoProgressTime() time.Duration
+    SetNoProgressTime(time.Duration)
     StartNoReplyTimer(*sippy_time.MonoTime)
     StartNoProgressTimer(*sippy_time.MonoTime)
     StartExpireTimer(*sippy_time.MonoTime)
     CancelExpireTimer()
     GetDiscCbs() []OnDisconnectListener
+    SetDiscCbs([]OnDisconnectListener)
     GetFailCbs() []OnFailureListener
+    SetFailCbs([]OnFailureListener)
     GetConnCbs() []OnConnectListener
+    SetConnCbs([]OnConnectListener)
     GetRingCbs() []OnRingingListener
     GetDeadCbs() []OnDeadListener
+    SetDeadCbs([]OnDeadListener)
     IsYours(SipRequest, bool) bool
     GetLocalUA() *sippy_header.SipUserAgent
     SetLocalUA(*sippy_header.SipUserAgent)
@@ -256,6 +266,7 @@ type UA interface {
     GetP1xxTs() *sippy_time.MonoTime
     SetP1xxTs(*sippy_time.MonoTime)
     UpdateRouting(SipResponse, bool, bool)
+    GetConnectTs() *sippy_time.MonoTime
     SetConnectTs(*sippy_time.MonoTime)
     SetBranch(string)
     SetAuth(sippy_header.SipHeader)
@@ -271,7 +282,9 @@ type UA interface {
     GetPassAuth() bool
     GetOnLocalSdpChange() OnLocalSdpChange
     GetOnRemoteSdpChange() OnRemoteSdpChange
+    SetOnRemoteSdpChange(OnRemoteSdpChange)
     GetRemoteUA() string
+    SetExtraHeaders([]sippy_header.SipHeader)
 }
 
 type baseTransaction interface {
@@ -351,4 +364,5 @@ type RtpProxyClient interface {
     IsLocal() bool
     TNotSupported() bool
     GetProxyAddress() string
+    IsOnline() bool
 }

@@ -30,16 +30,18 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/sdp"
     "sippy/types"
 )
 
 type sdpMediaDescription struct {
     m_header *sdpMedia
-    i_header *sdpGeneric
-    c_header sippy_types.SdpConnecton
-    b_header *sdpGeneric
-    k_header *sdpGeneric
+    i_header *sippy_sdp.SdpGeneric
+    c_header *sippy_sdp.SdpConnecton
+    b_header *sippy_sdp.SdpGeneric
+    k_header *sippy_sdp.SdpGeneric
     a_headers []string
+    needs_update bool
 }
 
 func (self *sdpMediaDescription) GetCopy() sippy_types.SdpMediaDescription {
@@ -52,6 +54,7 @@ func (self *sdpMediaDescription) GetCopy() sippy_types.SdpMediaDescription {
         b_header : self.b_header.GetCopy(),
         k_header : self.k_header.GetCopy(),
         a_headers : a_headers,
+        needs_update : true,
     }
 }
 
@@ -104,13 +107,13 @@ func (self *sdpMediaDescription) AddHeader(name, header string) {
         case "m":
             self.m_header = ParseSdpMedia(header)
         case "i":
-            self.i_header = ParseSdpGeneric(header)
+            self.i_header = sippy_sdp.ParseSdpGeneric(header)
         case "c":
-            self.c_header = ParseSdpConnecton(header)
+            self.c_header = sippy_sdp.ParseSdpConnecton(header)
         case "b":
-            self.b_header = ParseSdpGeneric(header)
+            self.b_header = sippy_sdp.ParseSdpGeneric(header)
         case "k":
-            self.k_header = ParseSdpGeneric(header)
+            self.k_header = sippy_sdp.ParseSdpGeneric(header)
         }
     }
 }
@@ -126,14 +129,14 @@ func (self *sdpMediaDescription) GetMHeader() sippy_types.SdpMedia {
     return self.m_header
 }
 
-func (self *sdpMediaDescription) GetCHeader() sippy_types.SdpConnecton {
+func (self *sdpMediaDescription) GetCHeader() *sippy_sdp.SdpConnecton {
     if self.c_header == nil {
         return nil
     }
     return self.c_header
 }
 
-func (self *sdpMediaDescription) SetCHeader(c_header sippy_types.SdpConnecton) {
+func (self *sdpMediaDescription) SetCHeader(c_header *sippy_sdp.SdpConnecton) {
     self.c_header = c_header
 }
 
@@ -170,4 +173,12 @@ func (self *sdpMediaDescription) optimize_a() {
         new_a_headers = append(new_a_headers, ah)
     }
     self.a_headers = new_a_headers
+}
+
+func (self *sdpMediaDescription) NeedsUpdate() bool {
+    return self.needs_update
+}
+
+func (self *sdpMediaDescription) SetNeedsUpdate(needs_update bool) {
+    self.needs_update = needs_update
 }

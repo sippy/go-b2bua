@@ -24,7 +24,7 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_sdp
 
 import (
     "strings"
@@ -32,54 +32,52 @@ import (
     "sippy/conf"
 )
 
-type sdpOrigin struct {
-    username        string
-    session_id      string
-    version         string
-    network_type    string
-    address_type    string
-    address         *sippy_conf.MyAddress
+type SdpConnecton struct {
+    ntype string
+    atype string
+    addr string
 }
 
-func ParseSdpOrigin(body string) *sdpOrigin {
+func ParseSdpConnecton(body string) *SdpConnecton {
     arr := strings.Fields(body)
-    if len(arr) != 6 {
+    if len(arr) != 3 {
         return nil
     }
-    return &sdpOrigin{
-        username        : arr[0],
-        session_id      : arr[1],
-        version         : arr[2],
-        network_type    : arr[3],
-        address_type    : arr[4],
-        address         : sippy_conf.NewMyAddress(arr[5]),
+    return &SdpConnecton{
+        ntype   : arr[0],
+        atype   : arr[1],
+        addr    : arr[2],
     }
 }
 
-func (self *sdpOrigin) String() string {
-    return strings.Join([]string{ self.username, self.session_id, self.version, self.network_type, self.address_type, self.address.String() }, " ")
+func (self *SdpConnecton) String() string {
+    return self.ntype + " " + self.atype + " " + self.addr
 }
 
-func (self *sdpOrigin) LocalStr(hostport *sippy_conf.HostPort) string {
-    if hostport != nil && self.address.IsSystemDefault() {
-        var address_type string
-        local_addr := hostport.Host.String()
-
-        if local_addr[0] == '[' {
-            address_type = "IP6"
-            local_addr = local_addr[1:len(local_addr)-1]
-        } else {
-            address_type = "IP4"
-        }
-        return strings.Join([]string{ self.username, self.session_id, self.version, self.network_type, address_type, local_addr }, " ")
-    }
-    return strings.Join([]string{ self.username, self.session_id, self.version, self.network_type, self.address_type, self.address.String() }, " ")
+func (self *SdpConnecton) LocalStr(hostport *sippy_conf.HostPort) string {
+    return self.String()
 }
 
-func (self *sdpOrigin) GetCopy() *sdpOrigin {
+func (self *SdpConnecton) GetCopy() *SdpConnecton {
     if self == nil {
         return nil
     }
-    var ret sdpOrigin = *self
+    var ret SdpConnecton = *self
     return &ret
+}
+
+func (self *SdpConnecton) GetAddr() string {
+    return self.addr
+}
+
+func (self *SdpConnecton) SetAddr(addr string) {
+    self.addr = addr
+}
+
+func (self *SdpConnecton) GetAType() string {
+    return self.atype
+}
+
+func (self *SdpConnecton) SetAType(atype string) {
+    self.atype = atype
 }

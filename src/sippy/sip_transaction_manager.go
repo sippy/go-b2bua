@@ -444,6 +444,7 @@ func (self *sipTransactionManager) RegConsumer(consumer sippy_types.UA, call_id 
 func (self *sipTransactionManager) UnregConsumer(consumer sippy_types.UA, call_id string) {
     // Usually there will be only one consumer per call_id, so that
     // optimize management for this case
+    consumer.OnUnregister()
     self.consumers_lock.Lock()
     defer self.consumers_lock.Unlock()
     consumers, ok := self.req_consumers[call_id]

@@ -30,6 +30,7 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/sdp"
     "sippy/types"
 )
 
@@ -45,20 +46,20 @@ type sdp_header_and_name struct {
 
 type sdpBody struct {
     sections        []sippy_types.SdpMediaDescription
-    v_header        *sdpGeneric
-    o_header        *sdpOrigin
-    s_header        *sdpGeneric
-    i_header        *sdpGeneric
-    u_header        *sdpGeneric
-    e_header        *sdpGeneric
-    p_header        *sdpGeneric
-    b_header        *sdpGeneric
-    t_header        *sdpGeneric
-    r_header        *sdpGeneric
-    z_header        *sdpGeneric
-    k_header        *sdpGeneric
+    v_header        *sippy_sdp.SdpGeneric
+    o_header        *sippy_sdp.SdpOrigin
+    s_header        *sippy_sdp.SdpGeneric
+    i_header        *sippy_sdp.SdpGeneric
+    u_header        *sippy_sdp.SdpGeneric
+    e_header        *sippy_sdp.SdpGeneric
+    p_header        *sippy_sdp.SdpGeneric
+    b_header        *sippy_sdp.SdpGeneric
+    t_header        *sippy_sdp.SdpGeneric
+    r_header        *sippy_sdp.SdpGeneric
+    z_header        *sippy_sdp.SdpGeneric
+    k_header        *sippy_sdp.SdpGeneric
     a_headers       []string
-    c_header        sippy_types.SdpConnecton
+    c_header        *sippy_sdp.SdpConnecton
 }
 
 func ParseSdpBody(body string) *sdpBody {
@@ -70,7 +71,7 @@ func ParseSdpBody(body string) *sdpBody {
         return self
     }
     current_snum := 0
-    var c_header *sdpConnecton
+    var c_header *sippy_sdp.SdpConnecton
     for _, line := range strings.FieldsFunc(strings.TrimSpace(body), func(c rune) bool { return c == '\n' || c == '\r' }) {
         line = strings.TrimSpace(line)
         if line == "" { continue }
@@ -83,35 +84,35 @@ func ParseSdpBody(body string) *sdpBody {
         }
         if current_snum == 0 {
             if name == "c" {
-                c_header = ParseSdpConnecton(v)
+                c_header = sippy_sdp.ParseSdpConnecton(v)
             } else if name == "a" {
                 self.a_headers = append(self.a_headers, v)
             } else {
                 switch name {
                 case "v":
-                    self.v_header = ParseSdpGeneric(v)
+                    self.v_header = sippy_sdp.ParseSdpGeneric(v)
                 case "o":
-                    self.o_header = ParseSdpOrigin(v)
+                    self.o_header = sippy_sdp.ParseSdpOrigin(v)
                 case "s":
-                    self.s_header = ParseSdpGeneric(v)
+                    self.s_header = sippy_sdp.ParseSdpGeneric(v)
                 case "i":
-                    self.i_header = ParseSdpGeneric(v)
+                    self.i_header = sippy_sdp.ParseSdpGeneric(v)
                 case "u":
-                    self.u_header = ParseSdpGeneric(v)
+                    self.u_header = sippy_sdp.ParseSdpGeneric(v)
                 case "e":
-                    self.e_header = ParseSdpGeneric(v)
+                    self.e_header = sippy_sdp.ParseSdpGeneric(v)
                 case "p":
-                    self.p_header = ParseSdpGeneric(v)
+                    self.p_header = sippy_sdp.ParseSdpGeneric(v)
                 case "b":
-                    self.b_header = ParseSdpGeneric(v)
+                    self.b_header = sippy_sdp.ParseSdpGeneric(v)
                 case "t":
-                    self.t_header = ParseSdpGeneric(v)
+                    self.t_header = sippy_sdp.ParseSdpGeneric(v)
                 case "r":
-                    self.r_header = ParseSdpGeneric(v)
+                    self.r_header = sippy_sdp.ParseSdpGeneric(v)
                 case "z":
-                    self.z_header = ParseSdpGeneric(v)
+                    self.z_header = sippy_sdp.ParseSdpGeneric(v)
                 case "k":
-                    self.k_header = ParseSdpGeneric(v)
+                    self.k_header = sippy_sdp.ParseSdpGeneric(v)
                 }
             }
         } else {
@@ -315,4 +316,8 @@ func (self *sdpBody) RemoveSection(idx int) {
         return
     }
     self.sections = append(self.sections[:idx], self.sections[idx + 1:]...)
+}
+
+func (self *sdpBody) SetOHeader(o_header *sippy_sdp.SdpOrigin) {
+    self.o_header = o_header
 }

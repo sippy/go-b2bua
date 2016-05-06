@@ -27,12 +27,15 @@
 package sippy
 
 import (
+    "crypto/rand"
     "fmt"
     "math"
+    "math/big"
     "strings"
     "strconv"
 
     "sippy/conf"
+    "sippy/sdp"
     "sippy/types"
 )
 
@@ -45,11 +48,15 @@ type Rtp_proxy_session struct {
     max_index               int
     caller_raddress         *sippy_conf.HostPort
     callee_raddress         *sippy_conf.HostPort
+    caller_laddress         string
+    callee_laddress         string
     l4r                     *local4remote
     callee_session_exists   bool
     notify_socket           string
     notify_tag              string
     caller_codecs           string
+    callee_codecs           string
+    origin                  *sippy_sdp.SdpOrigin
 }
 
 type rtp_command_result struct {
@@ -58,67 +65,72 @@ type rtp_command_result struct {
     family              string
 }
 
+const (
+    _UPDATE_CALLER = 1
+    _UPDATE_CALLEE = 2
+)
+
 /*
-from SdpOrigin import SdpOrigin
-
-from hashlib import md5
-from random import random
-from time import time
-from datetime import datetime
-from traceback import print_exc
-from thread import get_ident
-import sys
-
-from twisted.internet import reactor
-
 class Rtp_proxy_session(object):
     rtp_proxy_client = nil
     call_id = nil
     from_tag = nil
     to_tag = nil
-    caller_session_exists = False
+    caller_session_exists = false
     caller_codecs = nil
     caller_raddress = nil
-    callee_session_exists = False
+    callee_session_exists = false
     callee_codecs = nil
     callee_raddress = nil
     max_index = -1
     origin = nil
     notify_socket = nil
     notify_tag = nil
-    global_config = nil
-    my_ident = nil
+*/
 
-    def __init__(self, global_config, call_id = nil, from_tag = nil, to_tag = nil,
-      notify_socket = nil, notify_tag = nil):
-        self.global_config = global_config
-        self.my_ident = get_ident()
-        if global_config.has_key("_rtp_proxy_clients"):
-            rtp_proxy_clients = [x for x in global_config["_rtp_proxy_clients"] if x.online]
-            n = len(rtp_proxy_clients)
-            if n == 0:
-                raise Exception("No online RTP proxy client has been found")
-            self.rtp_proxy_client = rtp_proxy_clients[int(random() * n)]
-        else:
-            self.rtp_proxy_client = global_config["rtp_proxy_client"]
-            if not self.rtp_proxy_client.online:
-                raise Exception("No online RTP proxy client has been found")
-        if call_id != nil:
-            self.call_id = call_id
-        else:
-            self.call_id = md5(str(random()) + str(time())).hexdigest()
-        if from_tag != nil:
-            self.from_tag = from_tag
-        else:
-            self.from_tag = md5(str(random()) + str(time())).hexdigest()
-        if to_tag != nil:
-            self.to_tag = to_tag
-        else:
-            self.to_tag = md5(str(random()) + str(time())).hexdigest()
-        self.origin = SdpOrigin()
-        self.notify_socket = notify_socket
-        self.notify_tag = notify_tag
-
+func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string) (*Rtp_proxy_session, error) {
+    self := &Rtp_proxy_session{
+        notify_socket   : notify_socket,
+        notify_tag      : notify_tag,
+        call_id         : call_id,
+        from_tag        : from_tag,
+        to_tag          : to_tag,
+    }
+    online_clients := []sippy_types.RtpProxyClient{}
+    for _, cl := range rtp_proxy_clients {
+        if cl.IsOnline() {
+            online_clients = append(online_clients, cl)
+        }
+    }
+    n := len(online_clients)
+    if n == 0 {
+        return nil, fmt.Errorf("No online RTP proxy client has been found")
+    }
+    idx, err := rand.Int(rand.Reader, big.NewInt(int64(n)))
+    if err != nil {
+        self.rtp_proxy_client = online_clients[0]
+    } else {
+        self.rtp_proxy_client = online_clients[idx.Int64()]
+    }
+    if self.call_id == "" {
+        buf := make([]byte, 16)
+        rand.Read(buf)
+        self.call_id = fmt.Sprintf("%x", buf)
+    }
+    if from_tag == "" {
+        buf := make([]byte, 16)
+        rand.Read(buf)
+        self.from_tag = fmt.Sprintf("%x", buf)
+    }
+    if to_tag == "" {
+        buf := make([]byte, 16)
+        rand.Read(buf)
+        self.to_tag = fmt.Sprintf("%x", buf)
+    }
+    self.origin = sippy_sdp.NewSdpOrigin(config)
+    return self, nil
+}
+/*
     def version(self, result_callback):
         self.rtp_proxy_client.SendCommand("V", self.version_result, result_callback)
 
@@ -217,12 +229,12 @@ func (self *Rtp_proxy_session) command_result(result string, result_callback fun
     }
 }
 
-func (self *Rtp_proxy_session) update_caller(remote_ip string, remote_port string, result_callback func(*rtp_command_result), options/*= ""*/ string, index /*= 0*/int, atype /*= "IP4"*/string /*, *callback_parameters*/) {
+func (self *Rtp_proxy_session) update_caller(remote_ip string, remote_port string, result_callback func(*rtp_command_result), options/*= ""*/ string, index /*= 0*/int, atype /*= "IP4"*/string) {
     command := "U"
     self.max_index = int(math.Max(float64(self.max_index), float64(index)))
     if self.rtp_proxy_client.SBindSupported() && self.caller_raddress != nil && atype == "IP4" {
         if self.rtp_proxy_client.IsLocal() {
-            options += fmt.Sprintf("L%s", self.l4r.getServer(self.caller_raddress, false).uopts.laddress.Host.String())
+            options += fmt.Sprintf("L%s", self.caller_laddress)
         } else {
             options += fmt.Sprintf("R%s", self.caller_raddress.Host.String())
         }
@@ -244,7 +256,7 @@ func (self *Rtp_proxy_session) update_callee(remote_ip string, remote_port strin
     self.max_index = int(math.Max(float64(self.max_index), float64(index)))
     if self.rtp_proxy_client.SBindSupported() && self.callee_raddress != nil && atype == "IP4" {
         if self.rtp_proxy_client.IsLocal() {
-            options += fmt.Sprintf("L%s", self.l4r.getServer(self.callee_raddress, false).uopts.laddress.Host.String())
+            options += fmt.Sprintf("L%s", self.callee_laddress)
         } else {
             options += fmt.Sprintf("R%s", self.callee_raddress.Host.String())
         }
@@ -305,66 +317,73 @@ func (self *Rtp_proxy_session) update_result(result string, result_callback func
             self.rtp_proxy_client.SendCommand(command)
             self.max_index -= 1
         self.rtp_proxy_client = nil
-
-    def on_caller_sdp_change(self, sdp_body, result_callback):
-        self.on_xxx_sdp_change(self.update_caller, sdp_body, result_callback)
-
+*/
+func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
+    self.on_xxx_sdp_change(_UPDATE_CALLER, sdp_body, result_callback)
+}
+/*
     def on_callee_sdp_change(self, sdp_body, result_callback):
         self.on_xxx_sdp_change(self.update_callee, sdp_body, result_callback)
-
-    def on_xxx_sdp_change(self, update_xxx, sdp_body, result_callback):
-        sects = []
-        try:
-            sdp_body.parse()
-        except Exception, exception:
-            print datetime.now(), "can't parse SDP body: %s:" % str(exception)
-            print "-" * 70
-            print_exc(file = sys.stdout)
-            print "-" * 70
-            print sdp_body.content
-            print "-" * 70
-            sys.stdout.flush()
-            return
-        for i in range(0, len(sdp_body.content.sections)):
-            sect = sdp_body.content.sections[i]
-            if sect.m_header.transport.lower() not in ("udp", "udptl", "rtp/avp"):
-                continue
-            sects.append(sect)
-        if len(sects) == 0:
-            sdp_body.needs_update = False
-            result_callback(sdp_body)
-            return
-        formats = sects[0].m_header.formats
-        if update_xxx == self.update_caller:
-            if len(formats) > 1:
-                self.caller_codecs = reduce(lambda x, y: str(x) + "," + str(y), formats)
-            else:
-                self.caller_codecs = str(formats[0])
-        else:
-            if len(formats) > 1:
-                self.callee_codecs = reduce(lambda x, y: str(x) + "," + str(y), formats)
-            else:
-                self.callee_codecs = str(formats[0])
-        for sect in sects:
-            options = ""
-            if sect.c_header.atype == "IP6":
-                options = "6"
-            update_xxx(sect.c_header.addr, sect.m_header.port, self.xxx_sdp_change_finish, options, \
-              sects.index(sect), sect.c_header.atype, sdp_body, sect, sects, result_callback)
+*/
+func (self *Rtp_proxy_session) on_xxx_sdp_change(update_xxx int, sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
+    sects := []sippy_types.SdpMediaDescription{}
+    for _, sect := range sdp_body.GetParsedBody().GetSections() {
+        switch strings.ToLower(sect.GetMHeader().GetTransport()) {
+        case "udp":
+        case "udptl":
+        case "rtp/avp":
+        default:
+            sects = append(sects, sect)
+        }
+    }
+    if len(sects) == 0 {
+        sdp_body.SetNeedsUpdate(false)
+        result_callback(sdp_body)
         return
+    }
+    formats := sects[0].GetMHeader().GetFormats()
+    if update_xxx == _UPDATE_CALLER {
+        self.caller_codecs = strings.Join(formats, ",")
+    } else {
+        self.callee_codecs = strings.Join(formats, ",")
+    }
+    for i, sect := range sects {
+        options := ""
+        if sect.GetCHeader().GetAType() == "IP6" {
+            options = "6"
+        }
+        if update_xxx == _UPDATE_CALLER {
+            self.update_caller(sect.GetCHeader().GetAddr(), sect.GetMHeader().GetPort(),
+              func (res *rtp_command_result) { self.xxx_sdp_change_finish(res, sdp_body, sect, sects, result_callback) },
+              options, i, sect.GetCHeader().GetAType())
+        } else {
+            self.update_callee(sect.GetCHeader().GetAddr(), sect.GetMHeader().GetPort(),
+              func (res *rtp_command_result) { self.xxx_sdp_change_finish(res, sdp_body, sect, sects, result_callback) },
+              options, i, sect.GetCHeader().GetAType())
+        }
+    }
+}
 
-    def xxx_sdp_change_finish(self, address_port, sdp_body, sect, sects, result_callback):
-        sect.needs_update = False
-        if address_port != nil:
-            sect.c_header.atype = address_port[2]
-            sect.c_header.addr = address_port[0]
-            if sect.m_header.port != 0:
-                sect.m_header.port = address_port[1]
-        if len([x for x in sects if x.needs_update]) == 0:
-            sdp_body.content.o_header = self.origin
-            sdp_body.needs_update = False
+func (self *Rtp_proxy_session) xxx_sdp_change_finish(address_port *rtp_command_result, sdp_body sippy_types.MsgBody, sect sippy_types.SdpMediaDescription, sects []sippy_types.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
+    sect.SetNeedsUpdate(false)
+    if address_port != nil {
+        sect.GetCHeader().SetAType(address_port.family)
+        sect.GetCHeader().SetAddr(address_port.rtpproxy_address)
+        if sect.GetMHeader().GetPort() != "0" {
+            sect.GetMHeader().SetPort(address_port.rtpproxy_port)
+        }
+    }
+    for _, s := range sects {
+        if s.NeedsUpdate() {
+            sdp_body.GetParsedBody().SetOHeader(self.origin)
+            sdp_body.SetNeedsUpdate(false)
             result_callback(sdp_body)
+            return
+        }
+    }
+}
 
+/*
     def __del__(self):
         if self.my_ident != get_ident():
             #print "Rtp_proxy_session.__del__() from wrong thread, re-routing"
@@ -374,3 +393,11 @@ func (self *Rtp_proxy_session) update_result(result string, result_callback func
 */
 
 func (self *Rtp_proxy_session) CallerSessionExists() bool { return self.caller_session_exists }
+
+func (self *Rtp_proxy_session) SetCallerLaddress(addr string) {
+    self.caller_laddress = addr
+}
+
+func (self *Rtp_proxy_session) SetCalleeLaddress(addr string) {
+    self.callee_laddress = addr
+}

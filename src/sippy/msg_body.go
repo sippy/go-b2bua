@@ -30,6 +30,7 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/sdp"
     "sippy/types"
 )
 
@@ -82,6 +83,11 @@ func (self *genericMsgBody) SetSections([]sippy_types.SdpMediaDescription) {
 }
 
 func (self *genericMsgBody) RemoveSection(int) {
+    // NO OP
+}
+
+func (self *genericMsgBody) SetOHeader(*sippy_sdp.SdpOrigin) {
+    // NO OP
 }
 
 func (self *msgBody) GetParsedBody() sippy_types.ParsedMsgBody {
@@ -186,4 +192,8 @@ func (self *msgBody) GetMtype() string {
 
 func (self *msgBody) NeedsUpdate() bool {
     return self.needs_update
+}
+
+func (self *msgBody) SetNeedsUpdate(v bool) {
+    self.needs_update = v
 }
