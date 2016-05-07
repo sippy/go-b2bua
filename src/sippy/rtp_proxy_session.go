@@ -321,12 +321,13 @@ func (self *Rtp_proxy_session) update_result(result string, result_callback func
 func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
     self.on_xxx_sdp_change(_UPDATE_CALLER, sdp_body, result_callback)
 }
-/*
-    def on_callee_sdp_change(self, sdp_body, result_callback):
-        self.on_xxx_sdp_change(self.update_callee, sdp_body, result_callback)
-*/
+
+func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
+    self.on_xxx_sdp_change(_UPDATE_CALLEE, sdp_body, result_callback)
+}
+
 func (self *Rtp_proxy_session) on_xxx_sdp_change(update_xxx int, sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
-    sects := []sippy_types.SdpMediaDescription{}
+    sects := []*sippy_sdp.SdpMediaDescription{}
     for _, sect := range sdp_body.GetParsedBody().GetSections() {
         switch strings.ToLower(sect.GetMHeader().GetTransport()) {
         case "udp":
@@ -364,7 +365,7 @@ func (self *Rtp_proxy_session) on_xxx_sdp_change(update_xxx int, sdp_body sippy_
     }
 }
 
-func (self *Rtp_proxy_session) xxx_sdp_change_finish(address_port *rtp_command_result, sdp_body sippy_types.MsgBody, sect sippy_types.SdpMediaDescription, sects []sippy_types.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
+func (self *Rtp_proxy_session) xxx_sdp_change_finish(address_port *rtp_command_result, sdp_body sippy_types.MsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
     sect.SetNeedsUpdate(false)
     if address_port != nil {
         sect.GetCHeader().SetAType(address_port.family)

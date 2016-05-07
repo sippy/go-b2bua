@@ -63,7 +63,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         self.ua.SetOrigin("callee")
         if event.GetBody() != nil && event.GetBody().NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
-            self.ua.OnLocalSdpChange(event.GetBody(), event, func() { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(event.GetBody(), event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             return nil, nil
         }
         if event.GetSipCallId() == nil {

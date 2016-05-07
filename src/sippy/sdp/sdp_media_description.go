@@ -24,30 +24,28 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_sdp
 
 import (
     "strings"
 
     "sippy/conf"
-    "sippy/sdp"
-    "sippy/types"
 )
 
-type sdpMediaDescription struct {
-    m_header *sdpMedia
-    i_header *sippy_sdp.SdpGeneric
-    c_header *sippy_sdp.SdpConnecton
-    b_header *sippy_sdp.SdpGeneric
-    k_header *sippy_sdp.SdpGeneric
+type SdpMediaDescription struct {
+    m_header *SdpMedia
+    i_header *SdpGeneric
+    c_header *SdpConnecton
+    b_header *SdpGeneric
+    k_header *SdpGeneric
     a_headers []string
     needs_update bool
 }
 
-func (self *sdpMediaDescription) GetCopy() sippy_types.SdpMediaDescription {
+func (self *SdpMediaDescription) GetCopy() *SdpMediaDescription {
     a_headers := make([]string, len(self.a_headers))
     copy(a_headers, self.a_headers)
-    return &sdpMediaDescription{
+    return &SdpMediaDescription{
         m_header : self.m_header.GetCopy(),
         i_header : self.i_header.GetCopy(),
         c_header : self.c_header.GetCopy(),
@@ -58,26 +56,26 @@ func (self *sdpMediaDescription) GetCopy() sippy_types.SdpMediaDescription {
     }
 }
 
-func NewSdpMediaDescription() sippy_types.SdpMediaDescription {
-    return &sdpMediaDescription{
+func NewSdpMediaDescription() *SdpMediaDescription {
+    return &SdpMediaDescription{
         a_headers : make([]string, 0),
     }
 }
 
-func (self *sdpMediaDescription) all_headers() []*sdp_header_and_name {
-    ret := []*sdp_header_and_name{}
-    if self.m_header != nil { ret = append(ret, &sdp_header_and_name{ "m", self.m_header }) }
-    if self.i_header != nil { ret = append(ret, &sdp_header_and_name{ "i", self.i_header }) }
-    if self.c_header != nil { ret = append(ret, &sdp_header_and_name{ "c", self.c_header }) }
-    if self.b_header != nil { ret = append(ret, &sdp_header_and_name{ "b", self.b_header }) }
-    if self.k_header != nil { ret = append(ret, &sdp_header_and_name{ "k", self.k_header }) }
+func (self *SdpMediaDescription) all_headers() []*Sdp_header_and_name {
+    ret := []*Sdp_header_and_name{}
+    if self.m_header != nil { ret = append(ret, &Sdp_header_and_name{ "m", self.m_header }) }
+    if self.i_header != nil { ret = append(ret, &Sdp_header_and_name{ "i", self.i_header }) }
+    if self.c_header != nil { ret = append(ret, &Sdp_header_and_name{ "c", self.c_header }) }
+    if self.b_header != nil { ret = append(ret, &Sdp_header_and_name{ "b", self.b_header }) }
+    if self.k_header != nil { ret = append(ret, &Sdp_header_and_name{ "k", self.k_header }) }
     return ret
 }
 
-func (self *sdpMediaDescription) String() string {
+func (self *SdpMediaDescription) String() string {
     s := ""
     for _, it := range self.all_headers() {
-        s += it.name + "=" + it.header.String() + "\r\n"
+        s += it.Name + "=" + it.Header.String() + "\r\n"
     }
     for _, header := range self.a_headers {
         s += "a=" + header + "\r\n"
@@ -85,13 +83,13 @@ func (self *sdpMediaDescription) String() string {
     return s
 }
 
-func (self *sdpMediaDescription) LocalStr(hostport *sippy_conf.HostPort, noC bool) string {
+func (self *SdpMediaDescription) LocalStr(hostport *sippy_conf.HostPort, noC bool) string {
     s := ""
     for _, it := range self.all_headers() {
-        if noC && it.name == "c" {
+        if noC && it.Name == "c" {
             continue
         }
-        s += it.name + "=" + it.header.LocalStr(hostport) + "\r\n"
+        s += it.Name + "=" + it.Header.LocalStr(hostport) + "\r\n"
     }
     for _, header := range self.a_headers {
         s += "a=" + header + "\r\n"
@@ -99,7 +97,7 @@ func (self *sdpMediaDescription) LocalStr(hostport *sippy_conf.HostPort, noC boo
     return s
 }
 
-func (self *sdpMediaDescription) AddHeader(name, header string) {
+func (self *SdpMediaDescription) AddHeader(name, header string) {
     if name == "a" {
         self.a_headers = append(self.a_headers, header)
     } else {
@@ -107,40 +105,40 @@ func (self *sdpMediaDescription) AddHeader(name, header string) {
         case "m":
             self.m_header = ParseSdpMedia(header)
         case "i":
-            self.i_header = sippy_sdp.ParseSdpGeneric(header)
+            self.i_header = ParseSdpGeneric(header)
         case "c":
-            self.c_header = sippy_sdp.ParseSdpConnecton(header)
+            self.c_header = ParseSdpConnecton(header)
         case "b":
-            self.b_header = sippy_sdp.ParseSdpGeneric(header)
+            self.b_header = ParseSdpGeneric(header)
         case "k":
-            self.k_header = sippy_sdp.ParseSdpGeneric(header)
+            self.k_header = ParseSdpGeneric(header)
         }
     }
 }
 
-func (self *sdpMediaDescription) SetCHeaderAddr(addr string) {
+func (self *SdpMediaDescription) SetCHeaderAddr(addr string) {
     self.c_header.SetAddr(addr)
 }
 
-func (self *sdpMediaDescription) GetMHeader() sippy_types.SdpMedia {
+func (self *SdpMediaDescription) GetMHeader() *SdpMedia {
     if self.m_header == nil {
         return nil
     }
     return self.m_header
 }
 
-func (self *sdpMediaDescription) GetCHeader() *sippy_sdp.SdpConnecton {
+func (self *SdpMediaDescription) GetCHeader() *SdpConnecton {
     if self.c_header == nil {
         return nil
     }
     return self.c_header
 }
 
-func (self *sdpMediaDescription) SetCHeader(c_header *sippy_sdp.SdpConnecton) {
+func (self *SdpMediaDescription) SetCHeader(c_header *SdpConnecton) {
     self.c_header = c_header
 }
 
-func (self *sdpMediaDescription) RemoveAHeader(hdr string) {
+func (self *SdpMediaDescription) RemoveAHeader(hdr string) {
     new_a_hdrs := []string{}
     for _, h := range self.a_headers {
         if h == hdr {
@@ -151,14 +149,14 @@ func (self *sdpMediaDescription) RemoveAHeader(hdr string) {
     self.a_headers = new_a_hdrs
 }
 
-func (self *sdpMediaDescription) SetFormats(formats []string) {
+func (self *SdpMediaDescription) SetFormats(formats []string) {
     if self.m_header != nil {
-        self.m_header.formats = formats
+        self.m_header.SetFormats(formats)
         self.optimize_a()
     }
 }
 
-func (self *sdpMediaDescription) optimize_a() {
+func (self *SdpMediaDescription) optimize_a() {
     new_a_headers := []string{}
     for _, ah := range self.a_headers {
         pt := ""
@@ -175,10 +173,18 @@ func (self *sdpMediaDescription) optimize_a() {
     self.a_headers = new_a_headers
 }
 
-func (self *sdpMediaDescription) NeedsUpdate() bool {
+func (self *SdpMediaDescription) NeedsUpdate() bool {
     return self.needs_update
 }
 
-func (self *sdpMediaDescription) SetNeedsUpdate(needs_update bool) {
+func (self *SdpMediaDescription) SetNeedsUpdate(needs_update bool) {
     self.needs_update = needs_update
+}
+
+func (self *SdpMediaDescription) GetAHeaders() []string {
+    return self.a_headers
+}
+
+func (self *SdpMediaDescription) SetAHeaders(a_headers []string) {
+    self.a_headers = a_headers
 }

@@ -74,11 +74,11 @@ func (self *genericMsgBody) SetCHeaderAddr(string) {
     // NO OP
 }
 
-func (self *genericMsgBody) GetSections() []sippy_types.SdpMediaDescription {
-    return make([]sippy_types.SdpMediaDescription, 0)
+func (self *genericMsgBody) GetSections() []*sippy_sdp.SdpMediaDescription {
+    return make([]*sippy_sdp.SdpMediaDescription, 0)
 }
 
-func (self *genericMsgBody) SetSections([]sippy_types.SdpMediaDescription) {
+func (self *genericMsgBody) SetSections([]*sippy_sdp.SdpMediaDescription) {
     // NO OP
 }
 

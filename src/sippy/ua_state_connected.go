@@ -183,7 +183,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil
         }
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            self.ua.OnLocalSdpChange(body, event, func() { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             return nil, nil
         }
         req := self.ua.GenRequest("INVITE", body, "", "", nil, eh...)
@@ -211,7 +211,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         //code, reason, body = event.getData()
         body := _event.GetBody()
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            self.ua.OnLocalSdpChange(body, event, func() { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             return nil, nil
         }
         self.ua.StartCreditTimer(event.GetRtime())

@@ -24,7 +24,7 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_sdp
 
 import (
     "strings"
@@ -32,14 +32,14 @@ import (
     "sippy/conf"
 )
 
-type sdpMedia struct {
+type SdpMedia struct {
     stype       string
     port        string
     transport   string
     formats     []string
 }
 
-func ParseSdpMedia(body string) *sdpMedia {
+func ParseSdpMedia(body string) *SdpMedia {
     if body == "" {
         return nil
     }
@@ -47,7 +47,7 @@ func ParseSdpMedia(body string) *sdpMedia {
     if len(params) < 3 {
         return nil
     }
-    return &sdpMedia{
+    return &SdpMedia{
         stype       : params[0],
         port        : params[1],
         transport   : params[2],
@@ -55,7 +55,7 @@ func ParseSdpMedia(body string) *sdpMedia {
     }
 }
 
-func (self *sdpMedia) String() string {
+func (self *SdpMedia) String() string {
     rval := self.stype + " " + self.port + " " + self.transport
     for _, format := range self.formats {
         rval += " " + format
@@ -63,17 +63,17 @@ func (self *sdpMedia) String() string {
     return rval
 }
 
-func (self *sdpMedia) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *SdpMedia) LocalStr(hostport *sippy_conf.HostPort) string {
     return self.String()
 }
 
-func (self *sdpMedia) GetCopy() *sdpMedia {
+func (self *SdpMedia) GetCopy() *SdpMedia {
     if self == nil {
         return nil
     }
     formats := make([]string, len(self.formats))
     copy(formats, self.formats)
-    return &sdpMedia{
+    return &SdpMedia{
         stype       : self.stype,
         port        : self.port,
         transport   : self.transport,
@@ -81,19 +81,19 @@ func (self *sdpMedia) GetCopy() *sdpMedia {
     }
 }
 
-func (self *sdpMedia) GetTransport() string {
+func (self *SdpMedia) GetTransport() string {
     return self.transport
 }
 
-func (self *sdpMedia) GetPort() string {
+func (self *SdpMedia) GetPort() string {
     return self.port
 }
 
-func (self *sdpMedia) SetPort(port string) {
+func (self *SdpMedia) SetPort(port string) {
     self.port = port
 }
 
-func (self *sdpMedia) HasFormat(format string) bool {
+func (self *SdpMedia) HasFormat(format string) bool {
     for _, f := range self.formats {
         if f == format {
             return true
@@ -102,12 +102,12 @@ func (self *sdpMedia) HasFormat(format string) bool {
     return false
 }
 
-func (self *sdpMedia) GetFormats() []string {
+func (self *SdpMedia) GetFormats() []string {
     return self.formats
 }
 
 // WARNING! Use this function only if know what you do!
 // Otherwise consider using the sdpMediaDescription.SetFormats() instead.
-func (self *sdpMedia) SetFormats(formats []string) {
+func (self *SdpMedia) SetFormats(formats []string) {
     self.formats = formats
 }
