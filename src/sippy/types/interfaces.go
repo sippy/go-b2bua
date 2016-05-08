@@ -268,7 +268,7 @@ type UA interface {
     SetOnRemoteSdpChange(OnRemoteSdpChange)
     GetRemoteUA() string
     SetExtraHeaders([]sippy_header.SipHeader)
-    GetDelay() time.Duration
+    GetAcct(*sippy_time.MonoTime) (time.Duration, time.Duration, bool, bool)
 }
 
 type baseTransaction interface {

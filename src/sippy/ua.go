@@ -999,9 +999,24 @@ func (self *ua) SetExtraHeaders(extra_headers []sippy_header.SipHeader) {
 func (self *ua) OnUnregister() {
 }
 
-func (self *ua) GetDelay() time.Duration {
-    if self.connect_ts != nil {
-        return self.connect_ts.Sub(self.setup_ts)
+func (self *ua) GetAcct(disconnect_ts *sippy_time.MonoTime) (duration time.Duration, delay time.Duration, connected bool, disconnected bool) {
+    if self.disconnect_ts != nil {
+        disconnect_ts = self.disconnect_ts
+        disconnected = true
+    } else {
+        if disconnect_ts == nil {
+            disconnect_ts, _ = sippy_time.NewMonoTime()
+        }
+        disconnected = false
     }
-    return 0
+    if self.connect_ts != nil {
+        duration = disconnect_ts.Sub(self.connect_ts)
+        delay = self.connect_ts.Sub(self.setup_ts)
+        connected = true
+        return
+    }
+    duration = 0
+    delay = disconnect_ts.Sub(self.setup_ts)
+    connected = false
+    return
 }
