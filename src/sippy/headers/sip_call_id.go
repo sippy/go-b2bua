@@ -55,7 +55,14 @@ func (self *SipCallId) genCallId(config sippy_conf.Config) {
     self.CallId = fmt.Sprintf("%x", buf) + "@" + config.GetMyAddress().String()
 }
 
-func NewSipCallId(config sippy_conf.Config) *SipCallId {
+func NewSipCallIdFromString(call_id string) *SipCallId {
+    return &SipCallId{
+        compactName : _sip_call_id_name,
+        CallId      : call_id,
+    }
+}
+
+func GenerateSipCallId(config sippy_conf.Config) *SipCallId {
     self := &SipCallId{
         compactName : _sip_call_id_name,
     }

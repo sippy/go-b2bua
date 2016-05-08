@@ -112,7 +112,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
     self.AppendHeader(from)
     if to == nil            { to = sippy_header.NewSipTo(sippy_header.NewSipAddress("", ruri), config) }
     self.AppendHeader(to)
-    if callid == nil        { callid = sippy_header.NewSipCallId(config) }
+    if callid == nil        { callid = sippy_header.GenerateSipCallId(config) }
     self.AppendHeader(callid)
     self.AppendHeader(sippy_header.NewSipCSeq(cseq, method))
     if contact != nil {

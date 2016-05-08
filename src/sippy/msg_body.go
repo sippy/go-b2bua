@@ -90,6 +90,10 @@ func (self *genericMsgBody) SetOHeader(*sippy_sdp.SdpOrigin) {
     // NO OP
 }
 
+func (self *genericMsgBody) AppendAHeader(string) {
+    // NO OP
+}
+
 func (self *msgBody) GetParsedBody() sippy_types.ParsedMsgBody {
     if self.parsed_body == nil {
         self.parse()
@@ -196,4 +200,12 @@ func (self *msgBody) NeedsUpdate() bool {
 
 func (self *msgBody) SetNeedsUpdate(v bool) {
     self.needs_update = v
+}
+
+func (self *msgBody) AppendAHeader(hdr string) {
+    if self.parsed_body != nil {
+        self.parsed_body.AppendAHeader(hdr)
+    } else {
+        self.string_content += "a=" + hdr + "\r\n"
+    }
 }

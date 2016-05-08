@@ -120,6 +120,7 @@ type MsgBody interface {
     NeedsUpdate() bool
     SetNeedsUpdate(bool)
     GetParsedBody() ParsedMsgBody
+    AppendAHeader(string)
 }
 
 type ParsedMsgBody interface {
@@ -131,6 +132,7 @@ type ParsedMsgBody interface {
     SetSections([]*sippy_sdp.SdpMediaDescription)
     RemoveSection(int)
     SetOHeader(*sippy_sdp.SdpOrigin)
+    AppendAHeader(string)
 }
 
 type UA interface {
@@ -162,8 +164,10 @@ type UA interface {
     GetRTarget() *sippy_header.SipURL
     SetRUri(*sippy_header.SipTo)
     GetRuriUserparams() []string
+    SetRuriUserparams([]string)
     GetRUri() *sippy_header.SipTo
     GetToUsername() string
+    SetToUsername(string)
     GetUsername() string
     SetUsername(string)
     GetPassword() string
@@ -237,6 +241,7 @@ type UA interface {
     SetNpMtime(*sippy_time.MonoTime)
     GetExMtime() *sippy_time.MonoTime
     SetExMtime(*sippy_time.MonoTime)
+    GetP100Ts() *sippy_time.MonoTime
     SetP100Ts(*sippy_time.MonoTime)
     HasNoProgressTimer() bool
     CancelNoProgressTimer()
@@ -263,6 +268,7 @@ type UA interface {
     SetOnRemoteSdpChange(OnRemoteSdpChange)
     GetRemoteUA() string
     SetExtraHeaders([]sippy_header.SipHeader)
+    GetDelay() time.Duration
 }
 
 type baseTransaction interface {

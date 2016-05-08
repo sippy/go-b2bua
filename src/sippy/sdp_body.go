@@ -311,3 +311,7 @@ func (self *sdpBody) RemoveSection(idx int) {
 func (self *sdpBody) SetOHeader(o_header *sippy_sdp.SdpOrigin) {
     self.o_header = o_header
 }
+
+func (self *sdpBody) AppendAHeader(hdr string) {
+    self.a_headers = append(self.a_headers, hdr)
+}

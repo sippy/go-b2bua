@@ -67,7 +67,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             return nil, nil
         }
         if event.GetSipCallId() == nil {
-            self.ua.SetCallId(sippy_header.NewSipCallId(self.config))
+            self.ua.SetCallId(sippy_header.GenerateSipCallId(self.config))
         } else {
             self.ua.SetCallId(event.GetSipCallId().GetCopy())
         }

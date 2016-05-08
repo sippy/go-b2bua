@@ -858,6 +858,10 @@ func (self *ua) SetExMtime(t *sippy_time.MonoTime) {
     self._ex_mtime = t
 }
 
+func (self *ua) GetP100Ts() *sippy_time.MonoTime {
+    return self.p100_ts
+}
+
 func (self *ua) SetP100Ts(ts *sippy_time.MonoTime) {
     if self.p100_ts == nil {
         self.p100_ts = ts
@@ -993,4 +997,11 @@ func (self *ua) SetExtraHeaders(extra_headers []sippy_header.SipHeader) {
 }
 
 func (self *ua) OnUnregister() {
+}
+
+func (self *ua) GetDelay() time.Duration {
+    if self.connect_ts != nil {
+        return self.connect_ts.Sub(self.setup_ts)
+    }
+    return 0
 }
