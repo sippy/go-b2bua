@@ -63,7 +63,7 @@ type baseTransaction struct {
     sip_tm          *sipTransactionManager
     state           sip_transaction_state
     tid             *sippy_header.TID
-    teA             *timeout
+    teA             *Timeout
     address         *sippy_conf.HostPort
     needack         bool
     tout            time.Duration
@@ -89,19 +89,19 @@ func (self *baseTransaction) cleanup() {
     self.userv = nil
     self.tid = nil
     self.address = nil
-    if self.teA != nil { self.teA.cancel(); self.teA = nil }
+    if self.teA != nil { self.teA.Cancel(); self.teA = nil }
 }
 
 func (self *baseTransaction) cancelTeA() {
     if self.teA != nil {
-        self.teA.cancel()
+        self.teA.Cancel()
         self.teA = nil
     }
 }
 
 func (self *baseTransaction) startTeA() {
     if self.teA != nil {
-        self.teA.cancel()
+        self.teA.Cancel()
     }
     self.teA = NewTimeout(self.timerA, self.lock, self.tout, 1, nil)
     self.teA.Start()

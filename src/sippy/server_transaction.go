@@ -39,9 +39,9 @@ type serverTransaction struct {
     baseTransaction
     lock            sync.Mutex
     checksum        string
-    teD             *timeout
-    teF             *timeout
-    teE             *timeout
+    teD             *Timeout
+    teF             *Timeout
+    teE             *Timeout
     r487            sippy_types.SipResponse
     cancel_cb       func(*sippy_time.MonoTime, sippy_types.SipRequest)
     method          string
@@ -93,9 +93,9 @@ func (self *serverTransaction) cleanup() {
     self.baseTransaction.cleanup()
     self.r487 = nil
     self.cancel_cb = nil
-    if self.teD != nil { self.teD.cancel(); self.teD = nil }
-    if self.teE != nil { self.teE.cancel(); self.teE = nil }
-    if self.teF != nil { self.teF.cancel(); self.teF = nil }
+    if self.teD != nil { self.teD.Cancel(); self.teD = nil }
+    if self.teE != nil { self.teE.Cancel(); self.teE = nil }
+    if self.teF != nil { self.teF.Cancel(); self.teF = nil }
     self.noack_cb = nil
     self.ack_cb = nil
 }
@@ -107,7 +107,7 @@ func (self *serverTransaction) startTeE(t time.Duration) {
 
 func (self *serverTransaction) startTeF(t time.Duration) {
     if self.teF != nil {
-        self.teF.cancel()
+        self.teF.Cancel()
     }
     self.teF = NewTimeout(self.timerF, self, t, 1, nil)
     self.teF.Start()
@@ -115,28 +115,28 @@ func (self *serverTransaction) startTeF(t time.Duration) {
 
 func (self *serverTransaction) cancelTeE() {
     if self.teE != nil {
-        self.teE.cancel()
+        self.teE.Cancel()
         self.teE = nil
     }
 }
 
 func (self *serverTransaction) cancelTeD() {
     if self.teD != nil {
-        self.teD.cancel()
+        self.teD.Cancel()
         self.teD = nil
     }
 }
 
 func (self *serverTransaction) cancelTeF() {
     if self.teF != nil {
-        self.teF.cancel()
+        self.teF.Cancel()
         self.teF = nil
     }
 }
 
 func (self *serverTransaction) startTeD() {
     if self.teD != nil {
-        self.teD.cancel()
+        self.teD.Cancel()
     }
     self.teD = NewTimeout(self.timerD, self, 32 * time.Second, 1, nil)
     self.teD.Start()

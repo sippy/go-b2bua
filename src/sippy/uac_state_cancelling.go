@@ -35,7 +35,7 @@ import (
 
 type UacStateCancelling struct {
     uaStateGeneric
-    te      *timeout
+    te      *Timeout
     rtime   *sippy_time.MonoTime
     origin  string
     scode   int
@@ -82,7 +82,7 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
         return nil
     }
     if self.te != nil {
-        self.te.cancel()
+        self.te.Cancel()
         self.te = nil
     }
     // When the final response arrives make sure to send BYE

@@ -34,7 +34,7 @@ import (
     "sippy/log"
 )
 
-type timeout struct {
+type Timeout struct {
     callback        func()
     error_callback  func(error)
     timeout         time.Duration
@@ -48,8 +48,8 @@ type timeout struct {
     started         bool
 }
 
-func NewTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *timeout {
-    self := &timeout{
+func NewTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *Timeout {
+    self := &Timeout{
         callback        : callback,
         timeout         : _timeout,
         nticks          : nticks,
@@ -64,7 +64,7 @@ func NewTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nt
     return self
 }
 
-func (self *timeout) Start() {
+func (self *Timeout) Start() {
     self.lock.Lock()
     if ! self.started {
         self.started = true
@@ -73,20 +73,20 @@ func (self *timeout) Start() {
     self.lock.Unlock()
 }
 
-func (self *timeout) SpreadRuns(spread time.Duration) {
+func (self *Timeout) SpreadRuns(spread time.Duration) {
     self.spread = spread
 }
 
-func (self *timeout) cancel() {
+func (self *Timeout) Cancel() {
     self.shutdown = true
     close(self.shutdown_chan)
 }
 
-func (self *timeout) on_error(err error) {
+func (self *Timeout) on_error(err error) {
     self.logger.ErrorAndTraceback(err)
 }
 
-func (self *timeout) run() {
+func (self *Timeout) run() {
     for !self.shutdown {
         self._run()
     }
@@ -95,7 +95,7 @@ func (self *timeout) run() {
     self.cb_lock = nil
 }
 
-func (self *timeout) _run() {
+func (self *Timeout) _run() {
 /*    defer func() {
         if err := recover(); err != nil {
             handler := self.error_callback

@@ -38,9 +38,9 @@ import (
 
 type clientTransaction struct {
     baseTransaction
-    teB             *timeout
-    teC             *timeout
-    teG             *timeout
+    teB             *Timeout
+    teC             *Timeout
+    teG             *Timeout
     r408            sippy_types.SipResponse
     resp_receiver   sippy_types.ResponseReceiver
     expires         time.Duration
@@ -94,9 +94,9 @@ func (self *clientTransaction) cleanup() {
     self.baseTransaction.cleanup()
     self.ack = nil
     self.resp_receiver = nil
-    if self.teB != nil { self.teB.cancel(); self.teB = nil }
-    if self.teC != nil { self.teC.cancel(); self.teC = nil }
-    if self.teG != nil { self.teG.cancel(); self.teG = nil }
+    if self.teB != nil { self.teB.Cancel(); self.teB = nil }
+    if self.teC != nil { self.teC.Cancel(); self.teC = nil }
+    if self.teG != nil { self.teG.Cancel(); self.teG = nil }
     self.r408 = nil
     self.cancel = nil
 }
@@ -107,7 +107,7 @@ func (self *clientTransaction) SetOutboundProxy(outbound_proxy *sippy_conf.HostP
 
 func (self *clientTransaction) startTeC() {
     if self.teC != nil {
-        self.teC.cancel()
+        self.teC.Cancel()
     }
     self.teC = NewTimeout(self.timerC, self, 32 * time.Second, 1, nil)
     self.teC.Start()
@@ -151,14 +151,14 @@ func (self *clientTransaction) timerG() {
 
 func (self *clientTransaction) cancelTeB() {
     if self.teB != nil {
-        self.teB.cancel()
+        self.teB.Cancel()
         self.teB = nil
     }
 }
 
 func (self *clientTransaction) startTeB(timeout time.Duration) {
     if self.teB != nil {
-        self.teB.cancel()
+        self.teB.Cancel()
     }
     self.teB = NewTimeout(self.timerB, self, timeout, 1, nil)
     self.teB.Start()
@@ -329,7 +329,7 @@ func (self *clientTransaction) Unlock() {
 
 func (self *clientTransaction) SendACK() {
     if self.teG != nil {
-        self.teG.cancel()
+        self.teG.Cancel()
         self.teG = nil
     }
     self.sip_tm.transmitMsg(self.userv, self.ack, self.ack_rAddr, self.ack_checksum, self.tid.CallId)

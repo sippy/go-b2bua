@@ -78,11 +78,11 @@ type ua struct {
     source_address  *sippy_conf.HostPort
     remote_ua       string
     expire_time     time.Duration
-    expire_timer    *timeout
+    expire_timer    *Timeout
     no_progress_time time.Duration
     no_reply_time   time.Duration
-    no_reply_timer  *timeout
-    no_progress_timer *timeout
+    no_reply_timer  *Timeout
+    no_progress_timer *Timeout
     ltag            string
     rCSeq           int
     branch          string
@@ -91,7 +91,7 @@ type ua struct {
     disc_cbs        []sippy_types.OnDisconnectListener
     fail_cbs        []sippy_types.OnFailureListener
     ring_cbs        []sippy_types.OnRingingListener
-    credit_timer    *timeout
+    credit_timer    *Timeout
     uasResp         sippy_types.SipResponse
     useRefer        bool
     kaInterval      time.Duration
@@ -415,7 +415,7 @@ func (self *ua) update_ua(msg sippy_types.SipMsg) {
 func (self *ua) CancelCreditTimer() {
     //print("UA::cancelCreditTimer()")
     if self.credit_timer != nil {
-        self.credit_timer.cancel()
+        self.credit_timer.Cancel()
         self.credit_timer = nil
     }
 }
@@ -682,7 +682,7 @@ func (self *ua) StartExpireTimer(t *sippy_time.MonoTime) {
 
 func (self *ua) CancelExpireTimer() {
     if self.expire_timer != nil {
-        self.expire_timer.cancel()
+        self.expire_timer.Cancel()
         self.expire_timer = nil
     }
 }
@@ -841,7 +841,7 @@ func (self *ua) HasNoReplyTimer() bool {
 
 func (self *ua) CancelNoReplyTimer() {
     if self.no_reply_timer != nil {
-        self.no_reply_timer.cancel()
+        self.no_reply_timer.Cancel()
         self.no_reply_timer = nil
     }
 }
@@ -874,7 +874,7 @@ func (self *ua) HasNoProgressTimer() bool {
 
 func (self *ua) CancelNoProgressTimer() {
     if self.no_progress_timer != nil {
-        self.no_progress_timer.cancel()
+        self.no_progress_timer.Cancel()
         self.no_progress_timer = nil
     }
 }
