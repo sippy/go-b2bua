@@ -242,9 +242,9 @@ func (self *SipVia) GetTAddr(config sippy_conf.Config) *sippy_conf.HostPort {
     return sippy_conf.NewHostPort(host, rport)
 }
 
-func (self *SipVia) SetRport(v string) {
+func (self *SipVia) SetRport(v *string) {
     self.rport_exists = true
-    self.rport = &v
+    self.rport = v
 }
 
 func (self *SipVia) SetReceived(v string) {

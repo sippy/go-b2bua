@@ -272,7 +272,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
         req.vias[0].SetReceived(rhost)
     }
     if req.vias[0].HasRport() || req.nated {
-        req.vias[0].SetRport(rport)
+        req.vias[0].SetRport(&rport)
     }
     if self.nat_traversal && len(req.contacts) > 0 && !req.contacts[0].Asterisk && len(req.vias) == 1 {
         curl := req.contacts[0].GetUrl()
