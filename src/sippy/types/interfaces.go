@@ -47,7 +47,7 @@ type ResponseReceiver interface {
 }
 
 type CallMap interface {
-    OnNewDialog(SipRequest) (UA, RequestReceiver, SipResponse)
+    OnNewDialog(SipRequest, ServerTransaction) (UA, RequestReceiver, SipResponse)
 }
 
 type SipMsg interface {

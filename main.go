@@ -99,7 +99,7 @@ func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) *callMap {
     }
 }
 
-func (self *callMap) OnNewDialog(req sippy_types.SipRequest) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
+func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
     if req.GetTo().GetTag() != "" {
         // Request within dialog, but no such dialog
         return nil, nil, req.GenResponse(481, "Call Leg/Transaction Does Not Exist", nil, nil)

@@ -398,7 +398,7 @@ func (self *sipTransactionManager) new_server_transaction(server *udpServer, req
         t.UpgradeToSessionLock(consumer.GetSessionLock())
         rval = consumer.RecvRequest(req, t)
     } else {
-        ua, req_receiver, resp := self.call_map.OnNewDialog(req)
+        ua, req_receiver, resp := self.call_map.OnNewDialog(req, t)
         if resp != nil {
             t.SendResponse(resp, false, nil)
             return
