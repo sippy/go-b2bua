@@ -144,6 +144,7 @@ type UA interface {
     SipTM() SipTransactionManager
     GetSetupTs() *sippy_time.MonoTime
     SetSetupTs(*sippy_time.MonoTime)
+    GetDisconnectTs() *sippy_time.MonoTime
     SetDisconnectTs(*sippy_time.MonoTime)
     GetOrigin() string
     SetOrigin(string)
@@ -328,6 +329,7 @@ type CCEvent interface {
     SetReason(*sippy_header.SipReason)
     GetReason() *sippy_header.SipReason
     String() string
+    AppendExtraHeader(sippy_header.SipHeader)
 }
 
 type StatefulProxy interface {

@@ -687,6 +687,10 @@ func (self *ua) CancelExpireTimer() {
     }
 }
 
+func (self *ua) GetDisconnectTs() *sippy_time.MonoTime {
+    return self.disconnect_ts
+}
+
 func (self *ua) SetDisconnectTs(ts *sippy_time.MonoTime) {
     self.disconnect_ts = ts
 }

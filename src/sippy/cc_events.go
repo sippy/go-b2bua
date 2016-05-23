@@ -251,6 +251,9 @@ func NewCCEventFail(scode int, scode_reason string, rtime *sippy_time.MonoTime, 
 func (self *CCEventFail) String() string { return "CCEventFail" }
 
 func (self *CCEventFail) GetScode() int { return self.scode }
+func (self *CCEventFail) SetScode(scode int) { self.scode = scode }
+func (self *CCEventFail) GetScodeReason() string { return self.scode_reason }
+func (self *CCEventFail) SetScodeReason(reason string) { self.scode_reason = reason }
 
 func (self *CCEventFail) GetExtraHeaders() []sippy_header.SipHeader {
     if self.challenge == nil {
