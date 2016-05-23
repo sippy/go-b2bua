@@ -1024,3 +1024,17 @@ func (self *ua) GetAcct(disconnect_ts *sippy_time.MonoTime) (duration time.Durat
     connected = false
     return
 }
+
+func (self *ua) GetCLD() string {
+    if self.rUri == nil {
+        return ""
+    }
+    return self.rUri.GetUrl().Username
+}
+
+func (self *ua) GetCLI() string {
+    if self.lUri == nil {
+        return ""
+    }
+    return self.lUri.GetUrl().Username
+}
