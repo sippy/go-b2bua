@@ -270,6 +270,8 @@ type UA interface {
     GetRemoteUA() string
     SetExtraHeaders([]sippy_header.SipHeader)
     GetAcct(*sippy_time.MonoTime) (time.Duration, time.Duration, bool, bool)
+    GetCLI() string
+    GetCLD() string
 }
 
 type baseTransaction interface {
