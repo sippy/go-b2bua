@@ -49,3 +49,6 @@ func (*sipLogger) Write(rtime *sippy_time.MonoTime, call_id string, msg string) 
     }
     fmt.Println(rtime.Fptime(), call_id, msg)
 }
+
+func (*sipLogger) Reopen() {
+}

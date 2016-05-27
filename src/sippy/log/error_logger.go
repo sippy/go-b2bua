@@ -37,6 +37,7 @@ import (
 type ErrorLogger interface {
     ErrorAndTraceback(error)
     Error(...interface{})
+    Debug(...interface{})
 }
 
 type errorLogger struct {
@@ -56,9 +57,17 @@ func (self *errorLogger) ErrorAndTraceback(err error) {
     }
 }
 
+func (*errorLogger) Debug(params...interface{}) {
+    fmt.Fprint(os.Stderr, "DEBUG: ")
+    fmt.Fprint(os.Stderr, params...)
+    fmt.Fprint(os.Stderr, "\n")
+}
+
 func (*errorLogger) Error(params...interface{}) {
     fmt.Fprint(os.Stderr, "ERROR: ")
     fmt.Fprint(os.Stderr, params...)
     fmt.Fprint(os.Stderr, "\n")
 }
 
+func (*errorLogger) Reopen() {
+}

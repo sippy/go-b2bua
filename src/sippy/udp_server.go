@@ -38,7 +38,7 @@ import (
     "sippy/time"
 )
 
-type SipPacketReceiver func(data []byte, addr *sippy_conf.HostPort, server *udpServer, rtime *sippy_time.MonoTime)
+type UdpPacketReceiver func(data []byte, addr *sippy_conf.HostPort, server *udpServer, rtime *sippy_time.MonoTime)
 
 type write_req struct {
     address     net.Addr
@@ -178,12 +178,12 @@ func (self *asyncReceiver) run(userv *udpServer) {
 
 type udpServerOpts struct {
     laddress        *sippy_conf.HostPort
-    data_callback   SipPacketReceiver
+    data_callback   UdpPacketReceiver
     shut_down       bool
     nworkers        int
 }
 
-func NewUdpServerOpts(laddress *sippy_conf.HostPort, data_callback SipPacketReceiver) *udpServerOpts {
+func NewUdpServerOpts(laddress *sippy_conf.HostPort, data_callback UdpPacketReceiver) *udpServerOpts {
     self := &udpServerOpts{
         laddress        : laddress,
         data_callback   : data_callback,

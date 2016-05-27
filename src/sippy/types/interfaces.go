@@ -309,6 +309,7 @@ type SipTransactionManager interface {
     NewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer) (ClientTransaction, error)
     SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))
     Run()
+    Shutdown()
 }
 
 type UaState interface {

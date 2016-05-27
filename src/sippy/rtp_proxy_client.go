@@ -26,253 +26,335 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package sippy
 
-type Rtp_proxy_client struct {
-    client _Rtp_proxy_client
+import (
+    "math/rand"
+    "net"
+    "time"
+    "strings"
+
+    "sippy/conf"
+)
+
+type Rtp_proxy_client_impl interface {
+    GoOnline()
+    GoOffline()
+}
+
+type Rtp_proxy_opts struct {
+    No_version_check    *bool
+    Spath               *string
+    Nworkers            *int
+    Bind_address        *sippy_conf.HostPort
+}
+
+func (self *Rtp_proxy_opts) no_version_check() bool {
+    if self == nil || self.No_version_check == nil {
+        return false
+    }
+    return *self.No_version_check
+}
+
+func (self *Rtp_proxy_opts) spath() *string {
+    if self == nil {
+        return nil
+    }
+    return self.Spath
+}
+
+func (self *Rtp_proxy_opts) bind_address() *sippy_conf.HostPort {
+    if self == nil {
+        return nil
+    }
+    return self.Bind_address
+}
+
+type Rtp_proxy_client_base struct {
+    me              Rtp_proxy_client_impl
+    transport       rtp_proxy_transport
     proxy_address   string
     online          bool
     sbind_supported bool
     tnot_supported  bool
+    caps_done       bool
+    shut_down       bool
+    hrtb_retr_ival  time.Duration
 }
 
-type _Rtp_proxy_client interface {
+type rtp_proxy_transport interface {
     IsLocal() bool
     send_command(string, func(string))
 }
 
-func (self *Rtp_proxy_client) IsLocal() bool {
-    return self.client.IsLocal()
+func (self *Rtp_proxy_client_base) IsLocal() bool {
+    return self.transport.IsLocal()
 }
 
-func (self *Rtp_proxy_client) IsOnline() bool {
+func (self *Rtp_proxy_client_base) IsOnline() bool {
     return self.online
 }
 
-func (self *Rtp_proxy_client) SBindSupported() bool {
+func (self *Rtp_proxy_client_base) SBindSupported() bool {
     return self.sbind_supported
 }
 
-func (self *Rtp_proxy_client) TNotSupported() bool {
+func (self *Rtp_proxy_client_base) TNotSupported() bool {
     return self.tnot_supported
 }
 
-func (self *Rtp_proxy_client) GetProxyAddress() string {
+func (self *Rtp_proxy_client_base) GetProxyAddress() string {
     return self.proxy_address
 }
+
+func randomize(x time.Duration, p float64) time.Duration {
+    return time.Duration(float64(x) * (1.0 + p * (1.0 - 2.0 * rand.Float64())))
+}
+
 /*
-from Timeout import Timeout
-from Rtp_proxy_client_udp import Rtp_proxy_client_udp
-from Rtp_proxy_client_stream import Rtp_proxy_client_stream
-
-from random import random
-import socket
-
-def randomize(x, p):
-    return x * (1.0 + p * (1.0 - 2.0 * random()))
-
-CAPSTABLE = {'20071218':'copy_supported', '20080403':'stat_supported', \
-  '20081224':'tnot_supported', '20090810':'sbind_supported', \
-  '20150617':'wdnt_supported'}
+CAPSTABLE = {"20071218":"copy_supported", "20080403":"stat_supported", \
+  "20081224":"tnot_supported", "20090810":"sbind_supported", \
+  "20150617":"wdnt_supported"}
 
 class Rtpp_caps_checker(object):
     caps_requested = 0
     caps_received = 0
-    rtpc = None
+    rtpc = nil
 
     def __init__(self, rtpc):
         self.rtpc = rtpc
-        rtpc.caps_done = False
+        rtpc.caps_done = false
         for vers in CAPSTABLE.iterkeys():
             self.caps_requested += 1
-            rtpc.send_command('VF %s' % vers, self.caps_query_done, vers)
+            rtpc.send_command("VF %s" % vers, self.caps_query_done, vers)
 
     def caps_query_done(self, result, vers):
         self.caps_received -= 1
         vname = CAPSTABLE[vers]
-        if result == '1':
-            setattr(self.rtpc, vname, True)
+        if result == "1":
+            setattr(self.rtpc, vname, true)
         else:
-            setattr(self.rtpc, vname, False)
+            setattr(self.rtpc, vname, false)
         if self.caps_received == 0:
-            self.rtpc.caps_done = True
-            self.rtpc = None
+            self.rtpc.caps_done = true
+            self.rtpc = nil
 
-class Rtp_proxy_client(Rtp_proxy_client_udp, Rtp_proxy_client_stream):
-    worker = None
-    address = None
-    online = False
-    copy_supported = False
-    stat_supported = False
-    tnot_supported = False
-    sbind_supported = False
-    wdnt_supported = False
-    shut_down = False
-    proxy_address = None
-    caps_done = False
-    sessions_created = None
-    active_sessions = None
-    active_streams = None
-    preceived = None
-    ptransmitted = None
+class Rtp_proxy_client_base(Rtp_proxy_client_udp, Rtp_proxy_client_stream):
+    worker = nil
+    address = nil
+    online = false
+    copy_supported = false
+    stat_supported = false
+    tnot_supported = false
+    sbind_supported = false
+    wdnt_supported = false
+    shut_down = false
+    proxy_address = nil
+    caps_done = false
+    sessions_created = nil
+    active_sessions = nil
+    active_streams = nil
+    preceived = nil
+    ptransmitted = nil
     hrtb_ival = 1.0
     hrtb_retr_ival = 60.0
-    rtpp_class = None
-
-    def __init__(self, global_config, *address, **kwargs):
-        //print 'Rtp_proxy_client', address
-        no_version_check = False
-        if kwargs.has_key('no_version_check'):
-            no_version_check = kwargs['no_version_check']
-            del kwargs['no_version_check']
-        if len(address) == 0 and kwargs.has_key('spath'):
-            a = kwargs['spath']
-            del kwargs['spath']
-            if a.startswith('udp:'):
-                a = a.split(':', 2)
-                if len(a) == 2:
-                    rtppa = (a[1], 22222)
-                else:
-                    rtppa = (a[1], int(a[2]))
-                self.proxy_address = rtppa[0]
-                kwargs['family'] = socket.AF_INET
-                self.rtpp_class = Rtp_proxy_client_udp
-            elif a.startswith('udp6:'):
-                proto, a = a.split(':', 1)
-                if not a.endswith(']'):
-                    a = a.rsplit(':', 1)
-                    if len(a) == 1:
-                        rtp_proxy_host, rtp_proxy_port = a[0], 22222
-                    else:
-                        rtp_proxy_host, rtp_proxy_port = (a[0], int(a[1]))
-                else:
-                    rtp_proxy_host, rtp_proxy_port = a, 22222
-                if not rtp_proxy_host.startswith('['):
-                    rtp_proxy_host = '[%s]' % rtp_proxy_host
-                rtppa = (rtp_proxy_host, rtp_proxy_port)
-                self.proxy_address = rtppa[0]
-                kwargs['family'] = socket.AF_INET6
-                self.rtpp_class = Rtp_proxy_client_udp
-            elif a.startswith('tcp:'):
-                a = a.split(':', 2)
-                if len(a) == 2:
-                    rtppa = (a[1], 22222)
-                else:
-                    rtppa = (a[1], int(a[2]))
-                self.proxy_address = rtppa[0]
-                kwargs['family'] = socket.AF_INET
-                self.rtpp_class = Rtp_proxy_client_stream
-            elif a.startswith('tcp6:'):
-                proto, a = a.split(':', 1)
-                if not a.endswith(']'):
-                    a = a.rsplit(':', 1)
-                    if len(a) == 1:
-                        rtp_proxy_host, rtp_proxy_port = a[0], 22222
-                    else:
-                        rtp_proxy_host, rtp_proxy_port = (a[0], int(a[1]))
-                else:
-                    rtp_proxy_host, rtp_proxy_port = a, 22222
-                if not rtp_proxy_host.startswith('['):
-                    rtp_proxy_host = '[%s]' % rtp_proxy_host
-                rtppa = (rtp_proxy_host, rtp_proxy_port)
-                self.proxy_address = rtppa[0]
-                kwargs['family'] = socket.AF_INET6
-                self.rtpp_class = Rtp_proxy_client_stream
-            else:
-                if a.startswith('unix:'):
-                    rtppa = a[5:]
-                elif a.startswith('cunix:'):
-                    rtppa = a[6:]
-                else:
-                    rtppa = a
-                self.proxy_address = global_config['_sip_address']
-                kwargs['family'] = socket.AF_UNIX
-                self.rtpp_class = Rtp_proxy_client_stream
-            self.rtpp_class.__init__(self, global_config, rtppa, **kwargs)
-        elif len(address) > 0 and type(address[0]) in (tuple, list):
-            self.rtpp_class = Rtp_proxy_client_udp
-            Rtp_proxy_client_udp.__init__(self, global_config, *address, \
-              **kwargs)
-            self.proxy_address = address[0]
-        else:
-            self.rtpp_class = Rtp_proxy_client_stream
-            Rtp_proxy_client_stream.__init__(self, global_config, *address, \
-              **kwargs)
-            self.proxy_address = global_config['_sip_address']
-        if not no_version_check:
-            self.version_check()
-        else:
-            self.caps_done = True
-            self.online = True
 */
-func (self *Rtp_proxy_client) SendCommand(cmd string, cb func(string)) {
-    self.client.send_command(cmd, cb)
+
+func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (*Rtp_proxy_client_base, error) {
+    var err error
+    var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr, *Rtp_proxy_opts) (rtp_proxy_transport, error)
+    self := &Rtp_proxy_client_base{
+        me          : me,
+        caps_done   : false,
+        shut_down   : false,
+        hrtb_retr_ival  : 60 * time.Second,
+    }
+    //print "Rtp_proxy_client_base", address
+    if address == nil && opts.spath() != nil {
+        var rtppa net.Addr
+        a := *opts.spath()
+        if strings.HasPrefix(a, "udp:") {
+            tmp := strings.SplitN(a, ":", 3)
+            if len(tmp) == 2 {
+                rtppa, err = net.ResolveUDPAddr("udp", tmp[1] + ":22222")
+            } else {
+                rtppa, err = net.ResolveUDPAddr("udp", tmp[1] + ":" + tmp[2])
+            }
+            if err != nil { return nil, err }
+            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+            if err != nil { return nil, err }
+            rtpp_class = NewRtp_proxy_client_udp
+        } else if strings.HasPrefix(a, "udp6:") {
+            tmp := strings.SplitN(a, ":", 2)
+            a := tmp[1]
+            rtp_proxy_host, rtp_proxy_port := a, "22222"
+            if a[len(a)-1] != ']' {
+                idx := strings.LastIndexByte(a, ':')
+                if idx < 0 {
+                    rtp_proxy_host = a
+                } else {
+                    rtp_proxy_host, rtp_proxy_port = a[:idx], a[idx+1:]
+                }
+            }
+            if rtp_proxy_host[0] != '[' {
+                rtp_proxy_host = "[" + rtp_proxy_host + "]"
+            }
+            rtppa, err = net.ResolveUDPAddr("udp", rtp_proxy_host + ":" + rtp_proxy_port)
+            if err != nil { return nil, err }
+            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+            if err != nil { return nil, err }
+            rtpp_class = NewRtp_proxy_client_udp
+        } else if strings.HasPrefix(a, "tcp:") {
+            tmp := strings.SplitN(a, ":", 3)
+            if len(tmp) == 2 {
+                rtppa, err = net.ResolveTCPAddr("tcp", tmp[1] + ":22222")
+            } else {
+                rtppa, err = net.ResolveTCPAddr("tcp", tmp[1] + ":" + tmp[2])
+            }
+            if err != nil { return nil, err }
+            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+            if err != nil { return nil, err }
+            rtpp_class = NewRtp_proxy_client_stream
+        } else if strings.HasPrefix(a, "tcp6:") {
+            tmp := strings.SplitN(a, ":", 2)
+            a := tmp[1]
+            rtp_proxy_host, rtp_proxy_port := a, "22222"
+            if a[len(a)-1] != ']' {
+                idx := strings.LastIndexByte(a, ':')
+                if idx < 0 {
+                    rtp_proxy_host = a
+                } else {
+                    rtp_proxy_host, rtp_proxy_port = a[:idx], a[idx+1:]
+                }
+            }
+            if rtp_proxy_host[0] != '[' {
+                rtp_proxy_host = "[" + rtp_proxy_host + "]"
+            }
+            rtppa, err = net.ResolveTCPAddr("tcp", rtp_proxy_host + ":" + rtp_proxy_port)
+            if err != nil { return nil, err }
+            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+            if err != nil { return nil, err }
+            rtpp_class = NewRtp_proxy_client_stream
+        } else {
+            if strings.HasPrefix(a, "unix:") {
+                rtppa, err = net.ResolveUnixAddr("unix", a[5:])
+            } else if strings.HasPrefix(a, "cunix:") {
+                rtppa, err = net.ResolveUnixAddr("unix", a[6:])
+            } else {
+                rtppa, err = net.ResolveUnixAddr("unix", a)
+            }
+            self.proxy_address = global_config.SipAddress().String()
+            rtpp_class = NewRtp_proxy_client_stream
+        }
+        self.transport, err = rtpp_class(self, global_config, rtppa, opts)
+        if err != nil {
+            return nil, err
+        }
+    } else if strings.HasPrefix(address.Network(), "udp") {
+        self.transport, err = NewRtp_proxy_client_udp(self, global_config, address, opts)
+        if err != nil {
+            return nil, err
+        }
+        self.proxy_address, _, err = net.SplitHostPort(address.String())
+        if err != nil { return nil, err }
+    } else {
+        self.transport, err = NewRtp_proxy_client_stream(self, global_config, address, opts)
+        if err != nil {
+            return nil, err
+        }
+        self.proxy_address = global_config.SipAddress().String()
+    }
+    if ! opts.no_version_check() {
+        self.version_check()
+    } else {
+        self.caps_done = true
+        self.online = true
+    }
+    return self, nil
+}
+
+func (self *Rtp_proxy_client_base) SendCommand(cmd string, cb func(string)) {
+    self.transport.send_command(cmd, cb)
 }
 /*
     def reconnect(self, *args, **kwargs):
         self.rtpp_class.reconnect(self, *args, **kwargs)
+*/
 
-    def version_check(self):
-        if self.shut_down:
-            return
-        self.send_command('V', self.version_check_reply)
+func (self *Rtp_proxy_client_base) version_check() {
+    if self.shut_down {
+        return
+    }
+    self.transport.send_command("V", self.version_check_reply)
+}
 
-    def version_check_reply(self, version):
-        if self.shut_down:
-            return
-        if version == '20040107':
-            self.go_online()
-        elif self.online:
-            self.go_offline()
-        else:
-            Timeout(self.version_check, randomize(self.hrtb_retr_ival, 0.1))
-
+func (self *Rtp_proxy_client_base) version_check_reply(version string) {
+    if self.shut_down {
+        return
+    }
+    if version == "20040107" {
+        self.me.GoOnline()
+    } else if self.online {
+        self.me.GoOffline()
+    } else {
+        t := NewTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
+        t.Start()
+    }
+}
+/*
     def heartbeat(self):
-        //print 'heartbeat', self, self.address
+        //print "heartbeat", self, self.address
         if self.shut_down:
             return
-        self.send_command('Ib', self.heartbeat_reply)
+        self.send_command("Ib", self.heartbeat_reply)
 
     def heartbeat_reply(self, stats):
-        //print 'heartbeat_reply', self.address, stats, self.online
+        //print "heartbeat_reply", self.address, stats, self.online
         if self.shut_down:
             return
-        if not self.online:
+        if ! self.online:
             return
-        if stats == None:
-            self.active_sessions = None
+        if stats == nil:
+            self.active_sessions = nil
             self.go_offline()
         else:
             sessions_created = active_sessions = active_streams = preceived = ptransmitted = 0
             for line in stats.splitlines():
-                line_parts = line.split(':', 1)
-                if line_parts[0] == 'sessions created':
+                line_parts = line.split(":", 1)
+                if line_parts[0] == "sessions created":
                     sessions_created = int(line_parts[1])
-                elif line_parts[0] == 'active sessions':
+                elif line_parts[0] == "active sessions":
                     active_sessions = int(line_parts[1])
-                elif line_parts[0] == 'active streams':
+                elif line_parts[0] == "active streams":
                     active_streams = int(line_parts[1])
-                elif line_parts[0] == 'packets received':
+                elif line_parts[0] == "packets received":
                     preceived = int(line_parts[1])
-                elif line_parts[0] == 'packets transmitted':
+                elif line_parts[0] == "packets transmitted":
                     ptransmitted = int(line_parts[1])
                 self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
         Timeout(self.heartbeat, randomize(self.hrtb_ival, 0.1))
+*/
 
-    def go_online(self):
-        if self.shut_down:
-            return
-        if not self.online:
-            rtpp_cc = Rtpp_caps_checker(self)
-            self.online = True
-            self.heartbeat()
+func (self *Rtp_proxy_client_base) GoOnline() {
+    if self.shut_down {
+        return
+    }
+    if ! self.online {
+        rtpp_cc = Rtpp_caps_checker(self)
+        self.online = true
+        self.heartbeat()
+    }
+}
 
-    def go_offline(self):
-        if self.shut_down:
-            return
-        //print 'go_offline', self.address, self.online
-        if self.online:
-            self.online = False
-            Timeout(self.version_check, randomize(self.hrtb_retr_ival, 0.1))
-
+func (self *Rtp_proxy_client_base) GoOffline() {
+    if self.shut_down {
+        return
+    }
+    //print "go_offline", self.address, self.online
+    if self.online {
+        self.online = false
+        Timeout(self.version_check, randomize(self.hrtb_retr_ival, 0.1))
+    }
+}
+/*
     def update_active(self, active_sessions, sessions_created, active_streams, preceived, ptransmitted):
         self.sessions_created = sessions_created
         self.active_sessions = active_sessions
@@ -283,9 +365,9 @@ func (self *Rtp_proxy_client) SendCommand(cmd string, cb func(string)) {
     def shutdown(self):
         if self.shut_down: // do not crash when shutdown() called twice
             return
-        self.shut_down = True
+        self.shut_down = true
         self.rtpp_class.shutdown(self)
-        self.rtpp_class = None
+        self.rtpp_class = nil
 
     def get_rtpc_delay(self):
         self.rtpp_class.get_rtpc_delay(self)

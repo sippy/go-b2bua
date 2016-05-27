@@ -37,11 +37,11 @@ type local4remote struct {
     cache_r2l       map[string]*sippy_conf.HostPort
     cache_r2l_old   map[string]*sippy_conf.HostPort
     cache_l2s       map[string]*udpServer
-    handleIncoming  SipPacketReceiver
+    handleIncoming  UdpPacketReceiver
     fixed           bool
 }
 
-func NewLocal4Remote(config sippy_conf.Config, handleIncoming SipPacketReceiver) (*local4remote, error) {
+func NewLocal4Remote(config sippy_conf.Config, handleIncoming UdpPacketReceiver) (*local4remote, error) {
     self := &local4remote{
         config          : config,
         cache_r2l       : make(map[string]*sippy_conf.HostPort),

@@ -44,6 +44,13 @@ func ParseSipServer(body string) ([]SipHeader, error) {
     } }, nil
 }
 
+func NewSipServer(body string) *SipServer {
+    return &SipServer{
+        normalName  : _sip_server_name,
+        Server      : body,
+    }
+}
+
 func (self *SipServer) Body() string {
     return self.Server
 }
