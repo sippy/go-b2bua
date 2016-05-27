@@ -74,17 +74,7 @@ func getnretrans(first_retr, timeout float64) int64 {
     }
     return n
 }
-/*
-class Rtp_proxy_client_udp(object):
-    pending_requests = nil
-    is_local = false
-    worker = nil
-    uopts = nil
-    global_config = nil
-    delay_flt = nil
-    ploss_out_rate = 0.0
-    pdelay_out_max = 0.0
-*/
+
 func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (rtp_proxy_transport, error) {
     var err error
 

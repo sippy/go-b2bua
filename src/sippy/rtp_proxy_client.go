@@ -27,9 +27,11 @@
 package sippy
 
 import (
+    "bufio"
     "math/rand"
     "net"
     "time"
+    "strconv"
     "strings"
 
     "sippy/conf"
@@ -75,9 +77,19 @@ type Rtp_proxy_client_base struct {
     online          bool
     sbind_supported bool
     tnot_supported  bool
+    copy_supported  bool
+    stat_supported  bool
+    wdnt_supported  bool
     caps_done       bool
     shut_down       bool
+    active_sessions int64
+    sessions_created int64
+    active_streams  int64
+    preceived       int64
+    ptransmitted    int64
     hrtb_retr_ival  time.Duration
+    hrtb_ival       time.Duration
+    _CAPSTABLE      []struct{ vers string; attr *bool }
 }
 
 type rtp_proxy_transport interface {
@@ -104,39 +116,7 @@ func (self *Rtp_proxy_client_base) TNotSupported() bool {
 func (self *Rtp_proxy_client_base) GetProxyAddress() string {
     return self.proxy_address
 }
-
-func randomize(x time.Duration, p float64) time.Duration {
-    return time.Duration(float64(x) * (1.0 + p * (1.0 - 2.0 * rand.Float64())))
-}
-
 /*
-CAPSTABLE = {"20071218":"copy_supported", "20080403":"stat_supported", \
-  "20081224":"tnot_supported", "20090810":"sbind_supported", \
-  "20150617":"wdnt_supported"}
-
-class Rtpp_caps_checker(object):
-    caps_requested = 0
-    caps_received = 0
-    rtpc = nil
-
-    def __init__(self, rtpc):
-        self.rtpc = rtpc
-        rtpc.caps_done = false
-        for vers in CAPSTABLE.iterkeys():
-            self.caps_requested += 1
-            rtpc.send_command("VF %s" % vers, self.caps_query_done, vers)
-
-    def caps_query_done(self, result, vers):
-        self.caps_received -= 1
-        vname = CAPSTABLE[vers]
-        if result == "1":
-            setattr(self.rtpc, vname, true)
-        else:
-            setattr(self.rtpc, vname, false)
-        if self.caps_received == 0:
-            self.rtpc.caps_done = true
-            self.rtpc = nil
-
 class Rtp_proxy_client_base(Rtp_proxy_client_udp, Rtp_proxy_client_stream):
     worker = nil
     address = nil
@@ -162,10 +142,18 @@ func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf
     var err error
     var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr, *Rtp_proxy_opts) (rtp_proxy_transport, error)
     self := &Rtp_proxy_client_base{
-        me          : me,
-        caps_done   : false,
-        shut_down   : false,
+        me              : me,
+        caps_done       : false,
+        shut_down       : false,
         hrtb_retr_ival  : 60 * time.Second,
+        hrtb_ival       : time.Second,
+    }
+    self._CAPSTABLE = []struct{ vers string; attr *bool }{
+        { "20071218", &self.copy_supported },
+        { "20080403", &self.stat_supported },
+        { "20081224", &self.tnot_supported },
+        { "20090810", &self.sbind_supported },
+        { "20150617", &self.wdnt_supported },
     }
     //print "Rtp_proxy_client_base", address
     if address == nil && opts.spath() != nil {
@@ -299,46 +287,58 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
         t.Start()
     }
 }
-/*
-    def heartbeat(self):
-        //print "heartbeat", self, self.address
-        if self.shut_down:
-            return
-        self.send_command("Ib", self.heartbeat_reply)
 
-    def heartbeat_reply(self, stats):
-        //print "heartbeat_reply", self.address, stats, self.online
-        if self.shut_down:
-            return
-        if ! self.online:
-            return
-        if stats == nil:
-            self.active_sessions = nil
-            self.go_offline()
-        else:
-            sessions_created = active_sessions = active_streams = preceived = ptransmitted = 0
-            for line in stats.splitlines():
-                line_parts = line.split(":", 1)
-                if line_parts[0] == "sessions created":
-                    sessions_created = int(line_parts[1])
-                elif line_parts[0] == "active sessions":
-                    active_sessions = int(line_parts[1])
-                elif line_parts[0] == "active streams":
-                    active_streams = int(line_parts[1])
-                elif line_parts[0] == "packets received":
-                    preceived = int(line_parts[1])
-                elif line_parts[0] == "packets transmitted":
-                    ptransmitted = int(line_parts[1])
-                self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
-        Timeout(self.heartbeat, randomize(self.hrtb_ival, 0.1))
-*/
+func (self *Rtp_proxy_client_base) heartbeat() {
+    //print "heartbeat", self, self.address
+    if self.shut_down {
+        return
+    }
+    self.transport.send_command("Ib", self.heartbeat_reply)
+}
+
+func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
+    //print "heartbeat_reply", self.address, stats, self.online
+    if self.shut_down || ! self.online {
+        return
+    }
+    if stats == "" {
+        self.active_sessions = 0
+        self.me.GoOffline()
+    } else {
+        sessions_created := int64(0)
+        active_sessions := int64(0)
+        active_streams := int64(0)
+        preceived := int64(0)
+        ptransmitted := int64(0)
+        scanner := bufio.NewScanner(strings.NewReader(stats))
+        for scanner.Scan() {
+            line_parts := strings.SplitN(scanner.Text(), ":", 2)
+            if len(line_parts) != 2 { continue }
+            switch line_parts[0] {
+            case "sessions created":
+                sessions_created, _ = strconv.ParseInt(line_parts[1], 10, 64)
+            case "active sessions":
+                active_sessions, _ = strconv.ParseInt(line_parts[1], 10, 64)
+            case "active streams":
+                active_streams, _ = strconv.ParseInt(line_parts[1], 10, 64)
+            case "packets received":
+                preceived, _ = strconv.ParseInt(line_parts[1], 10, 64)
+            case "packets transmitted":
+                ptransmitted, _ = strconv.ParseInt(line_parts[1], 10, 64)
+            }
+        }
+        self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
+    }
+    t := NewTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 0.1), 1, nil)
+    t.Start()
+}
 
 func (self *Rtp_proxy_client_base) GoOnline() {
     if self.shut_down {
         return
     }
     if ! self.online {
-        rtpp_cc = Rtpp_caps_checker(self)
+        NewRtpp_caps_checker(self)
         self.online = true
         self.heartbeat()
     }
@@ -351,17 +351,19 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     //print "go_offline", self.address, self.online
     if self.online {
         self.online = false
-        Timeout(self.version_check, randomize(self.hrtb_retr_ival, 0.1))
+        t := NewTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
+        t.Start()
     }
 }
-/*
-    def update_active(self, active_sessions, sessions_created, active_streams, preceived, ptransmitted):
-        self.sessions_created = sessions_created
-        self.active_sessions = active_sessions
-        self.active_streams = active_streams
-        self.preceived = preceived
-        self.ptransmitted = ptransmitted
 
+func (self *Rtp_proxy_client_base) update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted int64) {
+    self.sessions_created = sessions_created
+    self.active_sessions = active_sessions
+    self.active_streams = active_streams
+    self.preceived = preceived
+    self.ptransmitted = ptransmitted
+}
+/*
     def shutdown(self):
         if self.shut_down: // do not crash when shutdown() called twice
             return
@@ -372,3 +374,38 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     def get_rtpc_delay(self):
         self.rtpp_class.get_rtpc_delay(self)
 */
+
+type Rtpp_caps_checker struct {
+    caps_requested  int
+    caps_received   int
+    rtpc            *Rtp_proxy_client_base
+}
+
+func NewRtpp_caps_checker(rtpc *Rtp_proxy_client_base) *Rtpp_caps_checker {
+    self := &Rtpp_caps_checker{
+        rtpc    : rtpc,
+    }
+    rtpc.caps_done = false
+    self.caps_requested = len(rtpc._CAPSTABLE)
+    for _, it := range rtpc._CAPSTABLE {
+        rtpc.transport.send_command("VF " + it.vers, func(res string) { self.caps_query_done(res, it.attr) })
+    }
+    return self
+}
+
+func (self *Rtpp_caps_checker) caps_query_done(result string, attr *bool) {
+    self.caps_received += 1
+    if result == "1" {
+        *attr = true
+    } else {
+        *attr = false
+    }
+    if self.caps_received == self.caps_requested {
+        self.rtpc.caps_done = true
+        self.rtpc = nil
+    }
+}
+
+func randomize(x time.Duration, p float64) time.Duration {
+    return time.Duration(float64(x) * (1.0 + p * (1.0 - 2.0 * rand.Float64())))
+}
