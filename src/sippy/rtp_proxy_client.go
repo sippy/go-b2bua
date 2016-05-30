@@ -93,12 +93,13 @@ type Rtp_proxy_client_base struct {
 }
 
 type rtp_proxy_transport interface {
-    IsLocal() bool
+    is_local() bool
     send_command(string, func(string))
+    shutdown()
 }
 
 func (self *Rtp_proxy_client_base) IsLocal() bool {
-    return self.transport.IsLocal()
+    return self.transport.is_local()
 }
 
 func (self *Rtp_proxy_client_base) IsOnline() bool {
@@ -363,16 +364,18 @@ func (self *Rtp_proxy_client_base) update_active(active_sessions, sessions_creat
     self.preceived = preceived
     self.ptransmitted = ptransmitted
 }
-/*
-    def shutdown(self):
-        if self.shut_down: // do not crash when shutdown() called twice
-            return
-        self.shut_down = true
-        self.rtpp_class.shutdown(self)
-        self.rtpp_class = nil
 
+func (self *Rtp_proxy_client_base) Shutdown() {
+    if self.shut_down { // do not crash when shutdown() called twice
+        return
+    }
+    self.shut_down = true
+    self.transport.shutdown()
+    self.transport = nil
+}
+/*
     def get_rtpc_delay(self):
-        self.rtpp_class.get_rtpc_delay(self)
+        self.transport.get_rtpc_delay(self)
 */
 
 type Rtpp_caps_checker struct {

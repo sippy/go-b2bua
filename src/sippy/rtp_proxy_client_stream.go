@@ -48,13 +48,15 @@ type rtpp_req_stream struct {
 }
 
 type _RTPPLWorker struct {
-    userv   *Rtp_proxy_client_stream
-    s       net.Conn
+    userv           *Rtp_proxy_client_stream
+    s               net.Conn
+    shutdown_chan   chan int
 }
 
 func NewRTPPLWorker(userv *Rtp_proxy_client_stream) *_RTPPLWorker {
     self := &_RTPPLWorker{
-        userv   : userv,
+        userv           : userv,
+        shutdown_chan   : make(chan int, 1),
     }
     self.connect()
     go self.run()
@@ -143,6 +145,7 @@ func (self *_RTPPLWorker) run() {
             go self.userv.register_delay(rtpc_delay)
         }
     }
+    self.shutdown_chan <- 1
 }
 
 type Rtp_proxy_client_stream struct {
@@ -150,7 +153,7 @@ type Rtp_proxy_client_stream struct {
     nworkers    int
     workers     []*_RTPPLWorker
     delay_flt   sippy_math.RecFilter
-    is_local    bool
+    _is_local    bool
     wi          chan *rtpp_req_stream
 }
 /*
@@ -178,9 +181,9 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         wi          : make(chan *rtpp_req_stream),
     }
     if strings.HasPrefix(address.Network(), "unix") {
-        self.is_local = true
+        self._is_local = true
     } else {
-        self.is_local = false
+        self._is_local = false
     }
     //self.wi_available = Condition()
     //self.wi = []
@@ -190,8 +193,8 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
     return self, nil
 }
 
-func (self *Rtp_proxy_client_stream) IsLocal() bool {
-    return self.is_local
+func (self *Rtp_proxy_client_stream) is_local() bool {
+    return self._is_local
 }
 
 func (self *Rtp_proxy_client_stream) send_command(command string, result_callback func(string)) {
@@ -208,16 +211,15 @@ func (self *Rtp_proxy_client_stream) send_command(command string, result_callbac
         for i in range(0, self.nworkers):
             self.workers.append(_RTPPLWorker(self))
         self.delay_flt = recfilter(0.95, 0.25)
-
-    def shutdown(self):
-        self.wi_available.acquire()
-        self.wi.append(nil)
-        self.wi_available.notify()
-        self.wi_available.release()
-        for rworker in self.workers:
-            rworker.join()
-        self.workers = nil
 */
+func (self *Rtp_proxy_client_stream) shutdown() {
+    self.wi <- nil
+    for _, rworker := range self.workers {
+        <-rworker.shutdown_chan
+    }
+    self.workers = nil
+}
+
 func (self *Rtp_proxy_client_stream) register_delay(rtpc_delay time.Duration) {
     self.delay_flt.Apply(rtpc_delay.Seconds())
 }

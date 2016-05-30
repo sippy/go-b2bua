@@ -99,7 +99,7 @@ func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_c
     return self, err
 }
 
-func (*Rtp_proxy_client_udp) IsLocal() bool {
+func (*Rtp_proxy_client_udp) is_local() bool {
     return false
 }
 
@@ -178,11 +178,12 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_conf
             self.worker.shutdown()
             self.worker = Udp_server(self.global_config, self.uopts)
             self.delay_flt = recfilter(0.95, 0.25)
-
-    def shutdown(self):
-        self.worker.shutdown()
-        self.worker = nil
-
+*/
+func (self *Rtp_proxy_client_udp) shutdown() {
+    self.worker.Shutdown()
+    self.worker = nil
+}
+/*
     def get_rtpc_delay(self):
         return self.delay_flt.lastval
 
