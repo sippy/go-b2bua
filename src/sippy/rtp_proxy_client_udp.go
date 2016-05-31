@@ -92,7 +92,7 @@ func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_c
     self.uopts = NewUdpServerOpts(opts.bind_address(), self.process_reply)
     //self.uopts.ploss_out_rate = self.ploss_out_rate
     //self.uopts.pdelay_out_max = self.pdelay_out_max
-    if opts.Nworkers != nil {
+    if opts != nil && opts.Nworkers != nil {
         self.uopts.nworkers = *opts.Nworkers
     }
     self.worker, err = NewUdpServer(global_config, self.uopts)

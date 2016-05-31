@@ -170,7 +170,7 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         }
     }
     nworkers := 1
-    if opts.Nworkers != nil {
+    if opts != nil && opts.Nworkers != nil {
         nworkers = *opts.Nworkers
     }
     self := &Rtp_proxy_client_stream{

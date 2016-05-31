@@ -209,7 +209,14 @@ type udpServer struct {
 }
 
 func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, error) {
-    laddress, err := net.ResolveUDPAddr("udp", uopts.laddress.String())
+    var laddress *net.UDPAddr
+    var err error
+
+    if uopts.laddress != nil {
+        laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
+    } else {
+        laddress, err = net.ResolveUDPAddr("udp", ":0")
+    }
     if err != nil { return nil, err }
     skt, err := net.ListenUDP("udp", laddress)
     if err != nil { return nil, err }
