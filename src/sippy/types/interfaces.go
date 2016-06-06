@@ -80,6 +80,7 @@ type SipMsg interface {
     GetSource() *sippy_conf.HostPort
     GetFirstHF(string) sippy_header.SipHeader
     GetHFs(string) []sippy_header.SipHeader
+    GetSL() string
 }
 
 type SipRequest interface {
@@ -101,9 +102,10 @@ type SipResponse interface {
     GetSCode() (int, string)
     SetSCode(int, string)
     GetSCodeNum() int
+    GetSCodeReason() string
     GetSipWWWAuthenticate() *sippy_header.SipWWWAuthenticate
     GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate
-    SetReason(string)
+    SetSCodeReason(string)
     GetCopy() SipResponse
 }
 

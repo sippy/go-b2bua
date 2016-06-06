@@ -141,7 +141,7 @@ func (self *sipRequest) GetTo() *sippy_header.SipTo {
     return self.to
 }
 
-func (self *sipRequest) getSL() string {
+func (self *sipRequest) GetSL() string {
     return self.method + " " + self.ruri.String() + " " + self.sipver
 }
 

@@ -192,7 +192,7 @@ func (self *sipAddress) GetCopy() *sipAddress {
     return &ret
 }
 
-func (self *sipAddress) getParam(name string) string {
+func (self *sipAddress) GetParam(name string) string {
     ret, ok := self.params[name]
     if !ok || ret == nil {
         return ""

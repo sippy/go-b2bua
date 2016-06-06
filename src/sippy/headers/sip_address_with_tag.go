@@ -56,7 +56,7 @@ func (self *sipAddressWithTag) GenTag() {
 }
 
 func (self *sipAddressWithTag) GetTag() string {
-    return self.address.getParam("tag")
+    return self.address.GetParam("tag")
 }
 
 func (self *sipAddressWithTag) SetTag(value string) {

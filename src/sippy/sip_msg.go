@@ -39,7 +39,7 @@ import (
 )
 
 type SipMsgDescendant interface {
-    getSL() string
+    GetSL() string
 }
 
 type sipMsg struct {
@@ -297,7 +297,7 @@ func (self *sipMsg) Bytes() []byte {
 }
 
 func (self *sipMsg) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
-    s := self.me.getSL() + "\r\n"
+    s := self.me.GetSL() + "\r\n"
     for _, via := range self.vias {
         s += via.LocalStr(hostport, compact) + "\r\n"
     }

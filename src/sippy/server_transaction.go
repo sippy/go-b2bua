@@ -163,7 +163,7 @@ func (self *serverTransaction) timerE() {
     self.cancelTeF()
     if self.state == TRYING || self.state == RINGING {
         if self.r487 != nil {
-            self.r487.SetReason("Request Expired")
+            self.r487.SetSCodeReason("Request Expired")
         }
         self.doCancel(/*rtime*/nil, /*req*/nil)
     }

@@ -98,7 +98,7 @@ func NewSipResponse(scode int, reason, sipver string, from *sippy_header.SipFrom
     return self
 }
 
-func (self *sipResponse) getSL() string {
+func (self *sipResponse) GetSL() string {
     return self.sipver + " " + strconv.Itoa(self.scode) + " " + self.reason
 }
 
@@ -124,6 +124,10 @@ func (self *sipResponse) GetSCodeNum() int {
     return self.scode
 }
 
-func (self *sipResponse) SetReason(reason string) {
+func (self *sipResponse) GetSCodeReason() string {
+    return self.reason
+}
+
+func (self *sipResponse) SetSCodeReason(reason string) {
     self.reason = reason
 }
