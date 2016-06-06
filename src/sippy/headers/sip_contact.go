@@ -71,7 +71,7 @@ func (self *SipContact) GetCopyAsIface() SipHeader {
 func ParseSipContact(body string) ([]SipHeader, error) {
     rval := []SipHeader{}
     if body == "*" {
-        rval = append(rval, &SipContact{ 
+        rval = append(rval, &SipContact{
             Asterisk     : true,
             compactName  : _sip_contact_name,
         })

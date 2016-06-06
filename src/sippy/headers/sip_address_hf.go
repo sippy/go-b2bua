@@ -79,7 +79,7 @@ func ParseSipAddressHF(body string) ([]*sipAddressHF, error) {
 
 func (self *sipAddressHF) getCopy() *sipAddressHF {
     return &sipAddressHF{
-        Address : self.Address.getCopy(),
+        Address : self.Address.GetCopy(),
     }
 }
 

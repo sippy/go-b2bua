@@ -52,7 +52,7 @@ func NewSipAddressWithTag(address *sipAddress, config sippy_conf.Config) *sipAdd
 }
 
 func (self *sipAddressWithTag) GenTag() {
-    self.address.setParam("tag", sippy_utils.GenTag())
+    self.address.SetParam("tag", sippy_utils.GenTag())
 }
 
 func (self *sipAddressWithTag) GetTag() string {
@@ -61,13 +61,13 @@ func (self *sipAddressWithTag) GetTag() string {
 
 func (self *sipAddressWithTag) SetTag(value string) {
     if value != "" {
-        self.address.setParam("tag", value)
+        self.address.SetParam("tag", value)
     }
 }
 
 func (self *sipAddressWithTag) getCopy() *sipAddressWithTag {
     return &sipAddressWithTag{
-        address : self.address.getCopy(),
+        address : self.address.GetCopy(),
     }
 }
 

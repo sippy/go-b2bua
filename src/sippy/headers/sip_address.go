@@ -177,7 +177,7 @@ func NewSipAddress(name string, url *SipURL) *sipAddress {
     }
 }
 
-func (self *sipAddress) getCopy() *sipAddress {
+func (self *sipAddress) GetCopy() *sipAddress {
     ret := *self
     ret.params = make(map[string]*string)
     for k, v := range self.params {
@@ -200,7 +200,7 @@ func (self *sipAddress) getParam(name string) string {
     return *ret
 }
 
-func (self *sipAddress) setParam(name, value string) {
+func (self *sipAddress) SetParam(name, value string) {
     self.params[name] = &value
 }
 
