@@ -309,7 +309,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         }
         self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
-    t := NewTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 0.1), 1, nil)
+    t := NewTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 1), 1, nil)
     t.Start()
 }
 
@@ -389,5 +389,5 @@ func (self *Rtpp_caps_checker) caps_query_done(result string, attr *bool) {
 }
 
 func randomize(x time.Duration, p float64) time.Duration {
-    return time.Duration(float64(x) * (1.0 + p * (1.0 - 2.0 * rand.Float64())))
+    return time.Duration(float64(x) * (1.0 + p * (1.0 - 2.0 * rand.Float64())) * float64(time.Second))
 }
