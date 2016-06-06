@@ -117,27 +117,6 @@ func (self *Rtp_proxy_client_base) TNotSupported() bool {
 func (self *Rtp_proxy_client_base) GetProxyAddress() string {
     return self.proxy_address
 }
-/*
-class Rtp_proxy_client_base(Rtp_proxy_client_udp, Rtp_proxy_client_stream):
-    worker = nil
-    address = nil
-    online = false
-    copy_supported = false
-    stat_supported = false
-    tnot_supported = false
-    sbind_supported = false
-    wdnt_supported = false
-    shut_down = false
-    proxy_address = nil
-    caps_done = false
-    sessions_created = nil
-    active_sessions = nil
-    active_streams = nil
-    preceived = nil
-    ptransmitted = nil
-    hrtb_ival = 1.0
-    hrtb_retr_ival = 60.0
-*/
 
 func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (*Rtp_proxy_client_base, error) {
     var err error

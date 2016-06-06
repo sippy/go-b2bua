@@ -156,11 +156,7 @@ type Rtp_proxy_client_stream struct {
     _is_local    bool
     wi          chan *rtpp_req_stream
 }
-/*
-class Rtp_proxy_client_stream(object):
-    wi_available = nil
-    wi = nil
-*/
+
 func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (rtp_proxy_transport, error) {
     var err error
     if address == nil {
