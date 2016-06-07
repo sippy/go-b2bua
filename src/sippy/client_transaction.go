@@ -196,7 +196,7 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
         }
     }
     self.startTeB(self.expires)
-    self.sip_tm.rcache_put(checksum, &rcache_entry{
+    self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
                                 userv : nil,
                                 data  : nil,
                                 address : nil,
@@ -268,7 +268,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             self.state = UACK
             self.ack_rAddr = rAddr
             self.ack_checksum = checksum
-            self.sip_tm.rcache_put(checksum, &rcache_entry{
+            self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
                                     userv : nil,
                                     data  : nil,
                                     address : nil,
@@ -279,7 +279,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             return
         }
     } else {
-        self.sip_tm.rcache_put(checksum, &rcache_entry{
+        self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
                                     userv : nil,
                                     data  : nil,
                                     address : nil,

@@ -274,6 +274,7 @@ type UA interface {
     GetAcct(*sippy_time.MonoTime) (time.Duration, time.Duration, bool, bool)
     GetCLI() string
     GetCLD() string
+    GetUasLossEmul() int
 }
 
 type baseTransaction interface {
@@ -300,6 +301,7 @@ type ServerTransaction interface {
     SetCancelCB(func(*sippy_time.MonoTime, SipRequest))
     SetNoackCB(func(*sippy_time.MonoTime))
     SendResponse(resp SipResponse, retrans bool, ack_cb func(SipRequest))
+    SendResponseWithLossEmul(resp SipResponse, retrans bool, ack_cb func(SipRequest), lossemul int)
     Cleanup()
     UpgradeToSessionLock(sync.Locker)
     SetServer(*sippy_header.SipServer)

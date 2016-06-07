@@ -178,7 +178,7 @@ func (self *serverTransaction) timerF() {
     //print("timerF", t.GetTID())
     self.cancelTeF()
     if self.state == RINGING && self.sip_tm.provisional_retr > 0 {
-        self.sip_tm.transmitData(self.userv, self.data, self.address, /*checksum*/ "", self.tid.CallId)
+        self.sip_tm.transmitData(self.userv, self.data, self.address, /*checksum*/ "", self.tid.CallId, 0)
         self.startTeF(time.Duration(self.sip_tm.provisional_retr))
     }
 }
@@ -210,7 +210,7 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         // Duplicate received, check that we have sent any response on this
         // request already
         if self.data != nil && len(self.data) > 0 {
-            self.sip_tm.transmitData(self.userv, self.data, self.address, checksum, self.tid.CallId)
+            self.sip_tm.transmitData(self.userv, self.data, self.address, checksum, self.tid.CallId, 0)
         }
         return
     }
@@ -231,7 +231,7 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         }
         // We have done with the transaction, no need to wait for timeout
         self.sip_tm.tserver_del(self.tid)
-        self.sip_tm.rcache_put(checksum, &rcache_entry{
+        self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
                                         userv : nil,
                                         data  : nil,
                                         address : nil,
@@ -242,6 +242,10 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
 }
 
 func (self *serverTransaction) SendResponse(resp sippy_types.SipResponse, retrans bool, ack_cb func(sippy_types.SipRequest)) {
+    self.SendResponseWithLossEmul(resp, retrans, ack_cb, 0)
+}
+
+func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResponse, retrans bool, ack_cb func(sippy_types.SipRequest), lossemul int) {
     if self.sip_tm == nil {
         return
     }
@@ -289,7 +293,7 @@ func (self *serverTransaction) SendResponse(resp sippy_types.SipResponse, retran
             need_cleanup = true
         }
     }
-    self.sip_tm.transmitData(self.userv, self.data, self.address, self.checksum, self.tid.CallId)
+    self.sip_tm.transmitData(self.userv, self.data, self.address, self.checksum, self.tid.CallId, lossemul)
     if need_cleanup {
         self.cleanup()
     }

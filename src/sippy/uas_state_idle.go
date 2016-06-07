@@ -73,7 +73,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetRTarget(req.GetContacts()[0].GetUrl().GetCopy())
     self.ua.UpdateRouting(self.ua.GetUasResp(), /*update_rtarget*/ false, /*reverse_routes*/ false)
     self.ua.SetRAddr0(self.ua.GetRAddr())
-    t.SendResponse(self.ua.GetUasResp(), false, nil)
+    t.SendResponseWithLossEmul(self.ua.GetUasResp(), false, nil, self.ua.GetUasLossEmul())
     self.ua.GetUasResp().GetTo().SetTag(self.ua.GetLTag())
     self.ua.SetLUri(sippy_header.NewSipFrom(self.ua.GetUasResp().GetTo().GetUri(), self.config))
     self.ua.SetRUri(sippy_header.NewSipTo(self.ua.GetUasResp().GetFrom().GetUri(), self.config))

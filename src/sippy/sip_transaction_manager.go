@@ -45,8 +45,8 @@ type SipRequestReceiver func(sippy_types.SipRequest) *sippy_types.Ua_context
 type sipTransactionManager struct {
     call_map        sippy_types.CallMap
     l4r             *local4remote
-    l1rcache        map[string]*rcache_entry
-    l2rcache        map[string]*rcache_entry
+    l1rcache        map[string]*sipTMRetransmitO
+    l2rcache        map[string]*sipTMRetransmitO
     rcache_lock     sync.Mutex
     shutdown_chan   chan int
     config          sippy_conf.Config
@@ -62,18 +62,19 @@ type sipTransactionManager struct {
     provisional_retr time.Duration
 }
 
-type rcache_entry struct {
-    userv   sippy_types.UdpServer
-    data    []byte
-    address *sippy_conf.HostPort
-    call_id string
+type sipTMRetransmitO struct {
+    userv       sippy_types.UdpServer
+    data        []byte
+    address     *sippy_conf.HostPort
+    call_id     string
+    lossemul    int
 }
 
 func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.CallMap) (*sipTransactionManager, error) {
     self := &sipTransactionManager{
         call_map        : call_map,
-        l1rcache        : make(map[string]*rcache_entry),
-        l2rcache        : make(map[string]*rcache_entry),
+        l1rcache        : make(map[string]*sipTMRetransmitO),
+        l2rcache        : make(map[string]*sipTMRetransmitO),
         shutdown_chan   : make(chan int),
         config          : config,
         tclient         : make(map[sippy_header.TID]sippy_types.ClientTransaction),
@@ -99,7 +100,7 @@ func (self *sipTransactionManager) Run() {
 
 func (self *sipTransactionManager) rCachePurge() {
     self.l2rcache = self.l1rcache
-    self.l1rcache = make(map[string]*rcache_entry)
+    self.l1rcache = make(map[string]*sipTMRetransmitO)
     self.l4r.rotateCache()
 }
 
@@ -124,13 +125,13 @@ func check1918(host string) bool {
     return false
 }
 
-func (self *sipTransactionManager) rcache_put(checksum string, entry *rcache_entry) {
+func (self *sipTransactionManager) rcache_put(checksum string, entry *sipTMRetransmitO) {
     self.rcache_lock.Lock()
     defer self.rcache_lock.Unlock()
     self.l1rcache[checksum] = entry
 }
 
-func (self *sipTransactionManager) rcache_get(checksum string) (entry *rcache_entry, ok bool) {
+func (self *sipTransactionManager) rcache_get(checksum string) (entry *sipTMRetransmitO, ok bool) {
     self.rcache_lock.Lock()
     defer self.rcache_lock.Unlock()
     entry, ok = self.l1rcache[checksum]
@@ -150,7 +151,7 @@ func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_co
         if retrans.data == nil {
             return
         }
-        self.transmitData(retrans.userv, retrans.data, retrans.address, "", retrans.call_id)
+        self.transmitData(retrans.userv, retrans.data, retrans.address, "", retrans.call_id, 0)
         return
     }
     if len(data) < 10 {
@@ -170,7 +171,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logError("can't parse SIP response from " + address.String() + ":" + err.Error())
-        self.rcache_put(checksum, &rcache_entry{
+        self.rcache_put(checksum, &sipTMRetransmitO{
                                     userv : nil,
                                     data  : nil,
                                     address : nil,
@@ -183,7 +184,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
 
     if resp.scode < 100 || resp.scode > 999 {
         self.logError("invalid status code in SIP response" + address.String() + ":\n" + string(data))
-        self.rcache_put(checksum, &rcache_entry{
+        self.rcache_put(checksum, &sipTMRetransmitO{
                                     userv : nil,
                                     data  : nil,
                                     address : nil,
@@ -214,10 +215,10 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
                 if resp.call_id != nil {
                     call_id = resp.call_id.CallId
                 }
-                self.transmitData(server, data, taddr, checksum, call_id)
+                self.transmitData(server, data, taddr, checksum, call_id, 0)
             }
         }
-        self.rcache_put(checksum, &rcache_entry{
+        self.rcache_put(checksum, &sipTMRetransmitO{
                                     userv : nil,
                                     data  : nil,
                                     address : nil,
@@ -253,7 +254,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
         }
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logError("can't parse SIP request from " + address.String() + ": " + err.Error())
-        self.rcache_put(checksum, &rcache_entry{
+        self.rcache_put(checksum, &sipTMRetransmitO{
                                     userv : nil,
                                     data  : nil,
                                     address : nil,
@@ -313,7 +314,7 @@ func (self *sipTransactionManager) NewClientTransaction(req sippy_types.SipReque
     self.tclient_lock.Unlock()
     t.StartTimers()
 
-    self.transmitData(userv, data, target, /*cachesum*/ "", /*call_id =*/ tid.CallId)
+    self.transmitData(userv, data, target, /*cachesum*/ "", /*call_id =*/ tid.CallId, 0)
     return t, nil
 }
 
@@ -350,7 +351,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
         // Drop and forget it - upper layer is unlikely to be interested
         // to seeing this anyway.
         //println("unmatched ACK transaction - ignoring")
-        self.rcache_put(checksum, &rcache_entry{
+        self.rcache_put(checksum, &sipTMRetransmitO{
                                         userv : nil,
                                         data  : nil,
                                         address : nil,
@@ -484,18 +485,27 @@ func (self *sipTransactionManager) SendResponse(resp sippy_types.SipResponse, lo
 
 func (self *sipTransactionManager) transmitMsg(userv sippy_types.UdpServer, msg sippy_types.SipMsg, address *sippy_conf.HostPort, cachesum string, call_id string) {
     data := msg.LocalStr(userv.GetLaddress(), false /* compact */)
-    self.transmitData(userv, []byte(data), address, cachesum, call_id)
+    self.transmitData(userv, []byte(data), address, cachesum, call_id, 0)
 }
 
-func (self *sipTransactionManager) transmitData(userv sippy_types.UdpServer, data []byte, address *sippy_conf.HostPort, cachesum, call_id string) {
-    userv.SendTo(data, address.Host.String(), address.Port.String())
-    self.config.SipLogger().Write(nil, call_id, "SENDING message to " + address.String() + ":\n" + string(data))
+func (self *sipTransactionManager) transmitData(userv sippy_types.UdpServer, data []byte, address *sippy_conf.HostPort, cachesum, call_id string, lossemul int /*=0*/) {
+    logop := "SENDING"
+    if lossemul == 0 {
+        userv.SendTo(data, address.Host.String(), address.Port.String())
+    } else {
+        logop = "DISCARDING"
+    }
+    self.config.SipLogger().Write(nil, call_id, logop + " message to " + address.String() + ":\n" + string(data))
     if len(cachesum) > 0 {
-        self.rcache_put(cachesum, &rcache_entry{
-            userv : userv,
-            data : data,
-            address : address.GetCopy(),
-            call_id : call_id,
+        if lossemul > 0 {
+            lossemul--
+        }
+        self.rcache_put(cachesum, &sipTMRetransmitO{
+            userv       : userv,
+            data        : data,
+            address     : address.GetCopy(),
+            call_id     : call_id,
+            lossemul    : lossemul,
         })
     }
 }

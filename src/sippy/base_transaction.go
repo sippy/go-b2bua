@@ -112,7 +112,7 @@ func (self *baseTransaction) timerA() {
     if self.sip_tm == nil {
         return
     }
-    self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id*/ self.tid.CallId)
+    self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id*/ self.tid.CallId, 0)
     self.tout *= 2
     self.teA = NewTimeout(self.timerA, self.lock, self.tout, 1, nil)
     self.teA.Start()

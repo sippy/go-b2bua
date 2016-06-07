@@ -1038,3 +1038,7 @@ func (self *ua) GetCLI() string {
     }
     return self.lUri.GetUrl().Username
 }
+
+func (self *ua) GetUasLossEmul() int {
+    return 0
+}
