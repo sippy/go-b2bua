@@ -28,7 +28,6 @@ package sippy_sdp
 
 import (
     "strings"
-    "time"
     "strconv"
     "sync/atomic"
 
@@ -38,7 +37,10 @@ import (
 var _sdp_session_id int64
 
 func init() {
-    _sdp_session_id = time.Now().UnixNano() / 1000000
+    buf := make([]byte, 6)
+    for i := 0; i < len(buf); i++ {
+        _sdp_session_id |= int64(buf[i]) << (uint(i) * 8)
+    }
 }
 
 type SdpOrigin struct {
