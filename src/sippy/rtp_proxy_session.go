@@ -57,6 +57,7 @@ type Rtp_proxy_session struct {
     caller_codecs           string
     callee_codecs           string
     origin                  *sippy_sdp.SdpOrigin
+    insert_nortpp           bool
 }
 
 type rtp_command_result struct {
@@ -95,6 +96,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         call_id         : call_id,
         from_tag        : from_tag,
         to_tag          : to_tag,
+        insert_nortpp   : false,
     }
     online_clients := []sippy_types.RtpProxyClient{}
     for _, cl := range rtp_proxy_clients {
@@ -377,6 +379,9 @@ func (self *Rtp_proxy_session) xxx_sdp_change_finish(address_port *rtp_command_r
     for _, s := range sects {
         if s.NeedsUpdate() {
             sdp_body.GetParsedBody().SetOHeader(self.origin)
+            if self.insert_nortpp {
+                sdp_body.GetParsedBody().AppendAHeader("nortpproxy=yes")
+            }
             sdp_body.SetNeedsUpdate(false)
             result_callback(sdp_body)
             return
