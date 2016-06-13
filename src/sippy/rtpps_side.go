@@ -67,11 +67,12 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     command := "U"
     self.owner.max_index = int(math.Max(float64(self.owner.max_index), float64(index)))
     if self.owner.rtp_proxy_client.SBindSupported() && self.raddress != nil {
-        if self.owner.rtp_proxy_client.IsLocal() && atype == "IP4" {
-            options += fmt.Sprintf("L%s", self.laddress)
-        } else if ! self.owner.rtp_proxy_client.IsLocal() {
-            options += fmt.Sprintf("R%s", self.raddress.Host.String())
-        }
+        //if self.owner.rtp_proxy_client.IsLocal() && atype == "IP4" {
+        //    options += fmt.Sprintf("L%s", self.laddress)
+        //} else if ! self.owner.rtp_proxy_client.IsLocal() {
+        //    options += fmt.Sprintf("R%s", self.raddress.Host.String())
+        //}
+        options += fmt.Sprintf("R%s", self.raddress.Host.String())
     }
     command += options
     if self.otherside.session_exists {
