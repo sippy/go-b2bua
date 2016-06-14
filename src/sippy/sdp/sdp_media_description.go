@@ -27,6 +27,7 @@
 package sippy_sdp
 
 import (
+    "fmt"
     "strings"
 
     "sippy/conf"
@@ -187,4 +188,14 @@ func (self *SdpMediaDescription) GetAHeaders() []string {
 
 func (self *SdpMediaDescription) SetAHeaders(a_headers []string) {
     self.a_headers = a_headers
+}
+
+func (self *SdpMediaDescription) SanityCheck() error {
+    switch {
+    case self.m_header == nil:
+        return fmt.Errorf("Mandatory \"m=\" SDP header is missing")
+    case self.c_header == nil:
+        return fmt.Errorf("Mandatory \"c=\" SDP header is missing")
+    }
+    return nil
 }

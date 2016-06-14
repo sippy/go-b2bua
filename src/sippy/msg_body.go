@@ -154,7 +154,12 @@ func (self *msgBody) parse() {
         }
     }
     if self.mtype == "application/sdp" {
-        self.parsed_body = ParseSdpBody(self.string_content)
+        parsed_body, err := ParseSdpBody(self.string_content)
+        if err == nil {
+            self.parsed_body = parsed_body
+        } else {
+            println("error parsing the SDP: " + err.Error())
+        }
     }
 }
 

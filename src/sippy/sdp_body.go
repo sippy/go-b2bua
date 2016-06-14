@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "fmt"
     "strings"
 
     "sippy/conf"
@@ -52,13 +53,10 @@ type sdpBody struct {
     c_header        *sippy_sdp.SdpConnecton
 }
 
-func ParseSdpBody(body string) *sdpBody {
+func ParseSdpBody(body string) (*sdpBody, error) {
     self := &sdpBody{
         a_headers       : make([]string, 0),
         sections        : make([]*sippy_sdp.SdpMediaDescription, 0),
-    }
-    if body == "" {
-        return self
     }
     current_snum := 0
     var c_header *sippy_sdp.SdpConnecton
@@ -119,7 +117,24 @@ func ParseSdpBody(body string) *sdpBody {
             self.c_header = c_header
         }
     }
-    return self
+    // Do some sanity checking, RFC4566
+    switch {
+    case self.v_header == nil:
+        return nil, fmt.Errorf("Mandatory \"v=\" SDP header is missing")
+    case self.o_header == nil:
+        return nil, fmt.Errorf("Mandatory \"o=\" SDP header is missing")
+    case self.s_header == nil:
+        return nil, fmt.Errorf("Mandatory \"s=\" SDP header is missing")
+    case self.t_header == nil:
+        return nil, fmt.Errorf("Mandatory \"t=\" SDP header is missing")
+    }
+    for _, sect := range self.sections {
+        if err := sect.SanityCheck(); err != nil {
+            return nil, err
+        }
+    }
+
+    return self, nil
 }
 
 func (self *sdpBody) first_half() []*sippy_sdp.Sdp_header_and_name {
