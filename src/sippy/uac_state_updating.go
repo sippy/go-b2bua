@@ -98,7 +98,12 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
     var event sippy_types.CCEvent
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
         event = NewCCEventRedirect(code, reason, body, resp.GetContacts()[0].GetUrl().GetCopy(), resp.GetRtime(), self.ua.GetOrigin())
-    } else if code == 408 || code == 481 {
+    } else {
+        event = NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
+        event.SetReason(reason_rfc3326)
+        self.ua.Enqueue(event)
+    }
+    if code == 408 || code == 481 {
         // If the response for a request within a dialog is a 481
         // (Call/Transaction Does Not Exist) or a 408 (Request Timeout), the UAC
         // SHOULD terminate the dialog.  A UAC SHOULD also terminate a dialog if
@@ -106,15 +111,14 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         // transaction would inform the TU about the timeout.)
         event = NewCCEventDisconnect(nil, resp.GetRtime(), self.ua.GetOrigin())
         event.SetReason(reason_rfc3326)
+        req := self.ua.GenRequest("BYE", nil, "", "", nil, event.GetExtraHeaders()...)
+        self.ua.IncLCSeq()
+        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
         self.ua.Enqueue(event)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(resp.GetRtime())
         return NewUaStateDisconnected(self.ua, resp.GetRtime(), self.ua.GetOrigin(), 0)
-    } else {
-        event = NewCCEventFail(code, reason, /*body,*/ resp.GetRtime(), self.ua.GetOrigin())
     }
-    event.SetReason(reason_rfc3326)
-    self.ua.Enqueue(event)
     return NewUaStateConnected(self.ua, nil, "")
 }
 
