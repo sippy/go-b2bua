@@ -65,6 +65,7 @@ type sipMsg struct {
     target              *sippy_conf.HostPort
     me                  SipMsgDescendant
     reason_hf           *sippy_header.SipReason
+    sip_warning         *sippy_header.SipWarning
     sip_www_authenticate *sippy_header.SipWWWAuthenticate
     sip_authorization   *sippy_header.SipAuthorization
     sip_proxy_authorization *sippy_header.SipProxyAuthorization
@@ -217,6 +218,8 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     case *sippy_header.SipReplaces:
     case *sippy_header.SipReason:
         self.reason_hf  = t
+    case *sippy_header.SipWarning:
+        self.sip_warning = t
     case nil:
         return
     }

@@ -238,6 +238,7 @@ type CCEventFail struct {
     challenge       sippy_header.SipHeader
     scode           int
     scode_reason    string
+    warning         *sippy_header.SipWarning
 }
 
 func NewCCEventFail(scode int, scode_reason string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventFail {

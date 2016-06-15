@@ -67,6 +67,7 @@ var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader
     "proxy-authorization": sippy_header.ParseSipProxyAuthorization,
     "replaces"          : sippy_header.ParseSipReplaces,
     "reason"            : sippy_header.ParseSipReason,
+    "warning"           : sippy_header.ParseSipWarning,
 }
 
 func ParseSipHeader(s string) ([]sippy_header.SipHeader, error) {

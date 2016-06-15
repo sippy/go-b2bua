@@ -121,6 +121,9 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         if code == 0 {
             code, reason = 500, "Failed"
         }
+        if event.warning != nil {
+            eh = append(eh, event.warning)
+        }
         self.ua.SendUasResponse(nil, code, reason, nil, nil, false, eh...)
         return NewUaStateConnected(self.ua, nil, ""), nil
     case *CCEventDisconnect:
