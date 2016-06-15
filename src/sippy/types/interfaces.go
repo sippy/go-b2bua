@@ -151,7 +151,7 @@ type UA interface {
     GetOrigin() string
     SetOrigin(string)
     HasOnLocalSdpChange() bool
-    OnLocalSdpChange(MsgBody, CCEvent, func(MsgBody))
+    OnLocalSdpChange(MsgBody, CCEvent, func(MsgBody)) error
     SetOnLocalSdpChange(OnLocalSdpChange)
     ResetOnLocalSdpChange()
     OnRemoteSdpChange(MsgBody, SipMsg, func(MsgBody))
@@ -348,7 +348,7 @@ type OnDisconnectListener func(*sippy_time.MonoTime, string, int)
 type OnFailureListener func(*sippy_time.MonoTime, string, int)
 type OnConnectListener func(*sippy_time.MonoTime, string)
 type OnDeadListener func()
-type OnLocalSdpChange func(MsgBody, CCEvent, func(MsgBody))
+type OnLocalSdpChange func(MsgBody, CCEvent, func(MsgBody)) error
 type OnRemoteSdpChange func(MsgBody, SipMsg, func(MsgBody))
 
 type RtpProxyClient interface {

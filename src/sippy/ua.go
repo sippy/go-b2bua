@@ -491,11 +491,11 @@ func (self *ua) SetOrigin(origin string) {
     self.origin = origin
 }
 
-func (self *ua) OnLocalSdpChange(body sippy_types.MsgBody, event sippy_types.CCEvent, cb func(sippy_types.MsgBody)) {
+func (self *ua) OnLocalSdpChange(body sippy_types.MsgBody, event sippy_types.CCEvent, cb func(sippy_types.MsgBody)) error {
     if self.on_local_sdp_change == nil {
-        return
+        return nil
     }
-    self.on_local_sdp_change(body, event, cb)
+    return self.on_local_sdp_change(body, event, cb)
 }
 
 func (self *ua) HasOnLocalSdpChange() bool {

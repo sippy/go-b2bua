@@ -268,6 +268,10 @@ func (self *CCEventFail) GetExtraHeaders() []sippy_header.SipHeader {
     return extra_headers
 }
 
+func (self *CCEventFail) SetWarning(text string) {
+    self.warning = sippy_header.NewSipWarning(text)
+}
+
 type CCEventRedirect struct {
     CCEventGeneric
     redirect_url    *sippy_header.SipURL

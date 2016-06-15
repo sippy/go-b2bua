@@ -188,7 +188,12 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil
         }
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            err := self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            if err != nil {
+                ev := NewCCEventFail(400, "Malformed SDP Body", event.GetRtime(), "")
+                ev.SetWarning(err.Error())
+                self.ua.Enqueue(ev)
+            }
             return nil, nil
         }
         req := self.ua.GenRequest("INVITE", body, "", "", nil, eh...)
