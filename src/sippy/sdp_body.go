@@ -133,7 +133,6 @@ func ParseSdpBody(body string) (*sdpBody, error) {
             return nil, err
         }
     }
-
     return self, nil
 }
 

@@ -121,7 +121,7 @@ type MsgBody interface {
     GetCopy() MsgBody
     NeedsUpdate() bool
     SetNeedsUpdate(bool)
-    GetParsedBody() ParsedMsgBody
+    GetParsedBody() (ParsedMsgBody, error)
     AppendAHeader(string)
 }
 

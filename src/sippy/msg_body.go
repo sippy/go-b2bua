@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "fmt"
     "strings"
 
     "sippy/conf"
@@ -94,18 +95,18 @@ func (self *genericMsgBody) AppendAHeader(string) {
     // NO OP
 }
 
-func (self *msgBody) GetParsedBody() sippy_types.ParsedMsgBody {
+func (self *msgBody) GetParsedBody() (sippy_types.ParsedMsgBody, error) {
     if self.parsed_body == nil {
-        self.parse()
+        err := self.parse()
+        if err != nil {
+            return nil, err
+        }
     }
-    return self.parsed_body
+    return self.parsed_body, nil
 }
 
-func (self *msgBody) parse() {
+func (self *msgBody) parse() error {
     self.parsed_body = newGenericMsgBody(self.string_content)
-    if self.string_content == "" {
-        return
-    }
     if strings.HasPrefix(self.mtype, "multipart/mixed;") {
         arr := strings.SplitN(self.mtype, ";", 2)
         mtheaders := arr[1]
@@ -118,7 +119,7 @@ func (self *msgBody) parse() {
             }
         }
         if mth_boundary == nil {
-            return
+            return fmt.Errorf("Error parsing the multipart message")
         }
         boundary := "--" + *mth_boundary
         for _, subsection := range strings.Split(self.string_content, boundary) {
@@ -158,9 +159,10 @@ func (self *msgBody) parse() {
         if err == nil {
             self.parsed_body = parsed_body
         } else {
-            println("error parsing the SDP: " + err.Error())
+            return fmt.Errorf("error parsing the SDP: %s", err.Error())
         }
     }
+    return nil
 }
 
 func (self *msgBody) String() string {

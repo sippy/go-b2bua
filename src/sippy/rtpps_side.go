@@ -117,9 +117,13 @@ func (self *_rtpps_side) update_result(result string, result_callback func(*rtp_
     })
 }
 
-func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
+func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
+    parsed_body, err := sdp_body.GetParsedBody()
+    if err != nil {
+        return err
+    }
     sects := []*sippy_sdp.SdpMediaDescription{}
-    for _, sect := range sdp_body.GetParsedBody().GetSections() {
+    for _, sect := range parsed_body.GetSections() {
         switch strings.ToLower(sect.GetMHeader().GetTransport()) {
         case "udp":
         case "udptl":
@@ -131,7 +135,7 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     if len(sects) == 0 {
         sdp_body.SetNeedsUpdate(false)
         result_callback(sdp_body)
-        return
+        return nil
     }
     formats := sects[0].GetMHeader().GetFormats()
     self.codecs = strings.Join(formats, ",")
@@ -141,12 +145,13 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
             options = "6"
         }
         self.update(sect.GetCHeader().GetAddr(), sect.GetMHeader().GetPort(),
-              func (res *rtp_command_result) { self._sdp_change_finish(res, sdp_body, sect, sects, result_callback) },
+              func (res *rtp_command_result) { self._sdp_change_finish(res, sdp_body, parsed_body, sect, sects, result_callback) },
               options, i, sect.GetCHeader().GetAType())
     }
+    return nil
 }
 
-func (self *_rtpps_side) _sdp_change_finish(address_port *rtp_command_result, sdp_body sippy_types.MsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
+func (self *_rtpps_side) _sdp_change_finish(address_port *rtp_command_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
     sect.SetNeedsUpdate(false)
     if address_port != nil {
         sect.GetCHeader().SetAType(address_port.family)
@@ -157,9 +162,9 @@ func (self *_rtpps_side) _sdp_change_finish(address_port *rtp_command_result, sd
     }
     for _, s := range sects {
         if s.NeedsUpdate() {
-            sdp_body.GetParsedBody().SetOHeader(self.origin)
+            parsed_body.SetOHeader(self.origin)
             if self.owner.insert_nortpp {
-                sdp_body.GetParsedBody().AppendAHeader("nortpproxy=yes")
+                parsed_body.AppendAHeader("nortpproxy=yes")
             }
             sdp_body.SetNeedsUpdate(false)
             result_callback(sdp_body)
