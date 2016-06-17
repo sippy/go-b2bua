@@ -765,10 +765,11 @@ func (self *ua) Enqueue(event sippy_types.CCEvent) {
     self.equeue = append(self.equeue, event)
 }
 
-func (self *ua) OnRemoteSdpChange(body sippy_types.MsgBody, req sippy_types.SipMsg, f func(x sippy_types.MsgBody)) {
+func (self *ua) OnRemoteSdpChange(body sippy_types.MsgBody, req sippy_types.SipMsg, f func(x sippy_types.MsgBody)) error {
     if self.on_remote_sdp_change != nil {
-        self.on_remote_sdp_change(body, req, f)
+        return self.on_remote_sdp_change(body, req, f)
     }
+    return nil
 }
 
 func (self *ua) ShouldUseRefer() bool {

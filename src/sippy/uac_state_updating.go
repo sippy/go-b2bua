@@ -29,6 +29,7 @@ package sippy
 import (
     "fmt"
 
+    "sippy/headers"
     "sippy/types"
 )
 
@@ -83,7 +84,11 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         event := NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
-                self.ua.OnRemoteSdpChange(body, resp, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+                if err := self.ua.OnRemoteSdpChange(body, resp, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) }); err != nil {
+                    ev := NewCCEventFail(502, "Bad Gateway", event.GetRtime(), "")
+                    ev.SetWarning(fmt.Sprintf("Malformed SDP Body received from downstream: \"%s\"", err.Error()))
+                    return self.updateFailed(ev)
+                }
                 return NewUaStateConnected(self.ua, nil, "")
             } else {
                 self.ua.SetRSDP(body.GetCopy())
@@ -101,25 +106,33 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
     } else {
         event = NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event.SetReason(reason_rfc3326)
-        self.ua.Enqueue(event)
     }
     if code == 408 || code == 481 {
-        // If the response for a request within a dialog is a 481
-        // (Call/Transaction Does Not Exist) or a 408 (Request Timeout), the UAC
-        // SHOULD terminate the dialog.  A UAC SHOULD also terminate a dialog if
-        // no response at all is received for the request (the client
-        // transaction would inform the TU about the timeout.)
-        event = NewCCEventDisconnect(nil, resp.GetRtime(), self.ua.GetOrigin())
-        event.SetReason(reason_rfc3326)
-        req := self.ua.GenRequest("BYE", nil, "", "", nil, event.GetExtraHeaders()...)
-        self.ua.IncLCSeq()
-        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
-        self.ua.Enqueue(event)
-        self.ua.CancelCreditTimer()
-        self.ua.SetDisconnectTs(resp.GetRtime())
-        return NewUaStateDisconnected(self.ua, resp.GetRtime(), self.ua.GetOrigin(), 0)
+        // (Call/Transaction Does Not Exist) or a 408 (Request Timeout), the
+        // UAC SHOULD terminate the dialog.  A UAC SHOULD also terminate a
+        // dialog if no response at all is received for the request (the
+        // client transaction would inform the TU about the timeout.)
+        return self.updateFailed(event)
     }
+    self.ua.Enqueue(event)
     return NewUaStateConnected(self.ua, nil, "")
+}
+
+func (self *UacStateUpdating) updateFailed(event sippy_types.CCEvent) sippy_types.UaState {
+    self.ua.Enqueue(event)
+    eh := []sippy_header.SipHeader{}
+    if event.GetReason() != nil {
+        eh = append(eh, event.GetReason())
+    }
+    req := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+    self.ua.IncLCSeq()
+    self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
+
+    self.ua.CancelCreditTimer()
+    self.ua.SetDisconnectTs(event.GetRtime())
+    event = NewCCEventDisconnect(nil, event.GetRtime(), self.ua.GetOrigin())
+    self.ua.Enqueue(event)
+    return NewUaStateDisconnected(self.ua, event.GetRtime(), self.ua.GetOrigin(), 0)
 }
 
 func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {

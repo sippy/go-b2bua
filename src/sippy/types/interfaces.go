@@ -154,7 +154,7 @@ type UA interface {
     OnLocalSdpChange(MsgBody, CCEvent, func(MsgBody)) error
     SetOnLocalSdpChange(OnLocalSdpChange)
     ResetOnLocalSdpChange()
-    OnRemoteSdpChange(MsgBody, SipMsg, func(MsgBody))
+    OnRemoteSdpChange(MsgBody, SipMsg, func(MsgBody)) error
     HasOnRemoteSdpChange() bool
     ResetOnRemoteSdpChange()
     SetCallId(*sippy_header.SipCallId)
@@ -349,7 +349,7 @@ type OnFailureListener func(*sippy_time.MonoTime, string, int)
 type OnConnectListener func(*sippy_time.MonoTime, string)
 type OnDeadListener func()
 type OnLocalSdpChange func(MsgBody, CCEvent, func(MsgBody)) error
-type OnRemoteSdpChange func(MsgBody, SipMsg, func(MsgBody))
+type OnRemoteSdpChange func(MsgBody, SipMsg, func(MsgBody)) error
 
 type RtpProxyClient interface {
     SendCommand(string, func(string))
