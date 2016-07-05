@@ -55,6 +55,7 @@ type rtp_command_result struct {
     rtpproxy_address    string
     rtpproxy_port       string
     family              string
+    sendonly            bool
 }
 
 func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string) (*Rtp_proxy_session, error) {

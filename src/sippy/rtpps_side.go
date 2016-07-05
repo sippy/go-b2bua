@@ -83,10 +83,10 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     if self.owner.notify_socket != "" && index == 0 && self.owner.rtp_proxy_client.TNotSupported() {
         command += fmt.Sprintf(" %s %s", self.owner.notify_socket, self.owner.notify_tag)
     }
-    self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.update_result(r, result_callback) })
+    self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.update_result(r, remote_ip, atype, result_callback) })
 }
 
-func (self *_rtpps_side) update_result(result string, result_callback func(*rtp_command_result)) {
+func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_callback func(*rtp_command_result)) {
     //print "%s.update_result(%s)" % (id(self), result)
     //result_callback, face, callback_parameters = args
     self.session_exists = true
@@ -110,10 +110,17 @@ func (self *_rtpps_side) update_result(result string, result_callback func(*rtp_
     } else {
         rtpproxy_address = self.owner.rtp_proxy_client.GetProxyAddress()
     }
+    sendonly := false
+    if atype == "IP4" && remote_ip == "0.0.0.0" {
+        sendonly = true
+    } else if atype == "IP6" && remote_ip == "::" {
+        sendonly = true
+    }
     result_callback(&rtp_command_result{
-        rtpproxy_address : rtpproxy_address,
-        rtpproxy_port : t1[0],
-        family : family,
+        rtpproxy_address    : rtpproxy_address,
+        rtpproxy_port       : t1[0],
+        family              : family,
+        sendonly            : sendonly,
     })
 }
 
@@ -151,13 +158,18 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     return nil
 }
 
-func (self *_rtpps_side) _sdp_change_finish(address_port *rtp_command_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
+func (self *_rtpps_side) _sdp_change_finish(cb_args *rtp_command_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
     sect.SetNeedsUpdate(false)
-    if address_port != nil {
-        sect.GetCHeader().SetAType(address_port.family)
-        sect.GetCHeader().SetAddr(address_port.rtpproxy_address)
+    if cb_args != nil {
+        sect.GetCHeader().SetAType(cb_args.family)
+        sect.GetCHeader().SetAddr(cb_args.rtpproxy_address)
         if sect.GetMHeader().GetPort() != "0" {
-            sect.GetMHeader().SetPort(address_port.rtpproxy_port)
+            sect.GetMHeader().SetPort(cb_args.rtpproxy_port)
+        }
+        if cb_args.sendonly {
+            sect.RemoveAHeader("sendrecv")
+            sect.RemoveAHeader("sendonly")
+            sect.AddHeader("a", "sendonly")
         }
     }
     for _, s := range sects {
