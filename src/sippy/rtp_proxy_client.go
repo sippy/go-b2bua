@@ -318,7 +318,10 @@ func (self *Rtp_proxy_client_base) GoOnline() {
         return
     }
     if ! self.online {
-        NewRtpp_caps_checker(self)
+        if ! self.caps_done {
+            NewRtpp_caps_checker(self)
+            return
+        }
         self.online = true
         self.heartbeat()
     }
@@ -384,6 +387,7 @@ func (self *Rtpp_caps_checker) caps_query_done(result string, attr *bool) {
     }
     if self.caps_received == self.caps_requested {
         self.rtpc.caps_done = true
+        self.rtpc.GoOnline()
         self.rtpc = nil
     }
 }
