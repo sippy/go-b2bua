@@ -199,3 +199,18 @@ func (self *SdpMediaDescription) SanityCheck() error {
     }
     return nil
 }
+
+func (self *SdpMediaDescription) IsOnHold() bool {
+    if self.c_header.atype == "IP4" && self.c_header.addr == "0.0.0.0" {
+        return true
+    }
+    if self.c_header.atype == "IP6" && self.c_header.addr == "::" {
+        return true
+    }
+    for _, aname := range self.a_headers {
+        if aname == "sendonly" || aname == "inactive" {
+            return true
+        }
+    }
+    return false
+}
