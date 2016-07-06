@@ -55,11 +55,25 @@ type Rtp_proxy_client_udp struct {
 
 type rtpp_req_udp struct {
     next_retr       float64
-    nretr           int64
+    triesleft       int64
     timer           *Timeout
     command         string
     result_callback func(string)
     stime           *sippy_time.MonoTime
+    retransmits     int
+}
+
+func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *Timeout, command string, result_callback func(string)) *rtpp_req_udp {
+    stime, _ := sippy_time.NewMonoTime()
+    return &rtpp_req_udp{
+        next_retr       : next_retr,
+        triesleft       : triesleft,
+        timer           : timer,
+        command         : command,
+        result_callback : result_callback,
+        stime           : stime,
+        retransmits     : 0,
+    }
 }
 
 func getnretrans(first_retr, timeout float64) int64 {
@@ -118,21 +132,18 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
     command = cookie + " " + command
     timer := NewTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, nil)
     timer.Start()
-    stime, _ := sippy_time.NewMonoTime()
     self.worker.SendTo([]byte(command), self.host, self.port)
     nretr -= 1
-    self.pending_requests[cookie] = &rtpp_req_udp{ next_retr, nretr, timer, command, result_callback, stime }
+    self.pending_requests[cookie] = new_rtpp_req_udp(next_retr, nretr, timer, command, result_callback)
 }
 
 func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
-    //next_retr, nretr, timer, command, result_callback, stime, callback_parameters = self.pending_requests[cookie]
     self.lock.Lock()
     req, ok := self.pending_requests[cookie]
     if ! ok {
         return
     }
-    //print "command to %s timeout %s cookie %s triesleft %d" % (str(self.address), command, cookie, nretr)
-    if req.nretr <= 0 || self.worker == nil {
+    if req.triesleft <= 0 || self.worker == nil {
         delete(self.pending_requests, cookie)
         self.lock.Unlock()
         self.owner.me.GoOffline()
@@ -142,12 +153,12 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
         return
     }
     req.next_retr *= 2
+    req.retransmits += 1
     req.timer = NewTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, nil)
     req.timer.Start()
     req.stime, _ = sippy_time.NewMonoTime()
     self.worker.SendTo([]byte(req.command), self.host, self.port)
-    req.nretr -= 1
-    //self.pending_requests[cookie] = (next_retr, nretr, timer, command, result_callback, stime, callback_parameters)
+    req.triesleft -= 1
     self.lock.Unlock()
 }
 
@@ -162,13 +173,21 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_conf
     if ! ok {
         return
     }
-    //next_retr, nretr, timer, command, result_callback, stime, callback_parameters = req
     req.timer.Cancel()
     if req.result_callback != nil {
         req.result_callback(strings.TrimSpace(result))
     }
-    self.delay_flt.Apply(rtime.Sub(req.stime).Seconds())
-    //print "Rtp_proxy_client_udp.process_reply(): delay %f" % (rtime - stime)
+    if req.retransmits == 0 {
+        // When we had to do retransmit it is not possible to figure out whether
+        // or not this reply is related to the original request or one of the
+        // retransmits. Therefore, using it to estimate delay could easily produce
+        // bogus value that is too low or even negative if we cook up retransmit
+        // while the original response is already in the queue waiting to be
+        // processed. This should not be a big issue since UDP command channel does
+        // not work very well if the packet loss goes to more than 30-40%.
+        self.delay_flt.Apply(rtime.Sub(req.stime).Seconds())
+        //print "Rtp_proxy_client_udp.process_reply(): delay %f" % (rtime - stime)
+    }
 }
 /*
     def reconnect(self, address, bind_address = nil):
