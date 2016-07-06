@@ -76,7 +76,10 @@ func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *Timeout, comman
     }
 }
 
-func getnretrans(first_retr, timeout float64) int64 {
+func getnretrans(first_retr, timeout float64) (int64, error) {
+    if first_retr < 0 {
+        return 0, fmt.Errorf("getnretrans(%f, %f)", first_retr, timeout)
+    }
     var n int64 = 0
     for {
         timeout -= first_retr
@@ -86,7 +89,7 @@ func getnretrans(first_retr, timeout float64) int64 {
         first_retr *= 2.0
         n += 1
     }
-    return n
+    return n, nil
 }
 
 func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (rtp_proxy_transport, error) {
@@ -122,19 +125,23 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
     rand.Read(buf)
     cookie := fmt.Sprintf("%x", buf)
     next_retr := self.delay_flt.GetLastval() * 4.0
-    rtime := 3.0
+    exp_time := 3.0
     if command[0] == 'I' {
-        rtime = 10.0
+        exp_time = 10.0
     } else if command[0] == 'G' {
-        rtime = 1.0
+        exp_time = 1.0
     }
-    nretr := getnretrans(next_retr, rtime)
+    nretr, err := getnretrans(next_retr, exp_time)
+    if err != nil {
+        println(err.Error())
+        return
+    }
     command = cookie + " " + command
     timer := NewTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, nil)
     timer.Start()
+    preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback)
     self.worker.SendTo([]byte(command), self.host, self.port)
-    nretr -= 1
-    self.pending_requests[cookie] = new_rtpp_req_udp(next_retr, nretr, timer, command, result_callback)
+    self.pending_requests[cookie] = preq
 }
 
 func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
