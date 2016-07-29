@@ -142,7 +142,7 @@ func (self *SdpMediaDescription) SetCHeader(c_header *SdpConnecton) {
 func (self *SdpMediaDescription) RemoveAHeader(hdr string) {
     new_a_hdrs := []string{}
     for _, h := range self.a_headers {
-        if h == hdr {
+        if strings.HasPrefix(h, hdr) {
             continue
         }
         new_a_hdrs = append(new_a_hdrs, h)

@@ -45,6 +45,7 @@ type _rtpps_side struct {
     raddress        *sippy_conf.HostPort
     codecs          string
     origin          *sippy_sdp.SdpOrigin
+    repacketize     int
 }
 
 func (self *_rtpps_side) _play(prompt_name string, times int, result_callback func(string), index int) {
@@ -66,13 +67,17 @@ func (self *_rtpps_side) __play(prompt_name string, times int, result_callback f
 func (self *_rtpps_side) update(remote_ip string, remote_port string, result_callback func(*rtp_command_result), options/*= ""*/ string, index /*= 0*/int, atype /*= "IP4"*/string) {
     command := "U"
     self.owner.max_index = int(math.Max(float64(self.owner.max_index), float64(index)))
-    if self.owner.rtp_proxy_client.SBindSupported() && self.raddress != nil {
-        //if self.owner.rtp_proxy_client.IsLocal() && atype == "IP4" {
-        //    options += fmt.Sprintf("L%s", self.laddress)
-        //} else if ! self.owner.rtp_proxy_client.IsLocal() {
-        //    options += fmt.Sprintf("R%s", self.raddress.Host.String())
-        //}
-        options += fmt.Sprintf("R%s", self.raddress.Host.String())
+    if self.owner.rtp_proxy_client.SBindSupported() {
+        if self.raddress != nil {
+            //if self.owner.rtp_proxy_client.IsLocal() && atype == "IP4" {
+            //    options += fmt.Sprintf("L%s", self.laddress)
+            //} else if ! self.owner.rtp_proxy_client.IsLocal() {
+            //    options += fmt.Sprintf("R%s", self.raddress.Host.String())
+            //}
+            options += "R" + self.raddress.Host.String()
+        } else {
+            options += "R" + self.laddress
+        }
     }
     command += options
     if self.otherside.session_exists {
@@ -95,6 +100,10 @@ func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_c
         return
     }
     t1 := strings.Fields(result)
+    if t1[0][0] == 'E' {
+        result_callback(nil)
+        return
+    }
     rtpproxy_port, err := strconv.Atoi(t1[0])
     if err != nil || rtpproxy_port == 0 {
         result_callback(nil)
@@ -135,6 +144,7 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
         case "udp":
         case "udptl":
         case "rtp/avp":
+        case "rtp/savp":
         default:
             sects = append(sects, sect)
         }
@@ -146,14 +156,18 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     }
     formats := sects[0].GetMHeader().GetFormats()
     self.codecs = strings.Join(formats, ",")
+    options := ""
+    if self.repacketize > 0 {
+        options = fmt.Sprintf("z%d", self.repacketize)
+    }
     for i, sect := range sects {
-        options := ""
+        sect_options := options
         if sect.GetCHeader().GetAType() == "IP6" {
-            options = "6"
+            sect_options = "6" + options
         }
         self.update(sect.GetCHeader().GetAddr(), sect.GetMHeader().GetPort(),
               func (res *rtp_command_result) { self._sdp_change_finish(res, sdp_body, parsed_body, sect, sects, result_callback) },
-              options, i, sect.GetCHeader().GetAType())
+              sect_options, i, sect.GetCHeader().GetAType())
     }
     return nil
 }
@@ -171,6 +185,10 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtp_command_result, sdp_bod
             sect.RemoveAHeader("sendonly")
             sect.AddHeader("a", "sendonly")
         }
+        if self.repacketize > 0 {
+            sect.RemoveAHeader("ptime:")
+            sect.AddHeader("a", fmt.Sprintf("ptime:%d", self.repacketize))
+        }
     }
     for _, s := range sects {
         if s.NeedsUpdate() {
@@ -184,5 +202,3 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtp_command_result, sdp_bod
         }
     }
 }
-
-
