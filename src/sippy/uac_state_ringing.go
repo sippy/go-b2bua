@@ -66,7 +66,10 @@ func (self *UacStateRinging) String() string {
 func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
     body := resp.GetBody()
     code, reason := resp.GetSCode()
-    self.ua.SetLastScode(code)
+    if code > 180 {
+        // the 100 Trying can be processed later than 180 Ringing
+        self.ua.SetLastScode(code)
+    }
     if code < 200 {
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(resp.GetRtime())
