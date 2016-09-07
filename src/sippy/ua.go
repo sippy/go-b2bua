@@ -438,8 +438,7 @@ func (self *ua) StartCreditTimer(rtime *sippy_time.MonoTime) {
     }
     // TODO make use of the mono time properly
     now, _ := sippy_time.NewMonoTime()
-    self.credit_timer = NewTimeout(func () { self.credit_expires(credit_time) }, self.session_lock, credit_time.Sub(now), 1, nil)
-    self.credit_timer.Start()
+    self.credit_timer = StartTimeout(func () { self.credit_expires(credit_time) }, self.session_lock, credit_time.Sub(now), 1, nil)
 }
 
 func (self *ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool /*true*/, reverse_routes bool /*true*/) {
@@ -664,20 +663,17 @@ func (self *ua) SetNoProgressTime(no_progress_time time.Duration) {
 
 func (self *ua) StartNoReplyTimer(t *sippy_time.MonoTime) {
     now, _ := sippy_time.NewMonoTime()
-    self.no_reply_timer = NewTimeout(self.no_reply_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
-    self.no_reply_timer.Start()
+    self.no_reply_timer = StartTimeout(self.no_reply_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
 }
 
 func (self *ua) StartNoProgressTimer(t *sippy_time.MonoTime) {
     now, _ := sippy_time.NewMonoTime()
-    self.no_progress_timer = NewTimeout(self.no_progress_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
-    self.no_progress_timer.Start()
+    self.no_progress_timer = StartTimeout(self.no_progress_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
 }
 
 func (self *ua) StartExpireTimer(t *sippy_time.MonoTime) {
     now, _ := sippy_time.NewMonoTime()
-    self.expire_timer = NewTimeout(self.expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
-    self.expire_timer.Start()
+    self.expire_timer = StartTimeout(self.expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
 }
 
 func (self *ua) CancelExpireTimer() {

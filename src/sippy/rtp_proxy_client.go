@@ -263,8 +263,7 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
     } else if self.online {
         self.me.GoOffline()
     } else {
-        t := NewTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
-        t.Start()
+        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
     }
 }
 
@@ -309,8 +308,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         }
         self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
-    t := NewTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 1), 1, nil)
-    t.Start()
+    StartTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 1), 1, nil)
 }
 
 func (self *Rtp_proxy_client_base) GoOnline() {
@@ -334,8 +332,7 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     //print "go_offline", self.address, self.online
     if self.online {
         self.online = false
-        t := NewTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
-        t.Start()
+        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
     }
 }
 

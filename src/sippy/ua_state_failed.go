@@ -56,8 +56,7 @@ func (self *UaStateFailed) OnActivation() {
             listener(self.rtime, self.origin, self.scode)
         }
     }
-    to := NewTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, nil)
-    to.Start()
+    StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, nil)
 }
 
 func (self *UaStateFailed) String() string {

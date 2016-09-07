@@ -53,8 +53,7 @@ func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin
     // 300 provides good estimate on the amount of time during which
     // we can wait for receiving non-negative response to CANCELled
     // INVITE transaction.
-    self.te = NewTimeout(self.goIdle, self.ua.GetSessionLock(), 300.0, 1, nil)
-    self.te.Start()
+    self.te = StartTimeout(self.goIdle, self.ua.GetSessionLock(), 300.0, 1, nil)
     return self
 }
 

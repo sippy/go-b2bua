@@ -103,8 +103,7 @@ func (self *baseTransaction) startTeA() {
     if self.teA != nil {
         self.teA.Cancel()
     }
-    self.teA = NewTimeout(self.timerA, self.lock, self.tout, 1, nil)
-    self.teA.Start()
+    self.teA = StartTimeout(self.timerA, self.lock, self.tout, 1, nil)
 }
 
 func (self *baseTransaction) timerA() {
@@ -114,8 +113,7 @@ func (self *baseTransaction) timerA() {
     }
     self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id*/ self.tid.CallId, 0)
     self.tout *= 2
-    self.teA = NewTimeout(self.timerA, self.lock, self.tout, 1, nil)
-    self.teA.Start()
+    self.teA = StartTimeout(self.timerA, self.lock, self.tout, 1, nil)
 }
 
 func (self *baseTransaction) GetHost() string {

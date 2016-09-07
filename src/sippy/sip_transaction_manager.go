@@ -87,7 +87,7 @@ func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.Cal
     l4r, err := NewLocal4Remote(config, self.handleIncoming)
     if err != nil { return nil, err }
     self.l4r = l4r
-    el := NewTimeout(self.rCachePurge, &self.rcache_lock, 32 * time.Second, -1, config.ErrorLogger())
+    el := NewInactiveTimeout(self.rCachePurge, &self.rcache_lock, 32 * time.Second, -1, config.ErrorLogger())
     el.SpreadRuns(time.Duration(0.1 * float64(time.Second)))
     el.Start()
     return self, nil

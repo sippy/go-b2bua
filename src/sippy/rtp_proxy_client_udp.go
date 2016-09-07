@@ -137,8 +137,7 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
         return
     }
     command = cookie + " " + command
-    timer := NewTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, nil)
-    timer.Start()
+    timer := StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, nil)
     preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback)
     self.worker.SendTo([]byte(command), self.host, self.port)
     self.pending_requests[cookie] = preq
@@ -161,8 +160,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
     }
     req.next_retr *= 2
     req.retransmits += 1
-    req.timer = NewTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, nil)
-    req.timer.Start()
+    req.timer = StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, nil)
     req.stime, _ = sippy_time.NewMonoTime()
     self.worker.SendTo([]byte(req.command), self.host, self.port)
     req.triesleft -= 1

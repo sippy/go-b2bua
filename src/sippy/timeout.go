@@ -48,7 +48,13 @@ type Timeout struct {
     started         bool
 }
 
-func NewTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *Timeout {
+func StartTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *Timeout {
+    self := NewInactiveTimeout(callback, cb_lock, _timeout, nticks, logger)
+    self.Start()
+    return self
+}
+
+func NewInactiveTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *Timeout {
     self := &Timeout{
         callback        : callback,
         timeout         : _timeout,

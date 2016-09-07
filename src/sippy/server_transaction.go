@@ -101,16 +101,14 @@ func (self *serverTransaction) cleanup() {
 }
 
 func (self *serverTransaction) startTeE(t time.Duration) {
-    self.teE = NewTimeout(self.timerE, self, t, 1, nil)
-    self.teE.Start()
+    self.teE = StartTimeout(self.timerE, self, t, 1, nil)
 }
 
 func (self *serverTransaction) startTeF(t time.Duration) {
     if self.teF != nil {
         self.teF.Cancel()
     }
-    self.teF = NewTimeout(self.timerF, self, t, 1, nil)
-    self.teF.Start()
+    self.teF = StartTimeout(self.timerF, self, t, 1, nil)
 }
 
 func (self *serverTransaction) cancelTeE() {
@@ -138,8 +136,7 @@ func (self *serverTransaction) startTeD() {
     if self.teD != nil {
         self.teD.Cancel()
     }
-    self.teD = NewTimeout(self.timerD, self, 32 * time.Second, 1, nil)
-    self.teD.Start()
+    self.teD = StartTimeout(self.timerD, self, 32 * time.Second, 1, nil)
 }
 
 func (self *serverTransaction) timerD() {

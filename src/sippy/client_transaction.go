@@ -109,8 +109,7 @@ func (self *clientTransaction) startTeC() {
     if self.teC != nil {
         self.teC.Cancel()
     }
-    self.teC = NewTimeout(self.timerC, self, 32 * time.Second, 1, nil)
-    self.teC.Start()
+    self.teC = StartTimeout(self.timerC, self, 32 * time.Second, 1, nil)
 }
 
 func (self *clientTransaction) timerB() {
@@ -160,8 +159,7 @@ func (self *clientTransaction) startTeB(timeout time.Duration) {
     if self.teB != nil {
         self.teB.Cancel()
     }
-    self.teB = NewTimeout(self.timerB, self, timeout, 1, nil)
-    self.teB.Start()
+    self.teB = StartTimeout(self.timerB, self, timeout, 1, nil)
 }
 
 func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string) {
@@ -274,8 +272,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                                     address : nil,
                                     call_id : self.tid.CallId,
                                 })
-            self.teG = NewTimeout(self.timerG, self, 64 * time.Second, 1, nil)
-            self.teG.Start()
+            self.teG = StartTimeout(self.timerG, self, 64 * time.Second, 1, nil)
             return
         }
     } else {

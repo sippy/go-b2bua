@@ -47,8 +47,7 @@ func newKeepaliveController(ua sippy_types.UA) *keepaliveController {
         triedauth   : false,
         keepalives  : 0,
     }
-    to := NewTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, nil)
-    to.Start()
+    StartTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, nil)
     return self
 }
 
@@ -88,16 +87,14 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
     if code == 408 || code == 481 || code == 486 {
         if self.keepalives == 1 {
             //print "%s: Remote UAS at %s:%d does not support re-INVITES, disabling keep alives" % (self.ua.cId, self.ua.rAddr[0], self.ua.rAddr[1])
-            to := NewTimeout(func() { self.ua.Disconnect(nil) }, self.ua.GetSessionLock(), 600, 1, nil)
-            to.Start()
+            StartTimeout(func() { self.ua.Disconnect(nil) }, self.ua.GetSessionLock(), 600, 1, nil)
             return
         }
         //print "%s: Received %d response to keep alive from %s:%d, disconnecting the call" % (self.ua.cId, code, self.ua.rAddr[0], self.ua.rAddr[1])
         self.ua.Disconnect(nil)
         return
     }
-    to := NewTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, nil)
-    to.Start()
+    StartTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, nil)
 }
 
 func (self *keepaliveController) keepAlive() {
