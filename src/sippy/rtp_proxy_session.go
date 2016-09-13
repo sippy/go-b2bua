@@ -167,12 +167,12 @@ func (self *Rtp_proxy_session) command_result(result string, result_callback fun
             self.max_index -= 1
         self.rtp_proxy_client = nil
 */
-func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
-    self.caller._on_sdp_change(sdp_body, result_callback)
+func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
+    return self.caller._on_sdp_change(sdp_body, result_callback)
 }
 
-func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) {
-    self.callee._on_sdp_change(sdp_body, result_callback)
+func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
+    return self.callee._on_sdp_change(sdp_body, result_callback)
 }
 
 /*
