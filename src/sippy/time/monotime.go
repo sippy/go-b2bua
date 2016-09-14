@@ -33,14 +33,14 @@ package sippy_time
 //      int res;
 //  } clock_gettime_result;
 //
-//  clock_gettime_result 
+//  static clock_gettime_result 
 //  clock_getrealtime() {
 //      clock_gettime_result res;
 //      res.res = clock_gettime(CLOCK_REALTIME, &res.ts);
 //      return res;
 //  }
 //
-//  clock_gettime_result
+//  static clock_gettime_result
 //  clock_getmonotime() {
 //      clock_gettime_result res;
 //      res.res = clock_gettime(CLOCK_MONOTONIC, &res.ts);
