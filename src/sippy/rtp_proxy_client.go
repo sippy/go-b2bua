@@ -126,7 +126,7 @@ func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf
         caps_done       : false,
         shut_down       : false,
         hrtb_retr_ival  : 60 * time.Second,
-        hrtb_ival       : time.Second,
+        hrtb_ival       : 10 * time.Second,
     }
     self._CAPSTABLE = []struct{ vers string; attr *bool }{
         { "20071218", &self.copy_supported },
@@ -308,7 +308,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         }
         self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
-    StartTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 1), 1, nil)
+    StartTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 0.1), 1, nil)
 }
 
 func (self *Rtp_proxy_client_base) GoOnline() {
