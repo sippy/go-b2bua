@@ -28,6 +28,7 @@ package sippy
 
 import (
     "fmt"
+    "os"
     "net"
     "strings"
     "syscall"
@@ -63,8 +64,9 @@ func NewRTPPLWorker(userv *Rtp_proxy_client_stream) *_RTPPLWorker {
     return self
 }
 
-func (self *_RTPPLWorker) connect() {
-    self.s, _ = net.Dial(self.userv.address.Network(), self.userv.address.String())
+func (self *_RTPPLWorker) connect() (err error) {
+    self.s, err = net.Dial(self.userv.address.Network(), self.userv.address.String())
+    return
 }
 
 func (self *_RTPPLWorker) send_raw(command string, _recurse int, stime *sippy_time.MonoTime) (string, time.Duration, error) {
@@ -80,10 +82,15 @@ func (self *_RTPPLWorker) send_raw(command string, _recurse int, stime *sippy_ti
     }
 LOOP1:
     for {
+        if self.s == nil {
+            self.connect()
+            return self.send_raw(command, _recurse + 1, stime)
+        }
         _, err := self.s.Write([]byte(command))
-        switch err {
-        case nil:
+        if err == nil {
             break LOOP1
+        }
+        switch _net_errno(err) {
         case syscall.EINTR:
             continue
         case syscall.EPIPE: fallthrough
@@ -99,16 +106,18 @@ LOOP1:
     rval := ""
     for {
         n, err := self.s.Read(buf)
-        switch err {
-        case syscall.EINTR:
-            continue
-        case syscall.EPIPE: fallthrough
-        case syscall.ENOTCONN: fallthrough
-        case syscall.ECONNRESET:
-            self.connect()
-            return self.send_raw(command, _recurse + 1, stime)
-        default:
-            return "", 0, err
+        if err != nil {
+            switch _net_errno(err) {
+            case syscall.EINTR:
+                continue
+            case syscall.EPIPE: fallthrough
+            case syscall.ENOTCONN: fallthrough
+            case syscall.ECONNRESET:
+                self.connect()
+                return self.send_raw(command, _recurse + 1, stime)
+            default:
+                return "", 0, err
+            }
         }
         if n == 0 {
             self.connect()
@@ -233,3 +242,13 @@ if __name__ == "__main__":
     reactor.run(installSignalHandlers = 1)
     r.shutdown()
 */
+
+func _net_errno(err error) syscall.Errno {
+    oe, ok := err.(*net.OpError)
+    if ! ok { return 0 }
+    errno, ok := oe.Err.(*os.SyscallError)
+    if ! ok { return 0 }
+    ret, ok := errno.Err.(syscall.Errno)
+    if ! ok { return 0 }
+    return ret
+}

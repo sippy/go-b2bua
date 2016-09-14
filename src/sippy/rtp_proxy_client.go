@@ -390,5 +390,5 @@ func (self *Rtpp_caps_checker) caps_query_done(result string, attr *bool) {
 }
 
 func randomize(x time.Duration, p float64) time.Duration {
-    return time.Duration(float64(x) * (1.0 + p * (1.0 - 2.0 * rand.Float64())) * float64(time.Second))
+    return time.Duration(x.Seconds() * (1.0 + p * (1.0 - 2.0 * rand.Float64())) * float64(time.Second))
 }
