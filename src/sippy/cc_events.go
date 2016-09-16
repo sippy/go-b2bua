@@ -50,6 +50,9 @@ func newCCEventGeneric(rtime *sippy_time.MonoTime, origin string, extra_headers 
     new_seq := global_event_seq
     global_event_seq++
     global_event_seq_lock.Unlock()
+    if rtime == nil {
+        rtime, _ = sippy_time.NewMonoTime()
+    }
     return CCEventGeneric{
         rtime   : rtime,
         seq     : new_seq,
