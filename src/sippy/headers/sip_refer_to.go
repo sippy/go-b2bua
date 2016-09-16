@@ -79,6 +79,7 @@ func (self *SipReferTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) st
 
 func (self *SipReferTo) AsSipAlso() *SipAlso {
     return &SipAlso{
+        normalName   : _sip_also_name,
         sipAddressHF : *self.sipAddressHF.getCopy(),
     }
 }

@@ -81,6 +81,7 @@ func (self *SipRecordRoute) LocalStr(hostport *sippy_conf.HostPort, compact bool
 
 func (self *SipRecordRoute) AsSipRoute() *SipRoute {
     return &SipRoute{
+        normalName   : _sip_route_name,
         sipAddressHF : *self.sipAddressHF.getCopy(),
     }
 }

@@ -61,6 +61,7 @@ func (self *SipCiscoGUID) LocalStr(*sippy_conf.HostPort, bool) string {
 
 func (self *SipCiscoGUID) AsH323ConfId() *SipH323ConfId {
     return &SipH323ConfId{
+        normalName  : _sip_h323_conf_id_name,
         body : self.body,
     }
 }
