@@ -67,9 +67,7 @@ func (self *SipUserAgent) AsSipServer() *SipServer {
     if self == nil {
         return nil
     }
-    return &SipServer{
-        Server : self.UserAgent,
-    }
+    return NewSipServer(self.UserAgent)
 }
 
 func (self *SipUserAgent) GetCopy() *SipUserAgent {

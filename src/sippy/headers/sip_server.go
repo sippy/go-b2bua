@@ -76,7 +76,5 @@ func (self *SipServer) AsSipUserAgent() *SipUserAgent {
     if self == nil {
         return nil
     }
-    return &SipUserAgent{
-        UserAgent : self.Server,
-    }
+    return NewSipUserAgent(self.Server)
 }
