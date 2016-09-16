@@ -126,9 +126,12 @@ func (self *local4remote) getServer(address *sippy_conf.HostPort, is_local bool 
     }
     server, ok := self.cache_l2s[laddress.String()]
     if ! ok {
+        var err error
         sopts := NewUdpServerOpts(laddress, self.handleIncoming)
-        server, err := NewUdpServer(self.config, sopts)
-        if err != nil { return nil }
+        server, err = NewUdpServer(self.config, sopts)
+        if err != nil {
+            return nil
+        }
         self.cache_l2s[laddress.String()] = server
     }
     //print 'local4remote-2: local address for %s is %s' % (address[0], laddress[0])
