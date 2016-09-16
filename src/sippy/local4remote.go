@@ -52,12 +52,12 @@ func NewLocal4Remote(config sippy_conf.Config, handleIncoming UdpPacketReceiver)
     }
     laddresses := make([]*sippy_conf.HostPort, 0)
     if config.SipAddress().IsSystemDefault() {
-        laddresses = append(laddresses, sippy_conf.NewHostPort("0.0.0.0", config.SipPort().String()))
+        laddresses = append(laddresses, sippy_conf.NewHostPort("0.0.0.0", config.GetMyPort().String()))
         if config.GetIPV6Enabled() {
-            laddresses = append(laddresses, sippy_conf.NewHostPort("[::]", config.SipPort().String()))
+            laddresses = append(laddresses, sippy_conf.NewHostPort("[::]", config.GetMyPort().String()))
         }
     } else {
-        laddresses = append(laddresses, sippy_conf.NewHostPort(config.SipAddress().String(), config.SipPort().String()))
+        laddresses = append(laddresses, sippy_conf.NewHostPort(config.SipAddress().String(), config.GetMyPort().String()))
         self.fixed = true
     }
     for _, laddress := range laddresses {
@@ -119,7 +119,7 @@ func (self *local4remote) getServer(address *sippy_conf.HostPort, is_local bool 
                 return nil // should not happen
             }
         }
-        laddress = sippy_conf.NewHostPort(_laddress, self.config.SipPort().String())
+        laddress = sippy_conf.NewHostPort(_laddress, self.config.GetMyPort().String())
         self.cache_r2l[address.Host.String()] = laddress
     } else {
         laddress = address
