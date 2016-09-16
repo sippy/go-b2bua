@@ -63,7 +63,7 @@ func NewCallController(config *myconfig, sip_tm sippy_types.SipTransactionManage
         uaO             : nil,
         lock            : new(sync.Mutex),
     }
-    self.uaA = sippy.NewUA(sip_tm, config, config.nh_addr, self, self.lock)
+    self.uaA = sippy.NewUA(sip_tm, config, config.nh_addr, self, self.lock, nil)
     //self.uaA.SetCreditTime(5 * time.Second)
     return self
 }
@@ -76,7 +76,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 self.uaA.RecvEvent(sippy.NewCCEventDisconnect(nil, event.GetRtime(), ""))
                 return
             }
-            self.uaO = sippy.NewUA(self.sip_tm, self.config, self.config.nh_addr, self, self.lock)
+            self.uaO = sippy.NewUA(self.sip_tm, self.config, self.config.nh_addr, self, self.lock, nil)
             self.uaO.SetRAddr(self.config.nh_addr)
         }
         self.uaO.RecvEvent(event)

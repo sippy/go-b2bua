@@ -108,13 +108,21 @@ type ua struct {
     pass_auth       bool
     pending_tr      sippy_types.ClientTransaction
     late_media      bool
+    heir            sippy_types.UA
+}
+
+func (self *ua) me() sippy_types.UA {
+    if self.heir == nil {
+        return self
+    }
+    return self.heir
 }
 
 func (self *ua) String() string {
     return "UA state: " + self.state.String() + ", Call-Id: " + self.cId.CallId
 }
 
-func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, nh_address *sippy_conf.HostPort, call_controller sippy_types.CallController, session_lock sync.Locker) *ua {
+func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, nh_address *sippy_conf.HostPort, call_controller sippy_types.CallController, session_lock sync.Locker, heir sippy_types.UA) *ua {
     return &ua{
         sip_tm          : sip_tm,
         call_controller : call_controller,
@@ -142,6 +150,7 @@ func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, n
         session_lock    : session_lock,
         pass_auth       : false,
         late_media      : false,
+        heir            : heir,
     }
 }
 
@@ -161,21 +170,21 @@ func (self *ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     self.rCSeq = req.GetCSeq().CSeq
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
-            self.ChangeState(NewUasStateIdle(self, self.config))
+            self.ChangeState(NewUasStateIdle(self.me(), self.config))
         } else {
             return nil
         }
     }
     newstate := self.state.RecvRequest(req, t)
     if newstate != nil {
-        self.ChangeState(newstate)
+        self.me().ChangeState(newstate)
     }
     self.emitPendingEvents()
     if newstate != nil && req.GetMethod() == "INVITE" {
         return &sippy_types.Ua_context{
             Response : nil,
             CancelCB : self.state.Cancel,
-            NoAckCB  : self.Disconnect,
+            NoAckCB  : self.me().Disconnect,
         }
     } else {
         return nil
@@ -196,7 +205,7 @@ func (self *ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         challenge := resp.GetSipWWWAuthenticate()
         req := self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), /*SipXXXAuthorization*/ nil)
         self.lCSeq += 1
-        self.tr, err = self.sip_tm.NewClientTransaction(req, self, self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil)
+        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil)
         if err == nil {
             self.tr.SetOutboundProxy(self.outbound_proxy)
             delete(self.reqs, cseq)
@@ -206,7 +215,7 @@ func (self *ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     if method == "INVITE" && !self.pass_auth && cseq_found && code == 407 && resp.GetSipProxyAuthenticate() != nil &&
       self.username != "" && self.password != "" && orig_req.GetSipProxyAuthorization() == nil {
         challenge := resp.GetSipProxyAuthenticate()
-        req := self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
+        req := self.me().GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         self.lCSeq += 1
         self.tr, err = self.sip_tm.NewClientTransaction(req, self, self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil)
         if err == nil {
@@ -220,7 +229,7 @@ func (self *ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     }
     newstate := self.state.RecvResponse(resp, tr)
     if newstate != nil {
-        self.ChangeState(newstate)
+        self.me().ChangeState(newstate)
     }
     self.emitPendingEvents()
 }
@@ -235,7 +244,7 @@ func (self *ua) RecvEvent(event sippy_types.CCEvent) {
         default:
             return
         }
-        self.ChangeState(NewUacStateIdle(self, self.config))
+        self.me().ChangeState(NewUacStateIdle(self.me(), self.config))
     }
     newstate, err := self.state.RecvEvent(event)
     if err != nil {
@@ -243,7 +252,7 @@ func (self *ua) RecvEvent(event sippy_types.CCEvent) {
         return
     }
     if newstate != nil {
-        self.ChangeState(newstate)
+        self.me().ChangeState(newstate)
     }
     self.emitPendingEvents()
 }
@@ -261,22 +270,22 @@ func (self *ua) Disconnect(rtime *sippy_time.MonoTime) {
 
 func (self *ua) expires() {
     self.expire_timer = nil
-    self.Disconnect(nil)
+    self.me().Disconnect(nil)
 }
 
 func (self *ua) no_progress_expires() {
     self.no_progress_timer = nil
-    self.Disconnect(nil)
+    self.me().Disconnect(nil)
 }
 
 func (self *ua) no_reply_expires() {
     self.no_reply_timer = nil
-    self.Disconnect(nil)
+    self.me().Disconnect(nil)
 }
 
 func (self *ua) credit_expires(rtime *sippy_time.MonoTime) {
     self.credit_timer = nil
-    self.Disconnect(rtime)
+    self.me().Disconnect(rtime)
 }
 
 func (self *ua) ChangeState(newstate sippy_types.UaState) {
@@ -294,7 +303,7 @@ func (self *ua) EmitEvent(event sippy_types.CCEvent) {
             return
         }
         self.elast_seq = event.GetSeq()
-        self.call_controller.RecvEvent(event, self)
+        self.call_controller.RecvEvent(event, self.me())
     }
 }
 
@@ -306,7 +315,7 @@ func (self *ua) emitPendingEvents() {
             continue
         }
         self.elast_seq = event.GetSeq()
-        self.call_controller.RecvEvent(event, self)
+        self.call_controller.RecvEvent(event, self.me())
     }
 }
 
@@ -400,7 +409,7 @@ func (self *ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) 
 
 func (self *ua) DelayedRemoteSdpUpdate(event sippy_types.CCEvent, remote_sdp_body sippy_types.MsgBody) {
     self.rSDP = remote_sdp_body.GetCopy()
-    self.Enqueue(event)
+    self.me().Enqueue(event)
     self.emitPendingEvents()
 }
 
@@ -988,8 +997,8 @@ func (self *ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map
         self.credit_times[k] = v
     }
     if self.state.IsConnected() {
-        self.CancelCreditTimer()
-        self.StartCreditTimer(rtime)
+        self.me().CancelCreditTimer()
+        self.me().StartCreditTimer(rtime)
     }
 }
 
