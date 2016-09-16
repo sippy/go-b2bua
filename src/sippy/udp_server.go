@@ -29,7 +29,10 @@ package sippy
 import (
     "fmt"
     "net"
+    "os"
+    "strconv"
     "sync"
+    "syscall"
     "time"
 
     "sippy/conf"
@@ -195,7 +198,8 @@ func NewUdpServerOpts(laddress *sippy_conf.HostPort, data_callback UdpPacketRece
 
 type udpServer struct {
     uopts           udpServerOpts
-    skt             *net.UDPConn
+    //skt             *net.UDPConn
+    skt             net.PacketConn
     wi              sippy_container.Fifo
     wi_cv           *sync.Cond
     wi_resolv       sippy_container.Fifo
@@ -208,6 +212,20 @@ type udpServer struct {
     packets_queued int
 }
 
+func zoneToUint32(zone string) uint32 {
+    if zone == "" {
+        return 0
+    }
+    if ifi, err := net.InterfaceByName(zone); err == nil {
+        return uint32(ifi.Index)
+    }
+    n, err := strconv.Atoi(zone)
+    if err != nil {
+        return 0
+    }
+    return uint32(n)
+}
+
 func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, error) {
     var laddress *net.UDPAddr
     var err error
@@ -215,11 +233,48 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
     if uopts.laddress != nil {
         laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
     } else {
-        laddress, err = net.ResolveUDPAddr("udp", ":0")
+        laddress, err = net.ResolveUDPAddr("udp", "127.0.0.1:0")
     }
     if err != nil { return nil, err }
+    s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
+    if err != nil { return nil, err }
+    for _, opt := range []int{ syscall.SO_REUSEPORT, syscall.SO_REUSEADDR } {
+        if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, opt, 1); err != nil {
+            syscall.Close(s)
+            return nil, err
+        }
+    }
+    ip4 := laddress.IP.To4()
+    var sockaddr syscall.Sockaddr
+    if ip4 != nil {
+        sockaddr = &syscall.SockaddrInet4{
+            Port : laddress.Port,
+            Addr : [4]byte{ ip4[0], ip4[1], ip4[2], ip4[3] },
+        }
+    } else {
+        sa6 := &syscall.SockaddrInet6{
+            Port : laddress.Port,
+            ZoneId : zoneToUint32(laddress.Zone),
+        }
+        for i := 0; i < 16; i++ {
+            sa6.Addr[i] = laddress.IP[i]
+        }
+        sockaddr = sa6
+    }
+    if err := syscall.Bind(s, sockaddr); err != nil {
+        syscall.Close(s)
+        return nil, err
+    }
+    f := os.NewFile(uintptr(s), "")
+    skt, err := net.FilePacketConn(f)
+    f.Close()
+    if err != nil {
+        return nil, err
+    }
+    /*
     skt, err := net.ListenUDP("udp", laddress)
     if err != nil { return nil, err }
+    */
     self := &udpServer{
         uopts       : *uopts,
         skt         : skt,
