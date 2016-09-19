@@ -30,6 +30,7 @@ import (
     "crypto/rand"
     "fmt"
     "math/big"
+    "runtime"
 
     "sippy/conf"
     "sippy/sdp"
@@ -66,6 +67,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         from_tag        : from_tag,
         to_tag          : to_tag,
         insert_nortpp   : false,
+        max_index       : -1,
     }
     self.caller.otherside = &self.callee
     self.callee.otherside = &self.caller
@@ -106,6 +108,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         rand.Read(buf)
         self.to_tag = fmt.Sprintf("%x", buf)
     }
+    runtime.SetFinalizer(self,  Rtp_proxy_session_destructor)
     return self, nil
 }
 /*
@@ -157,16 +160,18 @@ func (self *Rtp_proxy_session) command_result(result string, result_callback fun
     }
 }
 
-/*
-    def delete(self):
-        if self.rtp_proxy_client == nil:
-            return
-        while self.max_index >= 0:
-            command = "D %s %s %s" % ("%s-%d" % (self.call_id, self.max_index), self.from_tag, self.to_tag)
-            self.rtp_proxy_client.SendCommand(command)
-            self.max_index -= 1
-        self.rtp_proxy_client = nil
-*/
+func (self *Rtp_proxy_session) _delete() {
+    if self.rtp_proxy_client == nil {
+        return
+    }
+    for self.max_index >= 0 {
+        command := fmt.Sprint("D %s-%d %s %s", self.call_id, self.max_index, self.from_tag, self.to_tag)
+        self.rtp_proxy_client.SendCommand(command, nil)
+        self.max_index--
+    }
+    self.rtp_proxy_client = nil
+}
+
 func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
     return self.caller._on_sdp_change(sdp_body, result_callback)
 }
@@ -175,14 +180,9 @@ func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, r
     return self.callee._on_sdp_change(sdp_body, result_callback)
 }
 
-/*
-    def __del__(self):
-        if self.my_ident != get_ident():
-            #print "Rtp_proxy_session.__del__() from wrong thread, re-routing"
-            reactor.callFromThread(self.delete)
-        else:
-            self.delete()
-*/
+func Rtp_proxy_session_destructor(self *Rtp_proxy_session) {
+    self._delete()
+}
 
 func (self *Rtp_proxy_session) CallerSessionExists() bool { return self.caller_session_exists }
 
