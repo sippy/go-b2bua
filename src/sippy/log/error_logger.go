@@ -58,15 +58,17 @@ func (self *errorLogger) ErrorAndTraceback(err error) {
 }
 
 func (*errorLogger) Debug(params...interface{}) {
-    fmt.Fprint(os.Stderr, "DEBUG: ")
-    fmt.Fprint(os.Stderr, params...)
-    fmt.Fprint(os.Stderr, "\n")
+    buf := []interface{}{ "DEBUG: " }
+    buf = append(buf, params...)
+    buf = append(buf, "\n")
+    fmt.Fprint(os.Stderr, buf...)
 }
 
 func (*errorLogger) Error(params...interface{}) {
-    fmt.Fprint(os.Stderr, "ERROR: ")
-    fmt.Fprint(os.Stderr, params...)
-    fmt.Fprint(os.Stderr, "\n")
+    buf := []interface{}{ "ERROR: " }
+    buf = append(buf, params...)
+    buf = append(buf, "\n")
+    fmt.Fprint(os.Stderr, buf...)
 }
 
 func (*errorLogger) Reopen() {
