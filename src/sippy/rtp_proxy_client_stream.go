@@ -183,7 +183,7 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         nworkers    : nworkers,
         workers     : make([]*_RTPPLWorker, nworkers),
         delay_flt   : sippy_math.NewRecFilter(0.95, 0.25),
-        wi          : make(chan *rtpp_req_stream),
+        wi          : make(chan *rtpp_req_stream, 100),
     }
     if strings.HasPrefix(address.Network(), "unix") {
         self._is_local = true

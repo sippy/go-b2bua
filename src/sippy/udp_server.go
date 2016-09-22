@@ -31,12 +31,10 @@ import (
     "net"
     "os"
     "strconv"
-    "sync"
     "syscall"
     "time"
 
     "sippy/conf"
-    "sippy/container"
     "sippy/log"
     "sippy/time"
 )
@@ -63,7 +61,7 @@ type asyncResolver struct {
 
 func NewAsyncResolver(userv *udpServer, logger sippy_log.ErrorLogger) *asyncResolver {
     self := &asyncResolver{
-        sem     : make(chan int),
+        sem     : make(chan int, 2),
         logger  : logger,
     }
     go self.run(userv)
@@ -74,22 +72,12 @@ func (self *asyncResolver) run(userv *udpServer) {
     var wi *resolv_req
 LOOP:
     for {
-        userv.wi_resolv_cv.L.Lock()
-        for userv.wi_resolv.IsEmpty() {
-            userv.wi_resolv_cv.Wait()
-        }
-        wi = nil
-        switch t := userv.wi_resolv.Get().Value.(type) {
-        case *shutdown_req:
+        wi = <-userv.wi_resolv
+        if wi == nil {
             // Shutdown request, relay it further
-            userv.wi_resolv.Put(t)
-            userv.wi_resolv_cv.Signal()
-            userv.wi_resolv_cv.L.Unlock()
+            userv.wi_resolv <- nil
             break LOOP
-        case *resolv_req:
-            wi = t
         }
-        if wi == nil { continue }
         start, _ := sippy_time.NewMonoTime()
         addr, err := net.ResolveUDPAddr("udp", wi.hostport)
         delay, _ := start.OffsetFromNow()
@@ -102,6 +90,7 @@ LOOP:
         }
         userv._send_to(wi.data, addr)
     }
+    self.sem <- 1
 }
 
 type asyncSender struct {
@@ -110,7 +99,7 @@ type asyncSender struct {
 
 func NewAsyncSender(userv *udpServer) *asyncSender {
     self := &asyncSender{
-        sem     : make(chan int),
+        sem     : make(chan int, 2),
     }
     go self.run(userv)
     return self
@@ -120,21 +109,11 @@ func (self *asyncSender) run(userv *udpServer) {
     var wi *write_req
 LOOP:
     for {
-        wi = nil
-        userv.wi_cv.L.Lock()
-        for userv.wi.IsEmpty() {
-            userv.wi_cv.Wait()
-        }
-        switch t := userv.wi.Get().Value.(type) {
-        case *shutdown_req:
-            userv.wi.Put(t)
-            userv.wi_cv.Signal()
-            userv.wi_cv.L.Unlock()
+        wi = <-userv.wi
+        if wi == nil { // shutdown req
+            userv.wi <- nil
             break LOOP
-        case *write_req:
-            wi = t
         }
-        userv.wi_cv.L.Unlock()
 SEND_LOOP:
         for wi != nil {
             for i := 0; i < 20; i++ {
@@ -155,7 +134,7 @@ type asyncReceiver struct {
 
 func NewAsyncReciever(userv *udpServer, logger sippy_log.ErrorLogger) *asyncReceiver {
     self := &asyncReceiver{
-        sem     : make(chan int),
+        sem     : make(chan int, 2),
         logger  : logger,
     }
     go self.run(userv)
@@ -200,10 +179,8 @@ type udpServer struct {
     uopts           udpServerOpts
     //skt             *net.UDPConn
     skt             net.PacketConn
-    wi              sippy_container.Fifo
-    wi_cv           *sync.Cond
-    wi_resolv       sippy_container.Fifo
-    wi_resolv_cv    *sync.Cond
+    wi              chan *write_req
+    wi_resolv       chan *resolv_req
     asenders        []*asyncSender
     areceivers      []*asyncReceiver
     aresolvers      []*asyncResolver
@@ -278,10 +255,8 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
     self := &udpServer{
         uopts       : *uopts,
         skt         : skt,
-        wi          : sippy_container.NewFifo(),
-        wi_cv       : sync.NewCond(new(sync.Mutex)),
-        wi_resolv   : sippy_container.NewFifo(),
-        wi_resolv_cv: sync.NewCond(new(sync.Mutex)),
+        wi          : make(chan *write_req, 1000),
+        wi_resolv   : make(chan *resolv_req, 1000),
         asenders    : make([]*asyncSender, 0, uopts.nworkers),
         areceivers  : make([]*asyncReceiver, 0, uopts.nworkers),
         aresolvers  : make([]*asyncResolver, 0, uopts.nworkers),
@@ -300,10 +275,7 @@ func (self *udpServer) SendTo(data []byte, host, port string) {
     hostport := net.JoinHostPort(host, port)
     ip := net.ParseIP(host)
     if ip == nil {
-        self.wi_resolv_cv.L.Lock()
-        self.wi_resolv.Put(&resolv_req{ data : data, hostport : hostport })
-        self.wi_resolv_cv.Signal()
-        self.wi_resolv_cv.L.Unlock()
+        self.wi_resolv <- &resolv_req{ data : data, hostport : hostport }
         return
     }
     address, err := net.ResolveUDPAddr("udp", hostport) // in fact no resolving is done here
@@ -314,10 +286,7 @@ func (self *udpServer) SendTo(data []byte, host, port string) {
 }
 
 func (self *udpServer) _send_to(data []byte, address net.Addr) {
-    self.wi_cv.L.Lock()
-    self.wi.Put(&write_req{ data : data, address : address })
-    self.wi_cv.Signal()
-    self.wi_cv.L.Unlock()
+    self.wi <- &write_req{ data : data, address : address }
 }
 
 func (self *udpServer) handle_read(data []byte, address net.Addr, rtime *sippy_time.MonoTime) {
@@ -330,16 +299,8 @@ func (self *udpServer) handle_read(data []byte, address net.Addr, rtime *sippy_t
 
 func (self *udpServer) Shutdown() {
     self.skt.Close()
-
-    self.wi_cv.L.Lock()
-    self.wi.Put(&shutdown_req{})
-    self.wi_cv.Signal()
-    self.wi_cv.L.Unlock()
-
-    self.wi_resolv_cv.L.Lock()
-    self.wi_resolv.Put(&shutdown_req{})
-    self.wi_resolv_cv.Signal()
-    self.wi_resolv_cv.L.Unlock()
+    self.wi <- nil
+    self.wi_resolv <- nil
 
     self.uopts.shut_down = true // self.uopts.data_callback = None
     for _, worker := range self.asenders { <-worker.sem }
