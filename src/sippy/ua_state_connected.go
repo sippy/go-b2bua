@@ -179,7 +179,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
     }
     if _event, ok := event.(*CCEventUpdate); ok {
         body := _event.GetBody()
-        if self.ua.GetLSDP().String() == body.String() {
+        if self.ua.GetLSDP() != nil && body != nil && self.ua.GetLSDP().String() == body.String() {
             if self.ua.GetRSDP() != nil {
                 self.ua.Enqueue(NewCCEventConnect(200, "OK", self.ua.GetRSDP().GetCopy(), /*rtime*/ event.GetRtime(), /*origin*/ event.GetOrigin()))
             } else {
