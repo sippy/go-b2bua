@@ -108,7 +108,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         rand.Read(buf)
         self.to_tag = fmt.Sprintf("%x", buf)
     }
-    runtime.SetFinalizer(self,  Rtp_proxy_session_destructor)
+    runtime.SetFinalizer(self, rtp_proxy_session_destructor)
     return self, nil
 }
 /*
@@ -160,7 +160,7 @@ func (self *Rtp_proxy_session) command_result(result string, result_callback fun
     }
 }
 
-func (self *Rtp_proxy_session) _delete() {
+func (self *Rtp_proxy_session) Delete() {
     if self.rtp_proxy_client == nil {
         return
     }
@@ -180,8 +180,8 @@ func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, r
     return self.callee._on_sdp_change(sdp_body, result_callback)
 }
 
-func Rtp_proxy_session_destructor(self *Rtp_proxy_session) {
-    self._delete()
+func rtp_proxy_session_destructor(self *Rtp_proxy_session) {
+    self.Delete()
 }
 
 func (self *Rtp_proxy_session) CallerSessionExists() bool { return self.caller_session_exists }
