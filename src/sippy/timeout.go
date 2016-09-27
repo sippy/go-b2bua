@@ -112,7 +112,9 @@ func (self *Timeout) _run() {
         case <-self.shutdown_chan:
             self.shutdown = true
         case <-time.After(t):
-            sippy_utils.SafeCall(self.callback, self.cb_lock, self.logger)
+            if ! self.shutdown {
+                sippy_utils.SafeCall(self.callback, self.cb_lock, self.logger)
+            }
         }
     }
 }
