@@ -87,7 +87,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             body = self.ua.GetRSDP().GetCopy()
             parsed_body, err := body.GetParsedBody()
             if err != nil {
-                println("UaStateConnected::RecvRequest: " + err.Error())
+                self.ua.Config().ErrorLogger().Error("UaStateConnected::RecvRequest: " + err.Error())
                 return nil
             }
             parsed_body.SetCHeaderAddr("0.0.0.0")

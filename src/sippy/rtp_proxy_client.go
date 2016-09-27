@@ -35,6 +35,7 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/log"
 )
 
 type Rtp_proxy_client_impl interface {
@@ -90,6 +91,7 @@ type Rtp_proxy_client_base struct {
     hrtb_retr_ival  time.Duration
     hrtb_ival       time.Duration
     _CAPSTABLE      []struct{ vers string; attr *bool }
+    logger          sippy_log.ErrorLogger
 }
 
 type rtp_proxy_transport interface {
@@ -118,7 +120,7 @@ func (self *Rtp_proxy_client_base) GetProxyAddress() string {
     return self.proxy_address
 }
 
-func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (*Rtp_proxy_client_base, error) {
+func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
     var err error
     var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr, *Rtp_proxy_opts) (rtp_proxy_transport, error)
     self := &Rtp_proxy_client_base{
@@ -127,6 +129,7 @@ func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf
         shut_down       : false,
         hrtb_retr_ival  : 60 * time.Second,
         hrtb_ival       : 10 * time.Second,
+        logger          : logger,
     }
     self._CAPSTABLE = []struct{ vers string; attr *bool }{
         { "20071218", &self.copy_supported },
@@ -263,7 +266,7 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
     } else if self.online {
         self.me.GoOffline()
     } else {
-        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
+        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, self.logger)
     }
 }
 
@@ -308,7 +311,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         }
         self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
-    StartTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 0.1), 1, nil)
+    StartTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 0.1), 1, self.logger)
 }
 
 func (self *Rtp_proxy_client_base) GoOnline() {
@@ -332,7 +335,7 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     //print "go_offline", self.address, self.online
     if self.online {
         self.online = false
-        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, nil)
+        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, self.logger)
     }
 }
 

@@ -56,7 +56,7 @@ func (self *UaStateDisconnected) OnActivation() {
             listener(self.rtime, self.origin, self.scode)
         }
     }
-    StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, nil)
+    StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, self.ua.Config().ErrorLogger())
 }
 
 func (self *UaStateDisconnected) String() string {

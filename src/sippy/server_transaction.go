@@ -75,7 +75,7 @@ func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sipp
         branch          : branch,
         expires         : expires,
     }
-    self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, nil, nil, needack)
+    self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, nil, nil, needack, sip_tm.config.ErrorLogger())
     return self
 }
 
@@ -101,14 +101,14 @@ func (self *serverTransaction) cleanup() {
 }
 
 func (self *serverTransaction) startTeE(t time.Duration) {
-    self.teE = StartTimeout(self.timerE, self, t, 1, nil)
+    self.teE = StartTimeout(self.timerE, self, t, 1, self.logger)
 }
 
 func (self *serverTransaction) startTeF(t time.Duration) {
     if self.teF != nil {
         self.teF.Cancel()
     }
-    self.teF = StartTimeout(self.timerF, self, t, 1, nil)
+    self.teF = StartTimeout(self.timerF, self, t, 1, self.logger)
 }
 
 func (self *serverTransaction) cancelTeE() {
@@ -136,7 +136,7 @@ func (self *serverTransaction) startTeD() {
     if self.teD != nil {
         self.teD.Cancel()
     }
-    self.teD = StartTimeout(self.timerD, self, 32 * time.Second, 1, nil)
+    self.teD = StartTimeout(self.timerD, self, 32 * time.Second, 1, self.logger)
 }
 
 func (self *serverTransaction) timerD() {

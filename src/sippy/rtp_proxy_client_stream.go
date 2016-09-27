@@ -141,7 +141,7 @@ func (self *_RTPPLWorker) run() {
         //command, result_callback, callback_parameters = wi
         data, rtpc_delay, err := self.send_raw(req.command, 0, nil)
         if err != nil {
-            println("Error communicating the rtpproxy: " + err.Error())
+            self.userv.owner.logger.Debug("Error communicating the rtpproxy: " + err.Error())
             data, rtpc_delay = "", -1
         }
         if len(data) == 0 {
@@ -158,6 +158,7 @@ func (self *_RTPPLWorker) run() {
 }
 
 type Rtp_proxy_client_stream struct {
+    owner       *Rtp_proxy_client_base
     address     net.Addr
     nworkers    int
     workers     []*_RTPPLWorker
@@ -179,6 +180,7 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         nworkers = *opts.Nworkers
     }
     self := &Rtp_proxy_client_stream{
+        owner       : owner,
         address     : address,
         nworkers    : nworkers,
         workers     : make([]*_RTPPLWorker, nworkers),

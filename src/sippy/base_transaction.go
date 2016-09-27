@@ -32,6 +32,7 @@ import (
 
     "sippy/conf"
     "sippy/headers"
+    "sippy/log"
     "sippy/types"
 )
 
@@ -68,9 +69,10 @@ type baseTransaction struct {
     needack         bool
     tout            time.Duration
     data            []byte
+    logger          sippy_log.ErrorLogger
 }
 
-func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager, address *sippy_conf.HostPort, data []byte, needack bool) baseTransaction {
+func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager, address *sippy_conf.HostPort, data []byte, needack bool, logger sippy_log.ErrorLogger) baseTransaction {
     return baseTransaction{
         tout    : time.Duration(0.5 * float64(time.Second)),
         userv   : userv,
@@ -81,6 +83,7 @@ func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_typ
         data    : data,
         needack : needack,
         lock    : lock,
+        logger  : logger,
     }
 }
 
@@ -103,7 +106,7 @@ func (self *baseTransaction) startTeA() {
     if self.teA != nil {
         self.teA.Cancel()
     }
-    self.teA = StartTimeout(self.timerA, self.lock, self.tout, 1, nil)
+    self.teA = StartTimeout(self.timerA, self.lock, self.tout, 1, self.logger)
 }
 
 func (self *baseTransaction) timerA() {
@@ -113,7 +116,7 @@ func (self *baseTransaction) timerA() {
     }
     self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id*/ self.tid.CallId, 0)
     self.tout *= 2
-    self.teA = StartTimeout(self.timerA, self.lock, self.tout, 1, nil)
+    self.teA = StartTimeout(self.timerA, self.lock, self.tout, 1, self.logger)
 }
 
 func (self *baseTransaction) GetHost() string {

@@ -447,7 +447,7 @@ func (self *ua) StartCreditTimer(rtime *sippy_time.MonoTime) {
     }
     // TODO make use of the mono time properly
     now, _ := sippy_time.NewMonoTime()
-    self.credit_timer = StartTimeout(func () { self.credit_expires(credit_time) }, self.session_lock, credit_time.Sub(now), 1, nil)
+    self.credit_timer = StartTimeout(func () { self.credit_expires(credit_time) }, self.session_lock, credit_time.Sub(now), 1, self.config.ErrorLogger())
 }
 
 func (self *ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool /*true*/, reverse_routes bool /*true*/) {
@@ -1047,4 +1047,8 @@ func (self *ua) GetCLI() string {
 
 func (self *ua) GetUasLossEmul() int {
     return 0
+}
+
+func (self *ua) Config() sippy_conf.Config {
+    return self.config
 }

@@ -275,6 +275,7 @@ type UA interface {
     GetCLI() string
     GetCLD() string
     GetUasLossEmul() int
+    Config() sippy_conf.Config
 }
 
 type baseTransaction interface {

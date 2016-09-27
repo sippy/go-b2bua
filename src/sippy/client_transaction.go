@@ -81,7 +81,7 @@ func NewClientTransaction(req sippy_types.SipRequest, tid *sippy_header.TID, use
         session_lock    : session_lock,
         uack            : false,
     }
-    self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, address, data, needack)
+    self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
     return self
 }
 
@@ -109,7 +109,7 @@ func (self *clientTransaction) startTeC() {
     if self.teC != nil {
         self.teC.Cancel()
     }
-    self.teC = StartTimeout(self.timerC, self, 32 * time.Second, 1, nil)
+    self.teC = StartTimeout(self.timerC, self, 32 * time.Second, 1, self.logger)
 }
 
 func (self *clientTransaction) timerB() {
@@ -144,7 +144,7 @@ func (self *clientTransaction) timerG() {
     }
     self.teG = nil
     if self.state == UACK {
-        println(time.Now().String(), "INVITE transaction stuck in the UACK state, possible UAC bug")
+        self.logger.Error("INVITE transaction stuck in the UACK state, possible UAC bug")
     }
 }
 
@@ -159,7 +159,7 @@ func (self *clientTransaction) startTeB(timeout time.Duration) {
     if self.teB != nil {
         self.teB.Cancel()
     }
-    self.teB = StartTimeout(self.timerB, self, timeout, 1, nil)
+    self.teB = StartTimeout(self.timerB, self, timeout, 1, self.logger)
 }
 
 func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string) {
@@ -272,7 +272,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                                     address : nil,
                                     call_id : self.tid.CallId,
                                 })
-            self.teG = StartTimeout(self.timerG, self, 64 * time.Second, 1, nil)
+            self.teG = StartTimeout(self.timerG, self, 64 * time.Second, 1, self.logger)
             return
         }
     } else {
