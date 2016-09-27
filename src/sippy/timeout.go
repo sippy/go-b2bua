@@ -32,11 +32,11 @@ import (
     "sync"
 
     "sippy/log"
+    "sippy/utils"
 )
 
 type Timeout struct {
     callback        func()
-    error_callback  func(error)
     timeout         time.Duration
     logger          sippy_log.ErrorLogger
     shutdown_chan   chan struct{}
@@ -66,13 +66,12 @@ func NewInactiveTimeout(callback func(), cb_lock sync.Locker, _timeout time.Dura
         started         : false,
         cb_lock         : cb_lock,
     }
-    self.error_callback = self.on_error
     return self
 }
 
 func (self *Timeout) Start() {
     self.lock.Lock()
-    if ! self.started {
+    if ! self.started && self.callback != nil {
         self.started = true
         go self.run()
     }
@@ -88,28 +87,15 @@ func (self *Timeout) Cancel() {
     close(self.shutdown_chan)
 }
 
-func (self *Timeout) on_error(err error) {
-    self.logger.ErrorAndTraceback(err)
-}
-
 func (self *Timeout) run() {
     for !self.shutdown {
         self._run()
     }
     self.callback = nil
-    self.error_callback = nil
     self.cb_lock = nil
 }
 
 func (self *Timeout) _run() {
-/*    defer func() {
-        if err := recover(); err != nil {
-            handler := self.error_callback
-            if handler != nil {
-                handler(fmt.Errorf("%v", err))
-            }
-        }
-    }()*/
     for !self.shutdown {
         if self.nticks == 0 {
             self.shutdown = true
@@ -126,17 +112,7 @@ func (self *Timeout) _run() {
         case <-self.shutdown_chan:
             self.shutdown = true
         case <-time.After(t):
-            if self.callback != nil {
-                if self.cb_lock != nil {
-                    self.cb_lock.Lock()
-                }
-                if !self.shutdown {
-                    self.callback()
-                }
-                if self.cb_lock != nil {
-                    self.cb_lock.Unlock()
-                }
-            }
+            sippy_utils.SafeCall(self.callback, self.cb_lock, self.logger)
         }
     }
 }

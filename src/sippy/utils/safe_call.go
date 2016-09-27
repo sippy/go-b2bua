@@ -1,6 +1,4 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2016 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,55 +22,27 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-package sippy_log
+package sippy_utils
 
 import (
-    "fmt"
-    "runtime"
-    "os"
-    "strings"
-    "time"
+    "sync"
+
+    "sippy/log"
 )
 
-type ErrorLogger interface {
-    ErrorAndTraceback(interface{})
-    Error(...interface{})
-    Debug(...interface{})
+func SafeGo(function func(), lock sync.Locker, logger sippy_log.ErrorLogger) {
+    go SafeCall(function, lock, logger)
 }
 
-type errorLogger struct {
-}
-
-func NewErrorLogger() *errorLogger {
-    return &errorLogger{}
-}
-
-func (self *errorLogger) ErrorAndTraceback(err interface{}) {
-    self.Error(err)
-    buf := make([]byte, 16384)
-    runtime.Stack(buf, false)
-    s := string(buf)
-    for _, l := range strings.Split(s, "\n") {
-        self.Error(l)
+func SafeCall(function func(), lock sync.Locker, logger sippy_log.ErrorLogger) {
+    if lock != nil {
+        lock.Lock()
+        defer lock.Unlock()
     }
-}
-
-func (self *errorLogger) Debug(params...interface{}) {
-    self.write("DEBUG: ", params...)
-}
-
-func (self *errorLogger) Error(params...interface{}) {
-    self.write("ERROR: ", params...)
-}
-
-func (*errorLogger) Reopen() {
-}
-
-func (*errorLogger) write(prefix string, params ...interface{}) {
-    t := time.Now().UTC()
-    tmp := fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d+00 ", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
-    params = append([]interface{}{ tmp, prefix }, params...)
-    params = append(params, "\n")
-    fmt.Fprint(os.Stderr, params...)
+    defer func() {
+        if err := recover(); err != nil {
+            logger.ErrorAndTraceback(err)
+        }
+    }()
+    function()
 }
