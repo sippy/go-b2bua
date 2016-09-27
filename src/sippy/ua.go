@@ -303,7 +303,7 @@ func (self *ua) EmitEvent(event sippy_types.CCEvent) {
             return
         }
         self.elast_seq = event.GetSeq()
-        self.call_controller.RecvEvent(event, self.me())
+        sippy_utils.SafeCall(func() { self.call_controller.RecvEvent(event, self.me()) }, nil, self.config.ErrorLogger())
     }
 }
 
@@ -315,7 +315,7 @@ func (self *ua) emitPendingEvents() {
             continue
         }
         self.elast_seq = event.GetSeq()
-        self.call_controller.RecvEvent(event, self.me())
+        sippy_utils.SafeCall(func() { self.call_controller.RecvEvent(event, self.me()) }, nil, self.config.ErrorLogger())
     }
 }
 

@@ -38,6 +38,7 @@ import (
     "sippy/headers"
     "sippy/types"
     "sippy/time"
+    "sippy/utils"
 )
 
 type SipRequestReceiver func(sippy_types.SipRequest) *sippy_types.Ua_context
@@ -399,7 +400,10 @@ func (self *sipTransactionManager) new_server_transaction(server *udpServer, req
         t.UpgradeToSessionLock(consumer.GetSessionLock())
         rval = consumer.RecvRequest(req, t)
     } else {
-        ua, req_receiver, resp := self.call_map.OnNewDialog(req, t)
+        var ua sippy_types.UA
+        var req_receiver sippy_types.RequestReceiver
+        var resp sippy_types.SipResponse
+        sippy_utils.SafeCall(func () { ua, req_receiver, resp = self.call_map.OnNewDialog(req, t) }, nil, self.config.ErrorLogger())
         if resp != nil {
             t.SendResponse(resp, false, nil)
             return

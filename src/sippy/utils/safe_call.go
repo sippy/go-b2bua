@@ -30,10 +30,6 @@ import (
     "sippy/log"
 )
 
-func SafeGo(function func(), lock sync.Locker, logger sippy_log.ErrorLogger) {
-    go SafeCall(function, lock, logger)
-}
-
 func SafeCall(function func(), lock sync.Locker, logger sippy_log.ErrorLogger) {
     if lock != nil {
         lock.Lock()
