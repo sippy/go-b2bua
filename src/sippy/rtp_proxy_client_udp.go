@@ -43,7 +43,7 @@ import (
 type Rtp_proxy_client_udp struct {
     address             net.Addr
     uopts               *udpServerOpts
-    pending_requests    map[string]*rtpp_req_udp // TODO guard this with lock
+    pending_requests    map[string]*rtpp_req_udp
     global_config       sippy_conf.Config
     delay_flt           sippy_math.RecFilter
     worker              *udpServer
@@ -140,7 +140,9 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
     timer := StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, self.owner.logger)
     preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback)
     self.worker.SendTo([]byte(command), self.host, self.port)
+    self.lock.Lock()
     self.pending_requests[cookie] = preq
+    self.lock.Unlock()
 }
 
 func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
@@ -174,7 +176,9 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_conf
         return
     }
     cookie, result := arr[0], arr[1]
+    self.lock.Lock()
     req, ok := self.pending_requests[cookie]
+    self.lock.Unlock()
     if ! ok {
         return
     }
