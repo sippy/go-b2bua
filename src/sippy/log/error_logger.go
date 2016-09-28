@@ -59,11 +59,11 @@ func (self *errorLogger) ErrorAndTraceback(err interface{}) {
 }
 
 func (self *errorLogger) Debug(params...interface{}) {
-    self.write("DEBUG: ", params...)
+    self.write("DEBUG:", params...)
 }
 
 func (self *errorLogger) Error(params...interface{}) {
-    self.write("ERROR: ", params...)
+    self.write("ERROR:", params...)
 }
 
 func (*errorLogger) Reopen() {
@@ -71,8 +71,10 @@ func (*errorLogger) Reopen() {
 
 func (*errorLogger) write(prefix string, params ...interface{}) {
     t := time.Now().UTC()
-    tmp := fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d+00 ", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
-    params = append([]interface{}{ tmp, prefix }, params...)
-    params = append(params, "\n")
-    fmt.Fprint(os.Stderr, params...)
+    buf := []interface{}{ fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d+00", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second()), " ", prefix }
+    for _, it := range params {
+        buf = append(buf, " ", it)
+    }
+    buf = append(buf, "\n")
+    fmt.Fprint(os.Stderr, buf...)
 }
