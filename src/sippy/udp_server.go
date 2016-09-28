@@ -37,6 +37,7 @@ import (
     "sippy/conf"
     "sippy/log"
     "sippy/time"
+    "sippy/utils"
 )
 
 type UdpPacketReceiver func(data []byte, addr *sippy_conf.HostPort, server *udpServer, rtime *sippy_time.MonoTime)
@@ -153,7 +154,7 @@ func (self *asyncReceiver) run(userv *udpServer) {
             self.logger.Error("Cannot create MonoTime object")
             continue
         }
-        userv.handle_read(buf[:n], address, rtime)
+        sippy_utils.SafeCall(func() { userv.handle_read(buf[:n], address, rtime) }, nil, self.logger)
     }
     self.sem <- 1
 }

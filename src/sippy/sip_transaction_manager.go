@@ -238,7 +238,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     }
     host, port := address.Host.String(), address.Port.String()
     resp.source = sippy_conf.NewHostPort(host, port)
-    t.IncomingResponse(resp, checksum)
+    sippy_utils.SafeCall(func() { t.IncomingResponse(resp, checksum) }, nil, self.config.ErrorLogger())
 }
 
 func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, data []byte, checksum string, address *sippy_conf.HostPort, server *udpServer) {
@@ -343,9 +343,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     t, ok := self.tserver[*tid]
     if ok {
         self.tserver_lock.Unlock()
-        t.Lock()
-        t.IncomingRequest(req, checksum)
-        t.Unlock()
+        sippy_utils.SafeCall(func() { t.IncomingRequest(req, checksum) }, t, self.config.ErrorLogger())
     } else if req.GetMethod() == "ACK" {
         self.tserver_lock.Unlock()
         // Some ACK that doesn't match any existing transaction.
@@ -398,7 +396,7 @@ func (self *sipTransactionManager) new_server_transaction(server *udpServer, req
     self.consumers_lock.Unlock()
     if consumer != nil {
         t.UpgradeToSessionLock(consumer.GetSessionLock())
-        rval = consumer.RecvRequest(req, t)
+        sippy_utils.SafeCall(func() { rval = consumer.RecvRequest(req, t) }, nil, self.config.ErrorLogger())
     } else {
         var ua sippy_types.UA
         var req_receiver sippy_types.RequestReceiver
