@@ -52,9 +52,6 @@ type resolv_req struct {
     data        []byte
 }
 
-type shutdown_req struct {
-}
-
 type asyncResolver struct {
     sem         chan int
     logger      sippy_log.ErrorLogger
@@ -299,14 +296,15 @@ func (self *udpServer) handle_read(data []byte, address net.Addr, rtime *sippy_t
 }
 
 func (self *udpServer) Shutdown() {
-    self.skt.Close()
+    // shutdown the senders and resolvers first
     self.wi <- nil
     self.wi_resolv <- nil
+    for _, worker := range self.asenders { <-worker.sem }
+    for _, worker := range self.aresolvers { <-worker.sem }
+    self.skt.Close()
 
     self.uopts.shut_down = true // self.uopts.data_callback = None
-    for _, worker := range self.asenders { <-worker.sem }
     for _, worker := range self.areceivers { <-worker.sem }
-    for _, worker := range self.aresolvers { <-worker.sem }
     self.asenders = make([]*asyncSender, 0)
     self.areceivers = make([]*asyncReceiver, 0)
     self.aresolvers = make([]*asyncResolver, 0)
