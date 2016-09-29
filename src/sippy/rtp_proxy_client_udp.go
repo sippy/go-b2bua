@@ -149,6 +149,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
     self.lock.Lock()
     req, ok := self.pending_requests[cookie]
     if ! ok {
+        self.lock.Unlock()
         return
     }
     if req.triesleft <= 0 || self.worker == nil {
