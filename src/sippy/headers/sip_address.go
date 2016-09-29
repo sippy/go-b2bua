@@ -48,6 +48,7 @@ func ParseSipAddress(address string, relaxedparser bool) (*sipAddress, error) {
     // simple 'sip:foo' case
     self := &sipAddress{
         params : make(map[string]*string),
+        hadbrace : true,
     }
 
     if strings.HasPrefix(strings.ToLower(address), "sip:") && strings.Index(address, "<") == -1 {
