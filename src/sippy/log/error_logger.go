@@ -32,6 +32,7 @@ import (
     "runtime"
     "os"
     "strings"
+    "sync"
     "time"
 )
 
@@ -42,6 +43,7 @@ type ErrorLogger interface {
 }
 
 type errorLogger struct {
+    lock    sync.Mutex
 }
 
 func NewErrorLogger() *errorLogger {
@@ -49,6 +51,8 @@ func NewErrorLogger() *errorLogger {
 }
 
 func (self *errorLogger) ErrorAndTraceback(err interface{}) {
+    self.lock.Lock()
+    defer self.lock.Lock()
     self.Error(err)
     buf := make([]byte, 16384)
     runtime.Stack(buf, false)
