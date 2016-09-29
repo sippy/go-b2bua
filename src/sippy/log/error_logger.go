@@ -52,7 +52,7 @@ func NewErrorLogger() *errorLogger {
 
 func (self *errorLogger) ErrorAndTraceback(err interface{}) {
     self.lock.Lock()
-    defer self.lock.Lock()
+    defer self.lock.Unlock()
     self.Error(err)
     buf := make([]byte, 16384)
     runtime.Stack(buf, false)
