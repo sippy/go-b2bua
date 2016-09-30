@@ -30,6 +30,7 @@ import (
     "fmt"
     "net"
     "os"
+    "runtime"
     "strconv"
     "syscall"
     "time"
@@ -167,7 +168,7 @@ func NewUdpServerOpts(laddress *sippy_conf.HostPort, data_callback UdpPacketRece
     self := &udpServerOpts{
         laddress        : laddress,
         data_callback   : data_callback,
-        nworkers        : 10,
+        nworkers        : runtime.NumCPU() * 2,
         shut_down       : false,
     }
     return self
