@@ -228,12 +228,7 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         }
         // We have done with the transaction, no need to wait for timeout
         self.sip_tm.tserver_del(self.tid)
-        self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
-                                        userv : nil,
-                                        data  : nil,
-                                        address : nil,
-                                        call_id : self.tid.CallId,
-                                    })
+        self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
         self.cleanup()
     }
 }

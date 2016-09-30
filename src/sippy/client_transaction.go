@@ -194,12 +194,7 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
         }
     }
     self.startTeB(self.expires)
-    self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
-                                userv : nil,
-                                data  : nil,
-                                address : nil,
-                                call_id : self.tid.CallId,
-                            })
+    self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
     if self.resp_receiver != nil {
         self.resp_receiver.RecvResponse(resp, self)
     }
@@ -266,22 +261,12 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             self.state = UACK
             self.ack_rAddr = rAddr
             self.ack_checksum = checksum
-            self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
-                                    userv : nil,
-                                    data  : nil,
-                                    address : nil,
-                                    call_id : self.tid.CallId,
-                                })
+            self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
             self.teG = StartTimeout(self.timerG, self, 64 * time.Second, 1, self.logger)
             return
         }
     } else {
-        self.sip_tm.rcache_put(checksum, &sipTMRetransmitO{
-                                    userv : nil,
-                                    data  : nil,
-                                    address : nil,
-                                    call_id : self.tid.CallId,
-                                })
+        self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
     }
     if self.resp_receiver != nil {
         self.resp_receiver.RecvResponse(resp, self)

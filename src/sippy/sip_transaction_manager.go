@@ -129,25 +129,46 @@ func check1918(host string) bool {
 func (self *sipTransactionManager) rcache_put(checksum string, entry *sipTMRetransmitO) {
     self.rcache_lock.Lock()
     defer self.rcache_lock.Unlock()
+    self.rcache_put_no_lock(checksum, entry)
+}
+
+func (self *sipTransactionManager) rcache_put_no_lock(checksum string, entry *sipTMRetransmitO) {
     self.l1rcache[checksum] = entry
 }
 
-func (self *sipTransactionManager) rcache_get(checksum string) (entry *sipTMRetransmitO, ok bool) {
-    self.rcache_lock.Lock()
-    defer self.rcache_lock.Unlock()
+func (self *sipTransactionManager) rcache_get_no_lock(checksum string) (entry *sipTMRetransmitO, ok bool) {
     entry, ok = self.l1rcache[checksum]
     if ok { return }
     entry, ok = self.l2rcache[checksum]
     return
 }
 
+func (self *sipTransactionManager) rcache_set_call_id(checksum, call_id string) {
+    self.rcache_lock.Lock()
+    defer self.rcache_lock.Unlock()
+    if it, ok := self.rcache_get_no_lock(checksum); ok {
+        it.call_id = call_id
+    } else {
+        self.rcache_put_no_lock(checksum, &sipTMRetransmitO{
+                                userv : nil,
+                                data  : nil,
+                                address : nil,
+                                call_id : call_id,
+                            })
+    }
+}
+
 func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_conf.HostPort, server *udpServer, rtime *sippy_time.MonoTime) {
     if len(data) < 32 {
+        //self.config.SipLogger().Write(rtime, retrans.call_id, "RECEIVED message from " + address.String() + ":\n" + string(data))
+        //self.logError("The message is too short from " + address.String() + ":\n" + string(data))
         return
     }
     checksum := fmt.Sprintf("%x", md5.Sum(data))
-    retrans, ok := self.rcache_get(checksum)
+    self.rcache_lock.Lock()
+    retrans, ok := self.rcache_get_no_lock(checksum)
     if ok {
+        self.rcache_lock.Unlock()
         self.config.SipLogger().Write(rtime, retrans.call_id, "RECEIVED message from " + address.String() + ":\n" + string(data))
         if retrans.data == nil {
             return
@@ -155,11 +176,12 @@ func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_co
         self.transmitData(retrans.userv, retrans.data, retrans.address, "", retrans.call_id, 0)
         return
     }
-    if len(data) < 10 {
-        self.config.SipLogger().Write(rtime, retrans.call_id, "RECEIVED message from " + address.String() + ":\n" + string(data))
-        self.logError("The message is too short from " + address.String() + ":\n" + string(data))
-        return
-    }
+    self.rcache_put_no_lock(checksum, &sipTMRetransmitO{
+                                userv : nil,
+                                data  : nil,
+                                address : nil,
+                            })
+    self.rcache_lock.Unlock()
     if string(data[:7]) == "SIP/2.0" {
         self.process_response(rtime, data, checksum, address, server)
     } else {
@@ -172,12 +194,6 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logError("can't parse SIP response from " + address.String() + ":" + err.Error())
-        self.rcache_put(checksum, &sipTMRetransmitO{
-                                    userv : nil,
-                                    data  : nil,
-                                    address : nil,
-                                    call_id : "",
-                                })
         return
     }
     tid := resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
@@ -185,12 +201,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
 
     if resp.scode < 100 || resp.scode > 999 {
         self.logError("invalid status code in SIP response" + address.String() + ":\n" + string(data))
-        self.rcache_put(checksum, &sipTMRetransmitO{
-                                    userv : nil,
-                                    data  : nil,
-                                    address : nil,
-                                    call_id : tid.CallId,
-                                })
+        self.rcache_set_call_id(checksum, tid.CallId)
         return
     }
     self.tclient_lock.Lock()
@@ -219,12 +230,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
                 self.transmitData(server, data, taddr, checksum, call_id, 0)
             }
         }
-        self.rcache_put(checksum, &sipTMRetransmitO{
-                                    userv : nil,
-                                    data  : nil,
-                                    address : nil,
-                                    call_id : tid.CallId,
-                                })
+        self.rcache_set_call_id(checksum, tid.CallId)
         return
     }
     t.Lock()
@@ -255,12 +261,6 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
         }
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logError("can't parse SIP request from " + address.String() + ": " + err.Error())
-        self.rcache_put(checksum, &sipTMRetransmitO{
-                                    userv : nil,
-                                    data  : nil,
-                                    address : nil,
-                                    call_id : "",
-                                })
         return
     }
     tids := req.getTIds()
@@ -350,12 +350,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
         // Drop and forget it - upper layer is unlikely to be interested
         // to seeing this anyway.
         //println("unmatched ACK transaction - ignoring")
-        self.rcache_put(checksum, &sipTMRetransmitO{
-                                        userv : nil,
-                                        data  : nil,
-                                        address : nil,
-                                        call_id : tid.CallId,
-                                    })
+        self.rcache_set_call_id(checksum, tid.CallId)
     } else if req.GetMethod() == "CANCEL" {
         self.tserver_lock.Unlock()
         resp := req.GenResponse(481, "Call Leg/Transaction Does Not Exist", /*body*/ nil, /*server*/ nil)
