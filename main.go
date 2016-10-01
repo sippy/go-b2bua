@@ -38,7 +38,7 @@ import (
     "strconv"
     "sync"
     "syscall"
-    //"time"
+    "time"
 
     "sippy"
     "sippy/conf"
@@ -46,24 +46,36 @@ import (
     "sippy/log"
 )
 
+var next_cc_id chan int64
+
+func init() {
+    next_cc_id = make(chan int64)
+    go func() {
+        var id int64 = 1
+        for {
+            next_cc_id <- id
+            id++
+        }
+    }()
+}
+
 type callController struct {
-    config          *myconfig
-    logger          sippy_log.ErrorLogger
-    sip_tm          sippy_types.SipTransactionManager
     uaA             sippy_types.UA
     uaO             sippy_types.UA
     lock            *sync.Mutex
+    id              int64
+    cmap            *callMap
 }
 
-func NewCallController(config *myconfig, sip_tm sippy_types.SipTransactionManager, logger sippy_log.ErrorLogger) *callController {
+func NewCallController(cmap *callMap) *callController {
     self := &callController{
-        config          : config,
-        sip_tm          : sip_tm,
-        logger          : logger,
+        id              : <-next_cc_id,
         uaO             : nil,
         lock            : new(sync.Mutex),
+        cmap            : cmap,
     }
-    self.uaA = sippy.NewUA(sip_tm, config, config.nh_addr, self, self.lock, nil)
+    self.uaA = sippy.NewUA(cmap.sip_tm, cmap.config, cmap.config.nh_addr, self, self.lock, nil)
+    self.uaA.SetDeadCbs([]sippy_types.OnDeadListener{ self.aDead })
     //self.uaA.SetCreditTime(5 * time.Second)
     return self
 }
@@ -76,8 +88,9 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 self.uaA.RecvEvent(sippy.NewCCEventDisconnect(nil, event.GetRtime(), ""))
                 return
             }
-            self.uaO = sippy.NewUA(self.sip_tm, self.config, self.config.nh_addr, self, self.lock, nil)
-            self.uaO.SetRAddr(self.config.nh_addr)
+            self.uaO = sippy.NewUA(self.cmap.sip_tm, self.cmap.config, self.cmap.config.nh_addr, self, self.lock, nil)
+            self.uaO.SetDeadCbs([]sippy_types.OnDeadListener{ self.oDead })
+            self.uaO.SetRAddr(self.cmap.config.nh_addr)
         }
         self.uaO.RecvEvent(event)
     } else {
@@ -85,17 +98,42 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
     }
 }
 
+func (self *callController) aDead() {
+    self.cmap.Remove(self.id)
+}
+
+func (self *callController) oDead() {
+    self.cmap.Remove(self.id)
+}
+
+func (self *callController) Shutdown() {
+    self.uaA.Disconnect(nil)
+}
+
+func (self *callController) String() string {
+    res := "uaA:" + self.uaA.String() + ", uaO: "
+    if self.uaO == nil {
+        res += "nil"
+    } else {
+        res += self.uaO.String()
+    }
+    return res
+}
+
 type callMap struct {
     config *myconfig
     logger          sippy_log.ErrorLogger
     sip_tm          sippy_types.SipTransactionManager
     proxy           sippy_types.StatefulProxy
+    ccmap           map[int64]*callController
+    ccmap_lock      sync.Mutex
 }
 
 func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) *callMap {
     return &callMap{
         logger          : logger,
         config          : config,
+        ccmap           : make(map[int64]*callController),
     }
 }
 
@@ -106,7 +144,10 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.Serv
     }
     if req.GetMethod() == "INVITE" {
         // New dialog
-        cc := NewCallController(self.config, self.sip_tm, self.logger)
+        cc := NewCallController(self)
+        self.ccmap_lock.Lock()
+        self.ccmap[cc.id] = cc
+        self.ccmap_lock.Unlock()
         return cc.uaA, cc.uaA, nil
     }
     if req.GetMethod() == "REGISTER" {
@@ -118,6 +159,21 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.Serv
         return nil, nil, req.GenResponse(200, "OK", nil, nil)
     }
     return nil, nil, req.GenResponse(501, "Not Implemented", nil, nil)
+}
+
+func (self *callMap) Remove(ccid int64) {
+    self.ccmap_lock.Lock()
+    defer self.ccmap_lock.Unlock()
+    delete(self.ccmap, ccid)
+}
+
+func (self *callMap) Shutdown() {
+    self.ccmap_lock.Lock()
+    defer self.ccmap_lock.Unlock()
+    for _, cc := range self.ccmap {
+        //println(cc.String())
+        cc.Shutdown()
+    }
 }
 
 type myconfig struct {
@@ -148,7 +204,11 @@ func main() {
     flag.Parse()
 
     error_logger := sippy_log.NewErrorLogger()
-    sip_logger := sippy_log.NewSipLogger("b2bua")
+    sip_logger, err := sippy_log.NewSipLogger("b2bua", logfile)
+    if err != nil {
+        error_logger.Error(err)
+        return
+    }
     config := &myconfig{
         Config : sippy_conf.NewConfig(error_logger, sip_logger),
         nh_addr      : sippy_conf.NewHostPort("192.168.0.102", "5060"), // next hop address
@@ -201,7 +261,9 @@ func main() {
     signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE, syscall.SIGUSR1, syscall.SIGUSR2)
     select {
     case <-signal_chan:
+        cmap.Shutdown()
         sip_tm.Shutdown()
+        time.Sleep(time.Second)
         break
     }
 }
