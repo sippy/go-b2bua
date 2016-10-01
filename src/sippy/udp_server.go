@@ -25,7 +25,16 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package sippy
-
+// #include <sys/socket.h>
+//
+// #ifdef SO_REUSEPORT
+// #define SO_REUSEPORT_EXISTS 1
+// #else
+// #define SO_REUSEPORT_EXISTS 0
+// #define SO_REUSEPORT 0 /* just a placeholder to keep the go code compilable */
+// #endif
+//
+import "C"
 import (
     "fmt"
     "net"
@@ -214,8 +223,12 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
     if err != nil { return nil, err }
     s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
     if err != nil { return nil, err }
-    for _, opt := range []int{ syscall.SO_REUSEPORT, syscall.SO_REUSEADDR } {
-        if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, opt, 1); err != nil {
+    if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+        syscall.Close(s)
+        return nil, err
+    }
+    if C.SO_REUSEPORT_EXISTS == 1 {
+        if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, C.SO_REUSEPORT, 1); err != nil {
             syscall.Close(s)
             return nil, err
         }
