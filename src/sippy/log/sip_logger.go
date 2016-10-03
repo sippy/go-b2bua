@@ -29,6 +29,8 @@ package sippy_log
 
 import (
     "os"
+    "fmt"
+    "time"
     "sippy/time"
 )
 
@@ -38,12 +40,14 @@ type SipLogger interface {
 
 type sipLogger struct {
     fname   string
+    id      string
     fd      *os.File
 }
 
 func NewSipLogger(id, fname string) (*sipLogger, error) {
     self := &sipLogger{
         fname   : fname,
+        id      : id,
     }
     err := self.Reopen()
     if err != nil {
@@ -53,10 +57,15 @@ func NewSipLogger(id, fname string) (*sipLogger, error) {
 }
 
 func (self *sipLogger) Write(rtime *sippy_time.MonoTime, call_id string, msg string) {
-    if rtime == nil {
-        rtime, _ = sippy_time.NewMonoTime()
+    var t time.Time
+    if rtime != nil {
+        t = rtime.Realt()
+    } else {
+        t = time.Now()
     }
-    buf := rtime.Fptime() + " " + call_id + " " + msg + "\n"
+    buf := fmt.Sprintf("%d %s %02d:%02d:%06.3f/%s/%s: %s\n",
+                t.Day(), t.Month().String()[:3], t.Hour(), t.Minute(), float64(t.Second()) + float64(t.Nanosecond()) / 1e9,
+                call_id, self.id, msg)
     self.fd.Write([]byte(buf))
 }
 
