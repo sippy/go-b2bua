@@ -106,7 +106,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
     for _, route := range routes {
         self.AppendHeader(route)
     }
-    if maxforwards == nil   { maxforwards = sippy_header.NewSipMaxForwards() }
+    if maxforwards == nil   { maxforwards = sippy_header.NewSipMaxForwardsDefault() }
     self.AppendHeader(maxforwards)
     if from == nil          { from = sippy_header.NewSipFrom(nil, config) }
     self.AppendHeader(from)
@@ -181,10 +181,8 @@ func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config)
     }
     var maxforwards *sippy_header.SipMaxForwards = nil
 
-    if len(self.maxforwards) > 0 {
-        maxforwards = self.maxforwards[0].GetCopy()
-    } else {
-        maxforwards = nil
+    if self.maxforwards != nil {
+        maxforwards = self.maxforwards.GetCopy()
     }
     return NewSipRequest("ACK", /*ruri =*/ self.ruri.GetCopy(), /*sipver =*/ self.sipver,
                       /*to =*/ to, /*from =*/ self.from.GetCopy(), /*via =*/ self.vias[0].GetCopy(),
@@ -197,8 +195,8 @@ func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config)
 func (self *sipRequest) GenCANCEL(config sippy_conf.Config) sippy_types.SipRequest {
     var maxforwards *sippy_header.SipMaxForwards = nil
 
-    if len(self.maxforwards) > 0 {
-        maxforwards = self.maxforwards[0].GetCopy()
+    if self.maxforwards != nil {
+        maxforwards = self.maxforwards.GetCopy()
     }
     routes := make([]*sippy_header.SipRoute, len(self.routes))
     for i, r := range self.routes {

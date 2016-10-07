@@ -95,8 +95,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             t.SendResponse(req.GenResponse(200, "OK", self.ua.GetLSDP(), /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
             return nil
         }
-        event := NewCCEventUpdate(/*rtime*/ req.GetRtime(), /*origin*/ self.ua.GetOrigin(), body)
-        event.SetReason(req.GetReason())
+        event := NewCCEventUpdate(req.GetRtime(), self.ua.GetOrigin(), req.GetReason(), req.GetMaxForwards(), body)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, req, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
@@ -196,7 +195,11 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             }
             return nil, nil
         }
-        req := self.ua.GenRequest("INVITE", body, "", "", nil, eh...)
+        eh2 := eh
+        if _event.GetMaxForwards() != nil {
+            eh2 = append(eh2, sippy_header.NewSipMaxForwards(_event.GetMaxForwards().GetNum() - 1))
+        }
+        req := self.ua.GenRequest("INVITE", body, "", "", nil, eh2...)
         self.ua.IncLCSeq()
         self.ua.SetLSDP(body)
         t, err := self.ua.SipTM().NewClientTransaction(req, self.ua, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)

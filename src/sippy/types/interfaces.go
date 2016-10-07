@@ -81,6 +81,8 @@ type SipMsg interface {
     GetFirstHF(string) sippy_header.SipHeader
     GetHFs(string) []sippy_header.SipHeader
     GetSL() string
+    GetMaxForwards() *sippy_header.SipMaxForwards
+    SetMaxForwards(*sippy_header.SipMaxForwards)
 }
 
 type SipRequest interface {

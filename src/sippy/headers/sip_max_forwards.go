@@ -50,11 +50,15 @@ func ParseSipMaxForwards(body string) ([]SipHeader, error) {
     } }, nil
 }
 
-func NewSipMaxForwards() *SipMaxForwards {
+func NewSipMaxForwards(number int) *SipMaxForwards {
     return &SipMaxForwards{
         normalName  : _sip_max_forwards_name,
-        number      : 70,
+        number      : number,
     }
+}
+
+func NewSipMaxForwardsDefault() *SipMaxForwards {
+    return NewSipMaxForwards(70)
 }
 
 func (self *SipMaxForwards) Body() string {
@@ -76,4 +80,8 @@ func (self *SipMaxForwards) GetCopy() *SipMaxForwards {
 
 func (self *SipMaxForwards) GetCopyAsIface() SipHeader {
     return self.GetCopy()
+}
+
+func (self *SipMaxForwards) GetNum() int {
+    return self.number
 }

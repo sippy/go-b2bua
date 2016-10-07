@@ -55,7 +55,7 @@ type sipMsg struct {
     content_type        *sippy_header.SipContentType
     call_id             *sippy_header.SipCallId
     refer_to            *sippy_header.SipReferTo
-    maxforwards         []*sippy_header.SipMaxForwards
+    maxforwards         *sippy_header.SipMaxForwards
     also                []*sippy_header.SipAlso
     rtime               *sippy_time.MonoTime
     body                sippy_types.MsgBody
@@ -84,7 +84,6 @@ func NewSipMsg(me SipMsgDescendant, rtime *sippy_time.MonoTime) *sipMsg {
         contacts        : make([]*sippy_header.SipContact, 0),
         record_routes   : make([]*sippy_header.SipRecordRoute, 0),
         routes          : make([]*sippy_header.SipRoute, 0),
-        maxforwards     : make([]*sippy_header.SipMaxForwards, 0),
         also            : make([]*sippy_header.SipAlso, 0),
         me              : me,
         rtime           : rtime,
@@ -175,7 +174,7 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     case *sippy_header.SipTo:
         self.to = t
     case *sippy_header.SipMaxForwards:
-        self.maxforwards = append(self.maxforwards, t)
+        self.maxforwards = t
     case *sippy_header.SipVia:
         self.vias = append(self.vias, t)
         return
@@ -553,4 +552,12 @@ func (self *sipMsg) GetHFs(name string) []sippy_header.SipHeader {
         }
     }
     return rval
+}
+
+func (self *sipMsg) GetMaxForwards() *sippy_header.SipMaxForwards {
+    return self.maxforwards
+}
+
+func (self *sipMsg) SetMaxForwards(maxforwards *sippy_header.SipMaxForwards) {
+    self.maxforwards = maxforwards
 }

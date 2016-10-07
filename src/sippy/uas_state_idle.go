@@ -81,9 +81,10 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     auth := req.GetSipAuthorization().GetCopy()
     body := req.GetBody()
     self.ua.SetBranch(req.GetVias()[0].GetBranch())
-    event := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), self.ua.GetRUri().GetUrl().Username, req.GetRURI().Username, body, auth,
-      self.ua.GetRUri().GetUri().GetName(), /*rtime*/ req.GetRtime(), /*origin*/ self.ua.GetOrigin())
+    event := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), self.ua.GetRUri().GetUrl().Username,
+        req.GetRURI().Username, body, auth, self.ua.GetRUri().GetUri().GetName(), req.GetRtime(), self.ua.GetOrigin())
     event.SetReason(req.GetReason())
+    event.SetMaxForwards(req.GetMaxForwards())
     if self.ua.GetExpireTime() != 0 {
         self.ua.SetExMtime(event.GetRtime().Add(self.ua.GetExpireTime()))
     }

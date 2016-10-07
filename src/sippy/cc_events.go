@@ -43,6 +43,7 @@ type CCEventGeneric struct {
     extra_headers   []sippy_header.SipHeader
     origin          string
     sip_reason      *sippy_header.SipReason
+    sip_max_forwards *sippy_header.SipMaxForwards
 }
 
 func newCCEventGeneric(rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) CCEventGeneric {
@@ -53,12 +54,31 @@ func newCCEventGeneric(rtime *sippy_time.MonoTime, origin string, extra_headers 
     if rtime == nil {
         rtime, _ = sippy_time.NewMonoTime()
     }
-    return CCEventGeneric{
+    self := CCEventGeneric{
         rtime   : rtime,
         seq     : new_seq,
         origin  : origin,
-        extra_headers : extra_headers,
+        extra_headers : make([]sippy_header.SipHeader, 0, len(extra_headers)),
     }
+    for _, eh := range extra_headers {
+        switch header := eh.(type) {
+        case *sippy_header.SipMaxForwards:
+            self.sip_max_forwards = header
+        case *sippy_header.SipReason:
+            self.sip_reason = header
+        default:
+            self.extra_headers = append(self.extra_headers, eh)
+        }
+    }
+    return self
+}
+
+func (self *CCEventGeneric) GetMaxForwards() *sippy_header.SipMaxForwards {
+    return self.sip_max_forwards
+}
+
+func (self *CCEventGeneric) SetMaxForwards(max_forwards *sippy_header.SipMaxForwards) {
+    self.sip_max_forwards = max_forwards
 }
 
 func (self *CCEventGeneric) AppendExtraHeader(eh sippy_header.SipHeader) {
@@ -86,7 +106,11 @@ func (self *CCEventGeneric) GetOrigin() string {
 }
 
 func (self *CCEventGeneric) GetExtraHeaders() []sippy_header.SipHeader {
-    return self.extra_headers
+    ret := self.extra_headers
+    if self.sip_reason != nil { ret = append(ret, self.sip_reason) }
+    // The max_forwards should not be present here
+    //if self.sip_max_forwards != nil { ret = append(ret, self.sip_max_forwards) }
+    return ret
 }
 
 type CCEventTry struct {
@@ -188,11 +212,14 @@ type CCEventUpdate struct {
     body    sippy_types.MsgBody
 }
 
-func NewCCEventUpdate(rtime *sippy_time.MonoTime, origin string, msg_body sippy_types.MsgBody, extra_headers ...sippy_header.SipHeader) *CCEventUpdate {
-    return &CCEventUpdate{
-        CCEventGeneric  : newCCEventGeneric(rtime, origin, extra_headers...),
+func NewCCEventUpdate(rtime *sippy_time.MonoTime, origin string, reason *sippy_header.SipReason, max_forwards *sippy_header.SipMaxForwards, msg_body sippy_types.MsgBody) *CCEventUpdate {
+    self := &CCEventUpdate{
+        CCEventGeneric  : newCCEventGeneric(rtime, origin),
         body            : msg_body,
     }
+    self.SetReason(reason)
+    self.SetMaxForwards(max_forwards)
+    return self
 }
 
 func (self *CCEventUpdate) String() string { return "CCEventUpdate" }

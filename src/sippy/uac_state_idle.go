@@ -95,7 +95,11 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         self.ua.SetRoutes(make([]*sippy_header.SipRoute, 0))
         self.ua.SetCGUID(event.GetSipCiscoGUID())
         self.ua.SetLSDP(event.GetBody())
-        req := self.ua.GenRequest("INVITE", event.GetBody(), /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, /*extra_headers =*/ event.GetExtraHeaders()...)
+        eh := event.GetExtraHeaders()
+        if event.GetMaxForwards() != nil {
+            eh = append(eh, event.GetMaxForwards())
+        }
+        req := self.ua.GenRequest("INVITE", event.GetBody(), /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
         self.ua.IncLCSeq()
         var tr sippy_types.ClientTransaction
         tr, err = self.ua.SipTM().NewClientTransaction(req, self.ua, self.ua.GetSessionLock(), /*laddress =*/ self.ua.GetSourceAddress(), /*udp_server*/ nil)
