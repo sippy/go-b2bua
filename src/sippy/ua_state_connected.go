@@ -197,6 +197,10 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         }
         eh2 := eh
         if _event.GetMaxForwards() != nil {
+            if _event.GetMaxForwards().GetNum() <= 0 {
+                self.ua.Enqueue(NewCCEventFail(483, "Too Many Hops", event.GetRtime(), ""))
+                return nil, nil
+            }
             eh2 = append(eh2, sippy_header.NewSipMaxForwards(_event.GetMaxForwards().GetNum() - 1))
         }
         req := self.ua.GenRequest("INVITE", body, "", "", nil, eh2...)
