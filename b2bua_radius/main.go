@@ -27,7 +27,10 @@
 package main
 
 import (
+    "strings"
+
     "sippy"
+    "sippy/conf"
 )
 
 var global_static_route *B2BRoute
@@ -89,19 +92,6 @@ def re_replace(ptrn, s):
         ptrn = ptrn[3:]
     return s
 
-class CCStateIdle(object):
-    sname = 'Idle'
-class CCStateWaitRoute(object):
-    sname = 'WaitRoute'
-class CCStateARComplete(object):
-    sname = 'ARComplete'
-class CCStateConnected(object):
-    sname = 'Connected'
-class CCStateDead(object):
-    sname = 'Dead'
-class CCStateDisconnecting(object):
-    sname = 'Disconnecting'
-
 def reopen(signum, logfile):
     print('Signal %d received, reopening logs' % signum)
     fd = os.open(logfile, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
@@ -160,21 +150,23 @@ func main() {
     global_config.SetMyUAName("Sippy B2BUA (RADIUS)")
 
     global_cmap = NewCallMap(global_config)
+/*
+    if global_config.getdefault('xmpp_b2bua_id', nil) != nil:
+        global_config['_xmpp_mode'] = true
+*/
+    sip_tm := sippy.NewSipTransactionManager(global_config, global_cmap)
+    sip_tm.nat_traversal = global_config.nat_traversal
+    global_cmap.sip_tm = sip_tm
     if global_config.sip_proxy != "" {
-        host_port = global_config.sip_proxy.split(':', 1)
+        var sip_proxy *sippy_conf.HostPort
+        host_port := strings.SplitN(global_config.sip_proxy, ":", 2)
         if len(host_port) == 1 {
             sip_proxy = sippy_conf.NewHostPort(host_port[0], "5060")
         } else {
             sip_proxy = sippy_conf.NewHostPort(host_port[0], host_port[1])
         }
-        global_cmap.proxy = StatefulProxy(global_config, sip_proxy)
+        global_cmap.proxy = sippy.NewStatefulProxy(sip_tm, sip_proxy, global_config)
     }
-/*
-    if global_config.getdefault('xmpp_b2bua_id', nil) != nil:
-        global_config['_xmpp_mode'] = true
-*/
-    sip_tm := NewSipTransactionManager(global_config, global_cmap.recvRequest)
-    sip_tm.nat_traversal = global_config.nat_traversal
 
     cmdfile = global_config.b2bua_socket
     if cmdfile.startswith("unix:") {

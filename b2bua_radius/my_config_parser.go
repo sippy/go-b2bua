@@ -28,18 +28,26 @@ package main
 
 import (
     "sippy/conf"
+    "sippy/log"
 )
 
 type myConfigParser struct {
     sippy_conf.Config
+    accept_ips          map[string]bool
     static_route        string
+    sip_proxy           string
+    //auth_enable         bool
     rtp_proxy_clients   []string
+    pass_headers        []string
 }
 
 func NewMyConfigParser() *myConfigParser {
     return &myConfigParser{
         Config              : sippy_conf.NewConfig(error_logger, sip_logger),
         rtp_proxy_clients   : make([]string, 0),
+        accept_ips          : make(map[string]bool),
+        //auth_enable         : false,
+        pass_headers        : make([]string, 0),
     }
 }
 
@@ -86,6 +94,14 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
             */
     flag.StringVar(&self.static_route, "s", "", "static route for all SIP calls")
     flag.StringVar(&self.static_route, "static_route", "", "static route for all SIP calls")
+
+    var accept_ips string
+    flag.StringVar(&accept_ips, "a", "", "accept_ips")
+    flag.StringVar(&accept_ips, "accept_ips", "", "IP addresses that we will only be accepting incoming " +
+                                "calls from (comma-separated list). If the parameter " +
+                                "is not specified, we will accept from any IP and " +
+                                "then either try to authenticate if authentication " +
+                                "is enabled, or just let them to pass through")
 /*
         if o == '-a':
             global_config.check_and_set('accept_ips', a)
@@ -131,9 +147,10 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
         if o == '-m':
             global_config.check_and_set('max_credit_time', a)
             continue
-        if o == '-u':
-            global_config['auth_enable'] = false
-            continue
+*/
+    //flag.BoolVar(&self.auth_enable, "a", false, "auth_enable")
+    //flag.BoolVar(&self.auth_enable, "auth_enable", false, "enable or disable Radius authentication")
+/*
         if o == '-r':
             global_config.check_and_set('rtp_proxy_client', a)
             continue
@@ -143,10 +160,13 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
         if o == '-R':
             global_config.check_and_set('radiusclient.conf', a)
             continue
-        if o == '-h':
-            for a in a.split(','):
-                global_config.check_and_set('pass_header', a)
-            continue
+*/
+    var pass_header, pass_headers string
+    flag.StringVar(&pass_header, "h", "", "pass_header")
+    flag.StringVar(&pass_headers, "pass_headers", "", "list of SIP header field names that the B2BUA will " +
+                                "pass from ingress call leg to egress call leg " +
+                                "unmodified (comma-separated list)")
+/*
         if o == '-c':
             global_config.check_and_set('b2bua_socket', a)
             continue
@@ -171,11 +191,31 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
                                                                 "RTPproxy control socket. Address in the format " +
                                                                 "\"udp:host[:port]\" (comma-separated list)")
     flag.StringVar(&rtp_proxy_client, "rtp_proxy_client", "", "RTPproxy control socket. Address in the format \"udp:host[:port]\"")
+    flag.StringVar(&self.sip_proxy, "sip_proxy", "", "address of the helper proxy to handle \"REGISTER\" " +
+                                 "and \"SUBSCRIBE\" messages. Address in the format \"host[:port]\"")
     flag.Parse()
     rtp_proxy_clients += "," + rtp_proxy_client
     arr := strings.Split(rtp_proxy_clients, ",")
     for _, s := range arr {
-        self.rtp_proxy_clients = append(self.rtp_proxy_clients, strings.TrimSpace(s))
+        s = strings.TrimSpace(s)
+        if s != "" {
+            self.rtp_proxy_clients = append(self.rtp_proxy_clients, s)
+        }
+    }
+    arr = strings.Split(accept_ips, ",")
+    for _, s := range arr {
+        s = strings.TrimSpace(s)
+        if s != "" {
+            self.accept_ips[s] = true
+        }
+    }
+    pass_headers += "," + pass_header
+    arr = strings.Split(pass_headers, ",")
+    for _, s := range arr {
+        s = strings.TrimSpace(s)
+        if s != "" {
+            self.pass_headers = append(self.pass_headers, s)
+        }
     }
 }
 /*
@@ -398,3 +438,11 @@ if __name__ == '__main__':
     assert m['_accept_ips'][0] == '1.2.3.4'
     assert m['_accept_ips'][1] == '5.6.7.8'
 */
+
+func (self *myConfigParser) checkIP(ip string) bool {
+    if len(self.accept_ips) == 0 {
+        return true
+    }
+    _, ok = self.accept_ips[ip]
+    return ok
+}

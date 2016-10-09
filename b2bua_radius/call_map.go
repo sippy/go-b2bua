@@ -27,24 +27,35 @@
 package main
 
 import (
+    "fmt"
     "os"
+    "os/exec"
     "os/signal"
+    "sync"
     "syscall"
+    "time"
+
+    "sippy/headers"
+    "sippy/types"
 )
 
 type callMap struct {
     global_config   *myConfigParser
     ccmap           map[int64]*callController
+    gc_timeout      time.Duration
+    debug_mode      bool
+    safe_restart    bool
+    sip_tm          sippy_types.SipTransactionManager
+    proxy           sippy_types.StatefulProxy
+    cc_id           int64
+    cc_id_lock      sync.Mutex
 }
 
 /*
 class CallMap(object):
     ccmap = nil
     el = nil
-    debug_mode = false
-    safe_restart = false
     global_config = nil
-    proxy = nil
     //rc1 = nil
     //rc2 = nil
 */
@@ -53,6 +64,9 @@ func NewCallMap(global_config *myConfigParser) *callMap {
     self := &callMap{
         global_config   : global_config,
         ccmap           : make(map[int64]*callController),
+        gc_timeout      : time.Minute,
+        debug_mode      : false,
+        safe_restart    : false,
     }
     go func() {
         sighup_ch := make(chan os.Signal, 1)
@@ -72,76 +86,95 @@ func NewCallMap(global_config *myConfigParser) *callMap {
             }
         }
     }()
-    self.el = Timeout(self.GClector, 60, -1)
+    go func() {
+        for {
+            time.Sleep(self.gc_timeout)
+            self.GClector()
+        }
+    }()
+    return self
 }
+
+func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.ServerTransaction) {
+    to_tag := req.GetTo().GetTag()
+    //except Exception as exception:
+        //println(datetime.now(), "can\"t parse SIP request: %s:\n" % str(exception))
+        //println( "-" * 70)
+        //print_exc(file = sys.stdout)
+        //println( "-" * 70)
+        //println(req)
+        //println("-" * 70)
+        //sys.stdout.flush()
+        //return (nil, nil, nil)
+    if to_tag != "" {
+        // Request within dialog, but no such dialog
+        return req.GenResponse(481, "Call Leg/Transaction Does Not Exist", nil, nil)
+    }
+    if req.GetMethod() == "INVITE" {
+        // New dialog
+        var via *sippy_header.SipVia
+        vias := req.GetVias()
+        if len(vias) > 1 {
+            via = vias[1]
+        } else {
+            via = vias[0]
+        }
+        remote_ip := via.GetTAddr(self.global_config).Host
+        source := req.GetSource()
+
+        // First check if request comes from IP that
+        // we want to accept our traffic from
+        if ! self.global_config.checkIP(source.Host.String())  {
+            resp := req.GenResponse(403, "Forbidden", nil, nil)
+            return resp, nil, nil
+        }
 /*
-    def recvRequest(self, req, sip_t):
-        try:
-            to_tag = req.getHFBody("to").getTag()
-        except Exception as exception:
-            println(datetime.now(), "can\"t parse SIP request: %s:\n" % str(exception))
-            println( "-" * 70)
-            print_exc(file = sys.stdout)
-            println( "-" * 70)
-            println(req)
-            println("-" * 70)
-            sys.stdout.flush()
-            return (nil, nil, nil)
-        if to_tag != nil:
-            // Request within dialog, but no such dialog
-            return (req.genResponse(481, "Call Leg/Transaction Does Not Exist"), nil, nil)
-        if req.getMethod() == "INVITE":
-            // New dialog
-            if req.countHFs("via") > 1:
-                via = req.getHFBody("via", 1)
-            else:
-                via = req.getHFBody("via", 0)
-            remote_ip = via.getTAddr()[0]
-            source = req.getSource()
-
-            // First check if request comes from IP that
-            // we want to accept our traffic from
-            if self.global_config.has_key("_accept_ips") && \
-              ! source[0] in self.global_config["_accept_ips"]:
-                resp = req.genResponse(403, "Forbidden")
-                return (resp, nil, nil)
-
-            challenge = nil
-            if self.global_config["auth_enable"]:
-                // Prepare challenge if no authorization header is present.
-                // Depending on configuration, we might try remote ip auth
-                // first and then challenge it or challenge immediately.
-                if self.global_config["digest_auth"] && \
-                  req.countHFs("authorization") == 0:
-                    challenge = SipHeader(name = "www-authenticate")
-                    challenge.getBody().realm = req.getRURI().host
-                // Send challenge immediately if digest is the
-                // only method of authenticating
-                if challenge != nil && self.global_config.getdefault("digest_auth_only", false):
-                    resp = req.genResponse(401, "Unauthorized")
-                    resp.appendHeader(challenge)
-                    return (resp, nil, nil)
-
-            pass_headers = []
-            for header in self.global_config["_pass_headers"]:
-                hfs = req.getHFs(header)
-                if len(hfs) > 0:
-                    pass_headers.extend(hfs)
-            cc = CallController(remote_ip, source, self.global_config, pass_headers)
-            cc.challenge = challenge
-            rval = cc.uaA.recvRequest(req, sip_t)
-            self.ccmap.append(cc)
-            return rval
-        if self.proxy != nil && req.getMethod() in ("REGISTER", "SUBSCRIBE"):
-            return self.proxy.recvRequest(req)
-        if req.getMethod() in ("NOTIFY", "PING"):
-            // Whynot?
-            return (req.genResponse(200, "OK"), nil, nil)
-        return (req.genResponse(501, "Not Implemented"), nil, nil)
+        var challenge *sippy_header.SipWWWAuthenticate
+        if self.global_config.auth_enable {
+            // Prepare challenge if no authorization header is present.
+            // Depending on configuration, we might try remote ip auth
+            // first and then challenge it or challenge immediately.
+            if self.global_config["digest_auth"] && req.countHFs("authorization") == 0 {
+                challenge = NewSipWWWAuthenticate()
+                challenge.getBody().realm = req.getRURI().host
+            }
+            // Send challenge immediately if digest is the
+            // only method of authenticating
+            if challenge != nil && self.global_config.getdefault("digest_auth_only", false) {
+                resp = req.GenResponse(401, "Unauthorized")
+                resp.appendHeader(challenge)
+                return resp, nil, nil
+            }
+        }
 */
+        pass_headers := []sippy_header.SipHeader{}
+        for _, header := range self.global_config.pass_headers {
+            hfs := req.GetHFs(header)
+            pass_headers = append(pass_headers, hfs...)
+        }
+        self.cc_id_lock.Lock()
+        id := self.cc_id
+        self.cc_id++
+        self.cc_id_lock.Unlock()
+        cc := NewCallController(id, remote_ip, source, self.global_config, pass_headers)
+        //cc.challenge = challenge
+        rval = cc.uaA.recvRequest(req, sip_t)
+        self.ccmap.append(cc)
+        return rval
+    }
+    if self.proxy != nil && (req.GetMethod() == "REGISTER" || req.GetMethod() == "SUBSCRIBE") {
+        return self.proxy.recvRequest(req)
+    }
+    if (req.GetMethod() == "NOTIFY" || req.GetMethod() == "PING") {
+        // Whynot?
+        return req.GenResponse(200, "OK", nil, nil)
+    }
+    return req.GenResponse(501, "Not Implemented", nil, nil)
+}
+
 func (self *callMap) discAll(signum syscall.Signal) {
     if signum > 0 {
-        println("Signal %d received, disconnecting all calls" % signum)
+        println(fmt.Sprintf("Signal %d received, disconnecting all calls", signum))
     }
     for _, cc := range self.ccmap {
         cc.disconnect()
@@ -162,32 +195,36 @@ func (self *callMap) safeRestart() {
     self.safe_restart = true
 }
 
-/*
-    def GClector(self):
-        println("GC is invoked, %d calls in map" % len(self.ccmap))
-        if self.debug_mode:
-            println(self.global_config["_sip_tm"].tclient, self.global_config["_sip_tm"].tserver)
-            for cc in tuple(self.ccmap):
-                try:
-                    println(cc.uaA.state, cc.uaO.state)
-                except AttributeError:
-                    println(nil)
-        else:
-            println("[%d]: %d client, %d server transactions in memory" % \
-              (os.getpid(), len(self.global_config["_sip_tm"].tclient), len(self.global_config["_sip_tm"].tserver)))
-        if self.safe_restart:
-            if len(self.ccmap) == 0:
-                self.global_config["_sip_tm"].userv.close()
-                os.chdir(self.global_config["_orig_cwd"])
-                argv = [sys.executable,]
-                argv.extend(self.global_config["_orig_argv"])
-                os.execv(sys.executable, argv)
-                // Should not reach this point!
-            self.el.ival = 1
-        //print gc.collect()
-        if len(gc.garbage) > 0:
-            println(gc.garbage)
+func (self *callMap) GClector() {
+    fmt.Printf("GC is invoked, %d calls in map\n", len(self.ccmap))
+    if self.debug_mode {
+        //println(self.global_config["_sip_tm"].tclient, self.global_config["_sip_tm"].tserver)
+        for _, cc := range self.ccmap {
+            println(cc.uaA.GetState().String(), cc.uaO.GetState().String())
+        }
+    //} else {
+    //    fmt.Printf("[%d]: %d client, %d server transactions in memory\n",
+    //      os.getpid(), len(self.global_config["_sip_tm"].tclient), len(self.global_config["_sip_tm"].tserver))
+    }
+    if self.safe_restart {
+        if len(self.ccmap) == 0 {
+            self.sip_tm.Shutdown()
+            //os.chdir(self.global_config["_orig_cwd"])
+            cmd := exec.Command(os.Args[0], os.Args[1:]...)
+            cmd.Env = os.Environ()
+            err := cmd.Start()
+            if err != nil {
+                fmt.Println(err)
+                os.Exit(1)
+            }
+            os.Exit(0)
+            // Should not reach this point!
+        }
+        self.gc_timeout = time.Second
+    }
+}
 
+/*
     def recvCommand(self, clim, cmd):
         args = cmd.split()
         cmd = args.pop(0).lower()
