@@ -26,6 +26,158 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
 
+import (
+    "sippy/conf"
+)
+
+type myConfigParser struct {
+    sippy_conf.Config
+    static_route        string
+    rtp_proxy_clients   []string
+}
+
+func NewMyConfigParser() *myConfigParser {
+    return &myConfigParser{
+        Config              : sippy_conf.NewConfig(error_logger, sip_logger),
+        rtp_proxy_clients   : make([]string, 0),
+    }
+}
+
+func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger, error) {
+/*
+    global_config.digest_auth = true
+    global_config.start_acct_enable = false
+    global_config.keepalive_ans = 0
+    global_config.keepalive_orig = 0
+    global_config.auth_enable = true
+    global_config.acct_enable = true
+    global_config._pass_headers = []
+    //global_config._orig_argv = sys.argv[:]
+    //global_config._orig_cwd = os.getcwd()
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'fDl:p:d:P:L:s:a:t:T:k:m:A:ur:F:R:h:c:M:HC:W:',
+          global_config.get_longopts())
+    except getopt.GetoptError:
+        usage(global_config)
+    global_config['foreground'] = false
+    global_config['pidfile'] = '/var/run/b2bua.pid'
+    global_config['logfile'] = '/var/log/b2bua.log'
+    global_config['b2bua_socket'] = '/var/run/b2bua.sock'
+    global_config['_sip_address'] = SipConf.my_address
+    global_config['_sip_port'] = SipConf.my_port
+    rtp_proxy_clients = []
+    writeconf = nil
+    for o, a in opts:
+        if o == '-f':
+            global_config['foreground'] = true
+            continue
+        if o == '-l':
+            global_config.check_and_set('sip_address', a)
+            continue
+        if o == '-p':
+            global_config.check_and_set('sip_port', a)
+            continue
+        if o == '-P':
+            global_config.check_and_set('pidfile', a)
+            continue
+        if o == '-L':
+            global_config.check_and_set('logfile', a)
+            continue
+            */
+    flag.StringVar(&self.static_route, "s", "", "static route for all SIP calls")
+    flag.StringVar(&self.static_route, "static_route", "", "static route for all SIP calls")
+/*
+        if o == '-a':
+            global_config.check_and_set('accept_ips', a)
+            continue
+        if o == '-D':
+            global_config['digest_auth'] = false
+            continue
+        if o == '-A':
+            acct_level = int(a.strip())
+            if acct_level == 0:
+                global_config['acct_enable'] = false
+                global_config['start_acct_enable'] = false
+            elif acct_level == 1:
+                global_config['acct_enable'] = true
+                global_config['start_acct_enable'] = false
+            elif acct_level == 2:
+                global_config['acct_enable'] = true
+                global_config['start_acct_enable'] = true
+            else:
+                sys.__stderr__.write('ERROR: -A argument not in the range 0-2\n')
+                usage(global_config, true)
+            continue
+        if o == '-t':
+            global_config.check_and_set('static_tr_in', a)
+            continue
+        if o == '-T':
+            global_config.check_and_set('static_tr_out', a)
+            continue
+        if o == '-k':
+            ka_level = int(a.strip())
+            if ka_level == 0:
+                pass
+            elif ka_level == 1:
+                global_config['keepalive_ans'] = 32
+            elif ka_level == 2:
+                global_config['keepalive_orig'] = 32
+            elif ka_level == 3:
+                global_config['keepalive_ans'] = 32
+                global_config['keepalive_orig'] = 32
+            else:
+                sys.__stderr__.write('ERROR: -k argument not in the range 0-3\n')
+                usage(global_config, true)
+        if o == '-m':
+            global_config.check_and_set('max_credit_time', a)
+            continue
+        if o == '-u':
+            global_config['auth_enable'] = false
+            continue
+        if o == '-r':
+            global_config.check_and_set('rtp_proxy_client', a)
+            continue
+        if o == '-F':
+            global_config.check_and_set('allowed_pts', a)
+            continue
+        if o == '-R':
+            global_config.check_and_set('radiusclient.conf', a)
+            continue
+        if o == '-h':
+            for a in a.split(','):
+                global_config.check_and_set('pass_header', a)
+            continue
+        if o == '-c':
+            global_config.check_and_set('b2bua_socket', a)
+            continue
+        if o == '-M':
+            global_config.check_and_set('max_radiusclients', a)
+            continue
+        if o == '-H':
+            global_config['hide_call_id'] = true
+            continue
+        if o in ('-C', '--config'):
+            global_config.read(a.strip())
+            continue
+        if o.startswith('--'):
+            global_config.check_and_set(o[2:], a)
+            continue
+        if o == '-W':
+            writeconf = a.strip()
+            continue
+*/
+    var rtp_proxy_clients, rtp_proxy_client string
+    flag.StringVar(&rtp_proxy_clients, "rtp_proxy_clients", "", "comma-separated list of paths or addresses of the " +
+                                                                "RTPproxy control socket. Address in the format " +
+                                                                "\"udp:host[:port]\" (comma-separated list)")
+    flag.StringVar(&rtp_proxy_client, "rtp_proxy_client", "", "RTPproxy control socket. Address in the format \"udp:host[:port]\"")
+    flag.Parse()
+    rtp_proxy_clients += "," + rtp_proxy_client
+    arr := strings.Split(rtp_proxy_clients, ",")
+    for _, s := range arr {
+        self.rtp_proxy_clients = append(self.rtp_proxy_clients, strings.TrimSpace(s))
+    }
+}
 /*
 from ConfigParser import RawConfigParser
 from SipConf import SipConf
@@ -93,7 +245,7 @@ SUPPORTED_OPTIONS = { \
  'sip_proxy':         ('S', 'address of the helper proxy to handle "REGISTER" ' \
                              'and "SUBSCRIBE" messages. Address in the format ' \
                              '"host[:port]"'),
- 'nat_traversal':     ('B', 'enable NAT traversal for signalling'), \
+ 'nat_traversal': false    ('B', 'enable NAT traversal for signalling'), \
  'xmpp_b2bua_id':     ('I', 'ID passed to the XMPP socket server')}
 
 class MyConfigParser(RawConfigParser):
@@ -178,7 +330,7 @@ class MyConfigParser(RawConfigParser):
 
         value_type  = SUPPORTED_OPTIONS[key][0]
         if value_type == 'B':
-            if value.lower() not in self._boolean_states:
+            if value.lower() ! in self._boolean_states:
                 raise ValueError, 'Not a boolean: %s' % value
         elif value_type == 'I':
             _value = int(value)
@@ -203,7 +355,7 @@ class MyConfigParser(RawConfigParser):
             else:
                 self['_sip_address'] = value
         elif key == 'sip_port':
-            if _value <= 0 or _value > 65535:
+            if _value <= 0 || _value > 65535:
                 raise ValueError, 'sip_port should be in the range 1-65535'
             self['_sip_port'] = _value
         self[key] = value

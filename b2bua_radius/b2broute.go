@@ -25,6 +25,40 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
 
+import (
+    "errors"
+    "net"
+    "net/url"
+    "strconv"
+    "strings"
+    "time"
+
+    "sippy"
+    "sippy/conf"
+    "sippy/headers"
+)
+
+type B2BRoute struct {
+    cld             string
+    cld_set         bool
+    hostport        string
+    hostonly        string
+    huntstop_scodes []int
+    ainfo           []net.IP
+    credit_time     time.Duration
+    crt_set         bool
+    expires         time.Duration
+    no_progress_expires time.Duration
+    forward_on_fail bool
+    user            string
+    passw           string
+    cli             string
+    cli_set         bool
+    caller_name     string
+    extra_headers   []sippy_header.SipHeader
+    rtpp            bool
+    outbound_proxy  *sippy_conf.HostPort
+}
 /*
 from sippy.SipHeader import SipHeader
 from sippy.SipConf import SipConf
@@ -35,24 +69,170 @@ from socket import getaddrinfo, SOCK_STREAM, AF_INET, AF_INET6
 class B2BRoute(object):
     rnum = nil
     addrinfo = nil
-    cld = nil
-    cld_set = false
-    hostport = nil
-    hostonly = nil
-    credit_time = nil
-    crt_set = false
-    expires = nil
-    no_progress_expires = nil
-    forward_on_fail = false
-    user = nil
-    passw = nil
-    cli = nil
-    cli_set = false
     params = nil
     ainfo = nil
-    extra_headers = nil
+*/
 
-    def __init__(self, sroute = nil, cself = nil):
+func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, error) {
+    var hostport []string
+    var err error
+
+    self := &B2BRoute{
+        huntstop_scodes : []int{},
+        cld_set         : false,
+        crt_set         : false,
+        forward_on_fail : false,
+        cli_set         : false,
+        extra_headers   : []sippy_header.SipHeader{},
+        rtpp            : true,
+    }
+    route := strings.Split(sroute, ";")
+    if strings.IndexRune(route[0], '@') != -1 {
+        tmp := strings.SplitN(route[0], "@", 2)
+        self.cld, self.hostport = tmp[0], tmp[1]
+        // Allow CLD to be forcefully removed by sending `Routing:@host" entry,
+        // as opposed to the Routing:host, which means that CLD should be obtained
+        // from the incoming call leg.
+        self.cld_set = true
+    } else {
+        self.hostport = route[0]
+    }
+    ipv6only := false
+    if self.hostport[0] != '[' {
+        hostport = strings.SplitN(self.hostport, ":", 2)
+        self.hostonly = hostport[0]
+    } else {
+        hostport = strings.SplitN(self.hostport[1:], "]", 2)
+        if len(hostport) > 1 {
+            if hostport[1] == "" {
+                hostport = hostport[:1]
+            } else {
+                hostport[1] = hostport[1][1:]
+            }
+        }
+        ipv6only = true
+        self.hostonly = "[" + hostport[0] + "]"
+    }
+    var port *sippy_conf.MyPort
+    if len(hostport) == 1 {
+        port = global_config.GetMyPort()
+    } else {
+        port = sippy_conf.NewMyPort(hostport[1])
+    }
+    self.ainfo, err = net.LookupIP(hostport[0])
+    if ipv6only {
+        // get rid of IPv4 addresses
+        tmp := []net.IP{}
+        for _, ip := range self.ainfo {
+            if ip.To4() != nil { continue }
+            tmp = append(tmp, ip)
+        }
+        self.ainfo = tmp
+    }
+    //self.params = []string{}
+    for _, x := range route[1:] {
+        av := strings.SplitN(x, "=", 2)
+        switch av[0] {
+        case "credit-time":
+            v, err := strconv.Atoi(av[1])
+            if err != nil {
+                return nil, errors.New("Error parsing credit-time '" + av[1] + "': " + err.Error())
+            }
+            if v < 0 { v = 0 }
+            self.credit_time = time.Duration(v * int(time.Second))
+            self.crt_set = true
+        case "expires":
+            v, err := strconv.Atoi(av[1])
+            if err != nil {
+                return nil, errors.New("Error parsing the expires '" + av[1] + "': " + err.Error())
+            }
+            if v < 0 { v = 0 }
+            self.expires = time.Duration(v * int(time.Second))
+        case "hs_scodes":
+            for _, s := range strings.Split(av[1], ",") {
+                s = strings.TrimSpace(s)
+                if s == "" { continue }
+                scode, err := strconv.Atoi(s)
+                if err != nil {
+                    return nil, errors.New("Error parsing hs_scodes '" + s + "': " + err.Error())
+                }
+                self.huntstop_scodes = append(self.huntstop_scodes, scode)
+            }
+        case "np_expires":
+            v, err := strconv.Atoi(av[1])
+            if err != nil {
+                return nil, errors.New("Error parsing the no_progress_expires '" + av[1] + "': " + err.Error())
+            }
+            if v < 0 { v = 0 }
+            self.no_progress_expires = time.Duration(v * int(time.Second))
+        case "forward_on_fail":
+            self.forward_on_fail = true
+        case "auth":
+            tmp := strings.SplitN(av[1], ":", 2)
+            if len(tmp) != 2 {
+                return nil, errors.New("Error parsing the auth (no colon) '" + av[1] + "': " + err.Error())
+            }
+            self.user, self.passw = tmp[0], tmp[1]
+        case "cli":
+            self.cli = av[1]
+            self.cli_set = true
+        case "cnam":
+            self.caller_name, err = url.QueryUnescape(av[1])
+            if err != nil {
+                return nil, errors.New("Error parsing the cnam '" + av[1] + "': " + err.Error())
+            }
+        case "ash":
+            var v string
+            var ash []sippy_header.SipHeader
+            v, err = url.QueryUnescape(av[1])
+            if err == nil {
+                ash, err = sippy.ParseSipHeader(v)
+            }
+            if err != nil {
+                return nil, errors.New("Error parsing the ash '" + av[1] + "': " + err.Error())
+            }
+            self.extra_headers = append(self.extra_headers, ash...)
+        case "rtpp":
+            v, err := strconv.Atoi(av[1])
+            if err != nil {
+                return nil, errors.New("Error parsing the rtpp '" + av[1] + "': " + err.Error())
+            }
+            self.rtpp = (v != 0)
+        case "op":
+            host_port := strings.SplitN(av[1], ":", 2)
+            if len(host_port) == 1 {
+                self.outbound_proxy = sippy_conf.NewHostPort(av[1], "5060")
+            } else {
+                self.outbound_proxy = sippy_conf.NewHostPort(host_port[0], host_port[1])
+            }
+        //default:
+        //    self.params[a] = v
+        }
+    }
+    return self, nil
+}
+/*
+    def customize(self, rnum, default_cld, default_cli, default_credit_time, \
+      pass_headers, max_credit_time):
+        self.rnum = rnum
+        if ! self.cld_set:
+            self.cld = default_cld
+        if ! self.cli_set:
+            self.cli = default_cli
+        if ! self.crt_set:
+            self.crt_set = default_credit_time
+        if self.params.has_key("gt"):
+            timeout, skip = self.params["gt"].split(",", 1)
+            self.params["group_timeout"] = (int(timeout), rnum + int(skip))
+        if self.extra_headers != nil:
+            self.extra_headers = self.extra_headers + tuple(pass_headers)
+        else:
+            self.extra_headers = tuple(pass_headers)
+        if max_credit_time != nil:
+            if self.credit_time == nil or self.credit_time > max_credit_time:
+                self.credit_time = max_credit_time
+
+    def getCopy(self):
         if cself != nil:
             self.rnum = cself.rnum
             self.addrinfo = cself.addrinfo
@@ -74,108 +254,10 @@ class B2BRoute(object):
             if cself.extra_headers != nil:
                 self.extra_headers = tuple([x.getCopy() for x in cself.extra_headers])
             return
-        route = sroute.split(';')
-        if route[0].find('@') != -1:
-            self.cld, self.hostport = route[0].split('@', 1)
-            if len(self.cld) == 0:
-                # Allow CLD to be forcefully removed by sending `Routing:@host' entry,
-                # as opposed to the Routing:host, which means that CLD should be obtained
-                # from the incoming call leg.
-                self.cld = nil
-            self.cld_set = true
-        else:
-            self.hostport = route[0]
-        if not self.hostport.startswith('['):
-            hostport = self.hostport.split(':', 1)
-            af = 0
-            self.hostonly = hostport[0]
-        else:
-            hostport = self.hostport[1:].split(']', 1)
-            if len(hostport) > 1:
-                if len(hostport[1]) == 0:
-                    del hostport[1]
-                else:
-                    hostport[1] = hostport[1][1:]
-            af = AF_INET6
-            self.hostonly = '[%s]' % hostport[0]
-        if len(hostport) == 1:
-            port = SipConf.default_port
-        else:
-            port = int(hostport[1])
-        self.ainfo = getaddrinfo(hostport[0], port, af, SOCK_STREAM)
-        self.params = {}
-        extra_headers = []
-        for a, v in [x.split('=', 1) for x in route[1:]]:
-            if a == 'credit-time':
-                self.credit_time = int(v)
-                if self.credit_time < 0:
-                    self.credit_time = nil
-                self.crt_set = true
-            elif a == 'expires':
-                self.expires = int(v)
-                if self.expires < 0:
-                    self.expires = nil
-            elif a == 'hs_scodes':
-                self.params['huntstop_scodes'] = tuple([int(x) for x in v.split(',') if len(x.strip()) > 0])
-            elif a == 'np_expires':
-                self.no_progress_expires = int(v)
-                if self.no_progress_expires < 0:
-                    self.no_progress_expires = nil
-            elif a == 'forward_on_fail':
-                self.forward_on_fail = true
-            elif a == 'auth':
-                self.user, self.passw = v.split(':', 1)
-            elif a == 'cli':
-                self.cli = v
-                if len(self.cli) == 0:
-                    self.cli = nil
-                self.cli_set = true
-            elif a == 'cnam':
-                caller_name = unquote(v)
-                if len(caller_name) == 0:
-                    caller_name = nil
-                self.params['caller_name'] = caller_name
-            elif a == 'ash':
-                ash = SipHeader(unquote(v))
-                extra_headers.append(ash)
-            elif a == 'rtpp':
-                self.params['rtpp'] = (int(v) != 0)
-            elif a == 'op':
-                host_port = v.split(':', 1)
-                if len(host_port) == 1:
-                    self.params['outbound_proxy'] = (v, 5060)
-                else:
-                    self.params['outbound_proxy'] = (host_port[0], int(host_port[1]))
-            else:
-                self.params[a] = v
-        if len(extra_headers) > 0:
-            self.extra_headers = tuple(extra_headers)
-
-    def customize(self, rnum, default_cld, default_cli, default_credit_time, \
-      pass_headers, max_credit_time):
-        self.rnum = rnum
-        if not self.cld_set:
-            self.cld = default_cld
-        if not self.cli_set:
-            self.cli = default_cli
-        if not self.crt_set:
-            self.crt_set = default_credit_time
-        if self.params.has_key('gt'):
-            timeout, skip = self.params['gt'].split(',', 1)
-            self.params['group_timeout'] = (int(timeout), rnum + int(skip))
-        if self.extra_headers != nil:
-            self.extra_headers = self.extra_headers + tuple(pass_headers)
-        else:
-            self.extra_headers = tuple(pass_headers)
-        if max_credit_time != nil:
-            if self.credit_time == nil or self.credit_time > max_credit_time:
-                self.credit_time = max_credit_time
-
-    def getCopy(self):
         return self.__class__(cself = self)
 
     def getNHAddr(self, source):
-        if source[0].startswith('['):
+        if source[0].startswith("["):
             af = AF_INET6
         else:
             af = AF_INET
@@ -188,6 +270,6 @@ class B2BRoute(object):
         else:
             amatch = amatch[0]
         if af == AF_INET6:
-            return ((('[%s]' % amatch[0], amatch[1]), same_af))
+            return ((("[%s]" % amatch[0], amatch[1]), same_af))
         return (((amatch[0], amatch[1]), same_af))
 */
