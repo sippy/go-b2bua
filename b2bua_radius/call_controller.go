@@ -27,11 +27,15 @@
 package main
 
 import (
+    "fmt"
+    "net/url"
+    "strings"
     "sync"
 
     "sippy"
     "sippy/conf"
     "sippy/headers"
+    "sippy/time"
     "sippy/types"
 )
 
@@ -45,11 +49,16 @@ type callController struct {
     source          *sippy_conf.HostPort
     routes          []*B2BRoute
     pass_headers    []sippy_header.SipHeader
-    lock            sync.Mutex
+    lock            *sync.Mutex
+    cId             *sippy_header.SipCallId
+    cGUID           *sippy_header.SipCiscoGUID
+    cli             string
+    cld             string
+    caller_name     string
+    rtp_proxy_session *sippy.Rtp_proxy_session
 }
 /*
 class CallController(object):
-    cId = nil
     cld = nil
     eTry = nil
     acctA = nil
@@ -70,28 +79,35 @@ func NewCallController(id int64, remote_ip string, source *sippy_conf.HostPort, 
         source          : source,
         routes          : make([]*B2BRoute, 0),
         pass_headers    : pass_headers,
+        lock            : new(sync.Mutex),
     }
     self.uaA = sippy.NewUA(sip_tm, global_config, nil, self, self.lock, nil)
-    self.uaA.kaInterval = self.global_config.keepalive_ans
-    self.uaA.local_ua = self.global_config.GetMyUAName()
+    self.uaA.SetKaInterval(self.global_config.keepalive_ans)
+    self.uaA.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
     self.uaA.SetConnCbs([]sippy_types.OnConnectListener{ self.aConn})
     self.uaA.SetDiscCbs([]sippy_types.OnDisconnectListener{ self.aDisc })
     self.uaA.SetFailCbs([]sippy_types.OnFailureListener{ self.aDisc })
     self.uaA.SetDeadCbs([]sippy_types.OnDeadListener{ self.aDead })
+    return self
 }
 
 func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.UA) {
     if ua == self.uaA {
         if self.state == CCStateIdle {
-            if ! isinstance(event, CCEventTry) {
+            ev_try, ok := event.(*sippy.CCEventTry)
+            if ! ok {
                 // Some weird event received
-                self.uaA.RecvEvent(sippy.NewCCEventDisconnect(event.rtime))
+                self.uaA.RecvEvent(sippy.NewCCEventDisconnect(nil, event.GetRtime(), ""))
                 return
             }
-            self.cId, cGUID, self.cli, self.cld, body, auth, self.caller_name = event.getData()
-            self.cGUID = cGUID.hexForm()
-            if self.cld == nil {
-                self.uaA.recvEvent(sippy.NewCCEventFail(500, "Internal Server Error (1)", event.rtime))
+            self.cId = ev_try.GetSipCallId()
+            self.cGUID = ev_try.GetSipCiscoGUID()
+            self.cli = ev_try.GetCLI()
+            self.cld = ev_try.GetCLD()
+            //, body, auth, 
+            self.caller_name = ev_try.GetCallerName()
+            if self.cld == "" {
+                self.uaA.RecvEvent(sippy.NewCCEventFail(500, "Internal Server Error (1)", event.GetRtime(), ""))
                 self.state = CCStateDead
                 return
             }
@@ -100,7 +116,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 try:
                     body.parse()
                 except:
-                    self.uaA.recvEvent(CCEventFail((400, "Malformed SDP Body"), rtime = event.rtime))
+                    self.uaA.RecvEvent(CCEventFail((400, "Malformed SDP Body"), rtime = event.rtime))
                     self.state = CCStateDead
                     return
                 allowed_pts = self.global_config['_allowed_pts']
@@ -109,23 +125,23 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                     old_len = len(mbody.formats)
                     mbody.formats = [x for x in mbody.formats if x in allowed_pts]
                     if len(mbody.formats) == 0 {
-                        self.uaA.recvEvent(CCEventFail((488, "Not Acceptable Here")))
+                        self.uaA.RecvEvent(CCEventFail((488, "Not Acceptable Here")))
                         self.state = CCStateDead
                         return
                     if old_len > len(mbody.formats) {
                         body.content.sections[0].optimize_a()
 */
-            if self.cld.startswith("nat-") {
+            if strings.HasPrefix(self.cld, "nat-") {
                 self.cld = self.cld[4:]
-                if body != nil {
-                    body.content += "a=nated:yes\r\n"
+                if ev_try.GetBody() != nil {
+                    ev_try.GetBody().AppendAHeader("nated:yes")
                 }
-                event = sippy.NewCCEventTry(self.cId, cGUID, self.cli, self.cld, body, auth, self.caller_name)
+                event = sippy.NewCCEventTry(self.cId, self.cGUID, self.cli, self.cld, ev_try.GetBody(), ev_try.GetSipAuthorization(), self.caller_name, nil, "")
             }
 /*
             if self.global_config.has_key('static_tr_in') {
                 self.cld = re_replace(self.global_config['static_tr_in'], self.cld)
-                event = sippy.NewCCEventTry(self.cId, cGUID, self.cli, self.cld, body, auth, self.caller_name)
+                event = sippy.NewCCEventTry(self.cId, self.cGUID, self.cli, self.cld, body, auth, self.caller_name)
             }
 */
             if len(global_rtp_proxy_clients) > 0 {
@@ -152,21 +168,32 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
         if (self.state != CCStateARComplete && self.state != CCStateConnected && self.state != CCStateDisconnecting) || self.uaO == nil {
             return
         }
-        self.uaO.recvEvent(event)
+        self.uaO.RecvEvent(event)
     } else {
-        if (isinstance(event, CCEventFail) || isinstance(event, CCEventDisconnect)) && self.state == CCStateARComplete &&
-          (isinstance(self.uaA.state, UasStateTrying) || isinstance(self.uaA.state, UasStateRinging)) && len(self.routes) > 0 {
-            if isinstance(event, CCEventFail) {
+        ev_fail, is_ev_fail := event.(*sippy.CCEventFail)
+        _, is_ev_disconnect := event.(*sippy.CCEventFail)
+        _, is_state_trying := self.uaA.GetState().(*sippy.UasStateTrying)
+        _, is_state_ringing := self.uaA.GetState().(*sippy.UasStateRinging)
+        if (is_ev_fail || is_ev_disconnect) && self.state == CCStateARComplete &&
+          (is_state_trying || is_state_ringing) && len(self.routes) > 0 {
+            if is_ev_fail {
                 code = event.getData()[0]
             } else {
                 code = nil
             }
-            if code == nil || code ! in self.huntstop_scodes {
+            huntstop = false
+            for _, c := range self.huntstop_scodes {
+                if c == code {
+                    huntstop = true
+                    break
+                }
+            }
+            if code == nil || ! huntstop {
                 self.placeOriginate(self.routes.pop(0))
                 return
             }
         }
-        self.uaA.recvEvent(event)
+        self.uaA.RecvEvent(event)
     }
 }
 
@@ -180,7 +207,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                     event.extra_header = self.challenge
                 else:
                     event = CCEventFail((403, "Auth Failed"))
-                self.uaA.recvEvent(event)
+                self.uaA.RecvEvent(event)
                 self.state = CCStateDead
             return
         if self.global_config['acct_enable']:
@@ -213,7 +240,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
         if ! self.global_config.has_key('_static_route'):
             routing = [x for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("Routing:")]
             if len(routing) == 0:
-                self.uaA.recvEvent(CCEventFail((500, "Internal Server Error (2)")))
+                self.uaA.RecvEvent(CCEventFail((500, "Internal Server Error (2)")))
                 self.state = CCStateDead
                 return
             routing = [B2BRoute(x[1][8:]) for x in routing]
@@ -228,9 +255,9 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
             if oroute.credit_time == 0 || oroute.expires == 0:
                 continue
             self.routes.append(oroute)
-            //print "Got route:", oroute.hostport, oroute.cld
+            //println "Got route:", oroute.hostport, oroute.cld
         if len(self.routes) == 0:
-            self.uaA.recvEvent(CCEventFail((500, "Internal Server Error (3)")))
+            self.uaA.RecvEvent(CCEventFail((500, "Internal Server Error (3)")))
             self.state = CCStateDead
             return
         self.state = CCStateARComplete
@@ -262,7 +289,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
         disc_handlers = []
         if ! oroute.forward_on_fail && self.global_config['acct_enable']:
             disc_handlers.append(self.acctO.disc)
-        self.uaO = UA(self.global_config, self.recvEvent, oroute.user, oroute.passw, nh_address, oroute.credit_time, tuple(conn_handlers), \
+        self.uaO = UA(self.global_config, self.RecvEvent, oroute.user, oroute.passw, nh_address, oroute.credit_time, tuple(conn_handlers), \
           tuple(disc_handlers), tuple(disc_handlers), dead_cbs = (self.oDead,), expire_time = oroute.expires, \
           no_progress_time = oroute.no_progress_expires, extra_headers = oroute.extra_headers)
         self.uaO.local_ua = self.global_config.GetMyUAName()
@@ -289,11 +316,11 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
         if self.eTry.max_forwards != nil:
             event.max_forwards = self.eTry.max_forwards - 1
             if event.max_forwards <= 0:
-                self.uaA.recvEvent(CCEventFail((483, "Too Many Hops")))
+                self.uaA.RecvEvent(CCEventFail((483, "Too Many Hops")))
                 self.state = CCStateDead
                 return
         event.reason = self.eTry.reason
-        self.uaO.recvEvent(event)
+        self.uaO.RecvEvent(event)
 */
 func (self *callController) disconnect() {
     self.uaA.Disconnect(nil)
@@ -302,35 +329,44 @@ func (self *callController) disconnect() {
     def oConn(self, ua, rtime, origin):
         if self.acctO != nil:
             self.acctO.conn(ua, rtime, origin)
+*/
+func (self *callController) aConn(rtime *sippy_time.MonoTime, origin string) {
+    self.state = CCStateConnected
+    self.acctA.conn(rtime, origin)
+}
 
-    def aConn(self, ua, rtime, origin):
-        self.state = CCStateConnected
-        self.acctA.conn(ua, rtime, origin)
+func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, result int) {
+    //if self.state == CCStateWaitRoute && self.auth_proc != nil {
+    //    self.auth_proc.cancel()
+    //    self.auth_proc = nil
+    //}
+    if self.uaO != nil && self.state != CCStateDead {
+        self.state = CCStateDisconnecting
+    } else {
+        self.state = CCStateDead
+    }
+    if self.acctA != nil {
+        self.acctA.disc(ua, rtime, origin, result)
+    }
+    self.rtp_proxy_session = nil
+}
 
-    def aDisc(self, ua, rtime, origin, result = 0):
-        if self.state == CCStateWaitRoute && self.auth_proc != nil:
-            self.auth_proc.cancel()
-            self.auth_proc = nil
-        if self.uaO != nil && self.state != CCStateDead:
-            self.state = CCStateDisconnecting
-        else:
-            self.state = CCStateDead
-        if self.acctA != nil:
-            self.acctA.disc(ua, rtime, origin, result)
-        self.rtp_proxy_session = nil
+func (self *callController) aDead() {
+    if (self.uaO == nil || isinstance(self.uaO.state, UaStateDead)) {
+        if global_cmap.debug_mode {
+            println("garbadge collecting", self)
+        }
+        self.acctA = nil
+        self.acctO = nil
+        global_cmap.ccmap.remove(self)
+    }
+}
 
-    def aDead(self, ua):
-        if (self.uaO == nil || isinstance(self.uaO.state, UaStateDead)):
-            if global_cmap.debug_mode:
-                print("garbadge collecting", self)
-            self.acctA = nil
-            self.acctO = nil
-            global_cmap.ccmap.remove(self)
-
+/*
     def oDead(self, ua):
         if ua == self.uaO && isinstance(self.uaA.state, UaStateDead):
             if global_cmap.debug_mode:
-                print("garbadge collecting", self)
+                println("garbadge collecting", self)
             self.acctA = nil
             self.acctO = nil
             global_cmap.ccmap.remove(self)

@@ -27,6 +27,8 @@
 package main
 
 import (
+    "time"
+
     "sippy/conf"
     "sippy/log"
 )
@@ -39,6 +41,8 @@ type myConfigParser struct {
     //auth_enable         bool
     rtp_proxy_clients   []string
     pass_headers        []string
+    keepalive_ans       time.Duration
+    keepalive_orig      time.Duration
 }
 
 func NewMyConfigParser() *myConfigParser {
@@ -130,20 +134,16 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
         if o == '-T':
             global_config.check_and_set('static_tr_out', a)
             continue
-        if o == '-k':
-            ka_level = int(a.strip())
-            if ka_level == 0:
-                pass
-            elif ka_level == 1:
-                global_config['keepalive_ans'] = 32
-            elif ka_level == 2:
-                global_config['keepalive_orig'] = 32
-            elif ka_level == 3:
-                global_config['keepalive_ans'] = 32
-                global_config['keepalive_orig'] = 32
-            else:
-                sys.__stderr__.write('ERROR: -k argument not in the range 0-3\n')
-                usage(global_config, true)
+*/
+    var ka_level, keepalive_ans, keepalive_orig int
+    flag.IntVar(&ka_level, "k", 0, "keepalive level")
+    flag.IntVar(&keepalive_ans, "keepalive_ans", 0, "send periodic \"keep-alive\" re-INVITE requests on " +
+                                "answering (ingress) call leg and disconnect a call " +
+                                "if the re-INVITE fails (period in seconds, 0 to disable)")
+    flag.IntVar(&keepalive_orig, "keepalive_orig", 0, "send periodic \"keep-alive\" re-INVITE requests on " +
+                             "originating (egress) call leg and disconnect a call " +
+                             "if the re-INVITE fails (period in seconds, 0 to disable)")
+/*
         if o == '-m':
             global_config.check_and_set('max_credit_time', a)
             continue
@@ -216,6 +216,25 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
         if s != "" {
             self.pass_headers = append(self.pass_headers, s)
         }
+    }
+    switch ka_level {
+    case 0:
+        // do nothing
+    case 1:
+        global_config.keepalive_ans = 32 * time.Second
+    case 2:
+        global_config.keepalive_orig = 32 * time.Second
+    case 3:
+        global_config.keepalive_ans = 32 * time.Second
+        global_config.keepalive_orig = 32 * time.Second
+    default:
+        return nil, nil, "-k argument not in the range 0-3"
+    }
+    if keepalive_ans > 0 {
+        global_config.keepalive_ans = time.Duration(keepalive_ans) * time.Second
+    }
+    if keepalive_orig > 0 {
+        global_config.keepalive_orig = time.Duration(keepalive_orig) * time.Second
     }
 }
 /*
