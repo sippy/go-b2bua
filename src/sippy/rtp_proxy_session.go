@@ -193,3 +193,11 @@ func (self *Rtp_proxy_session) SetCallerLaddress(addr string) {
 func (self *Rtp_proxy_session) SetCalleeLaddress(addr string) {
     self.callee.laddress = addr
 }
+
+func (self *Rtp_proxy_session) SetCalleeRaddress(addr *sippy_conf.HostPort) {
+    self.callee.raddress = addr
+}
+
+func (self *Rtp_proxy_session) SetInsertNortpp(v bool) {
+    self.insert_nortpp = v
+}

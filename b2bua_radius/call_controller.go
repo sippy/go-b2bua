@@ -56,11 +56,11 @@ type callController struct {
     cld             string
     caller_name     string
     rtp_proxy_session *sippy.Rtp_proxy_session
+    eTry            *sippy.CCEventTry
 }
 /*
 class CallController(object):
     cld = nil
-    eTry = nil
     acctA = nil
     acctO = nil
     global_config = nil
@@ -145,14 +145,20 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
             }
 */
             if len(global_rtp_proxy_clients) > 0 {
-                self.rtp_proxy_session = sippy.NewRtp_proxy_session(self.global_config, self.cId, /*notify_socket*/ self.global_config.b2bua_socket, /*notify_tag*/ url.QueryEscape(fmt.Sprint("r %d", self.id)))
-                self.rtp_proxy_session.callee.raddress = sippy_conf.NewHostPort(self.remote_ip, "5060")
-                self.rtp_proxy_session.insert_nortpp = true
+                var err error
+                self.rtp_proxy_session, err = sippy.NewRtp_proxy_session(self.global_config, global_rtp_proxy_clients, self.cId.CallId, "", "", /*notify_socket*/ self.global_config.b2bua_socket, /*notify_tag*/ url.QueryEscape(fmt.Sprint("r %d", self.id)))
+                if err != nil {
+                    self.uaA.RecvEvent(sippy.NewCCEventFail(500, "Internal Server Error (4)", event.GetRtime(), ""))
+                    self.state = CCStateDead
+                    return
+                }
+                self.rtp_proxy_session.SetCalleeRaddress(sippy_conf.NewHostPort(self.remote_ip, "5060"))
+                self.rtp_proxy_session.SetInsertNortpp(true)
             }
-            self.eTry = event
+            self.eTry = ev_try
             self.state = CCStateWaitRoute
             //if ! self.global_config['auth_enable'] {
-                self.username = self.remote_ip
+                //self.username = self.remote_ip
                 self.rDone()
             //} else if auth == nil || auth.username == nil || len(auth.username) == 0 {
             //    self.username = self.remote_ip
@@ -197,71 +203,73 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
     }
 }
 
+func (self *callController) rDone(results) {
 /*
-    def rDone(self, results):
-        // Check that we got necessary result from Radius
-        if len(results) != 2 || results[1] != 0:
-            if isinstance(self.uaA.state, UasStateTrying):
-                if self.challenge != nil:
-                    event = CCEventFail((401, "Unauthorized"))
-                    event.extra_header = self.challenge
-                else:
-                    event = CCEventFail((403, "Auth Failed"))
-                self.uaA.RecvEvent(event)
-                self.state = CCStateDead
-            return
-        if self.global_config['acct_enable']:
-            self.acctA = RadiusAccounting(self.global_config, "answer", \
-              send_start = self.global_config['start_acct_enable'], lperiod = \
-              self.global_config.getdefault('alive_acct_int', nil))
-            self.acctA.ms_precision = self.global_config.getdefault('precise_acct', false)
-            self.acctA.setParams(self.username, self.cli, self.cld, self.cGUID, self.cId, self.remote_ip)
-        else:
-            self.acctA = FakeAccounting()
-        // Check that uaA is still in a valid state, send acct stop
-        if ! isinstance(self.uaA.state, UasStateTrying):
-            self.acctA.disc(self.uaA, time(), "caller")
-            return
-        cli = [x[1][4:] for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("CLI:")]
-        if len(cli) > 0:
-            self.cli = cli[0]
-            if len(self.cli) == 0:
-                self.cli = nil
-        caller_name = [x[1][5:] for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("CNAM:")]
-        if len(caller_name) > 0:
-            self.caller_name = caller_name[0]
-            if len(self.caller_name) == 0:
-                self.caller_name = nil
-        credit_time = [x for x in results[0] if x[0] == "h323-credit-time"]
-        if len(credit_time) > 0:
-            credit_time = int(credit_time[0][1])
-        else:
-            credit_time = nil
-        if ! self.global_config.has_key('_static_route'):
-            routing = [x for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("Routing:")]
-            if len(routing) == 0:
-                self.uaA.RecvEvent(CCEventFail((500, "Internal Server Error (2)")))
-                self.state = CCStateDead
-                return
-            routing = [B2BRoute(x[1][8:]) for x in routing]
-        else:
-            routing = [self.global_config['_static_route'].getCopy(),]
-        rnum = 0
-        for oroute in routing:
-            rnum += 1
-            max_credit_time = self.global_config.getdefault('max_credit_time', nil)
-            oroute.customize(rnum, self.cld, self.cli, credit_time, self.pass_headers, \
-              max_credit_time)
-            if oroute.credit_time == 0 || oroute.expires == 0:
-                continue
-            self.routes.append(oroute)
-            //println "Got route:", oroute.hostport, oroute.cld
-        if len(self.routes) == 0:
-            self.uaA.RecvEvent(CCEventFail((500, "Internal Server Error (3)")))
+    // Check that we got necessary result from Radius
+    if len(results) != 2 || results[1] != 0:
+        if isinstance(self.uaA.state, UasStateTrying):
+            if self.challenge != nil:
+                event = CCEventFail((401, "Unauthorized"))
+                event.extra_header = self.challenge
+            else:
+                event = CCEventFail((403, "Auth Failed"))
+            self.uaA.RecvEvent(event)
+            self.state = CCStateDead
+        return
+    if self.global_config['acct_enable']:
+        self.acctA = RadiusAccounting(self.global_config, "answer", \
+          send_start = self.global_config['start_acct_enable'], lperiod = \
+          self.global_config.getdefault('alive_acct_int', nil))
+        self.acctA.ms_precision = self.global_config.getdefault('precise_acct', false)
+        self.acctA.setParams(self.username, self.cli, self.cld, self.cGUID, self.cId, self.remote_ip)
+    else:
+    */
+        self.acctA = FakeAccounting()
+    // Check that uaA is still in a valid state, send acct stop
+    if ! isinstance(self.uaA.state, UasStateTrying):
+        self.acctA.disc(self.uaA, time(), "caller")
+        return
+    cli = [x[1][4:] for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("CLI:")]
+    if len(cli) > 0:
+        self.cli = cli[0]
+        if len(self.cli) == 0:
+            self.cli = nil
+    caller_name = [x[1][5:] for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("CNAM:")]
+    if len(caller_name) > 0:
+        self.caller_name = caller_name[0]
+        if len(self.caller_name) == 0:
+            self.caller_name = nil
+    credit_time = [x for x in results[0] if x[0] == "h323-credit-time"]
+    if len(credit_time) > 0:
+        credit_time = int(credit_time[0][1])
+    else:
+        credit_time = nil
+    if ! self.global_config.has_key('_static_route'):
+        routing = [x for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("Routing:")]
+        if len(routing) == 0:
+            self.uaA.RecvEvent(CCEventFail((500, "Internal Server Error (2)")))
             self.state = CCStateDead
             return
-        self.state = CCStateARComplete
-        self.placeOriginate(self.routes.pop(0))
+        routing = [B2BRoute(x[1][8:]) for x in routing]
+    else:
+        routing = [self.global_config['_static_route'].getCopy(),]
+    rnum = 0
+    for oroute in routing:
+        rnum += 1
+        max_credit_time = self.global_config.getdefault('max_credit_time', nil)
+        oroute.customize(rnum, self.cld, self.cli, credit_time, self.pass_headers, \
+          max_credit_time)
+        if oroute.credit_time == 0 || oroute.expires == 0:
+            continue
+        self.routes.append(oroute)
+        //println "Got route:", oroute.hostport, oroute.cld
+    if len(self.routes) == 0:
+        self.uaA.RecvEvent(CCEventFail((500, "Internal Server Error (3)")))
+        self.state = CCStateDead
+        return
+    self.state = CCStateARComplete
+    self.placeOriginate(self.routes.pop(0))
+/*
 
     def placeOriginate(self, oroute):
         cId, cGUID, cli, cld, body, auth, caller_name = self.eTry.getData()

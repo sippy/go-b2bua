@@ -43,6 +43,7 @@ type myConfigParser struct {
     pass_headers        []string
     keepalive_ans       time.Duration
     keepalive_orig      time.Duration
+    b2bua_socket        string
 }
 
 func NewMyConfigParser() *myConfigParser {
@@ -166,10 +167,10 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
     flag.StringVar(&pass_headers, "pass_headers", "", "list of SIP header field names that the B2BUA will " +
                                 "pass from ingress call leg to egress call leg " +
                                 "unmodified (comma-separated list)")
+    flag.StringVar(&self.b2bua_socket, "c", "/var/run/b2bua.sock", "b2bua_socket")
+    flag.StringVar(&self.b2bua_socket, "b2bua_socket", "/var/run/b2bua.sock", "path to the B2BUA command socket or address to listen " +
+                                        "for commands in the format \"udp:host[:port]\"")
 /*
-        if o == '-c':
-            global_config.check_and_set('b2bua_socket', a)
-            continue
         if o == '-M':
             global_config.check_and_set('max_radiusclients', a)
             continue

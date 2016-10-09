@@ -36,12 +36,10 @@ import (
 
     "sippy/conf"
     "sippy/log"
+    "sippy/types"
 )
 
-type RtpProxyClient interface {
-}
-
-func NewRtpProxyClient(spath string, config sippy_conf.Config, logger sippy_log.ErrorLogger) (RtpProxyClient, error) {
+func NewRtpProxyClient(spath string, config sippy_conf.Config, logger sippy_log.ErrorLogger) (sippy_types.RtpProxyClient, error) {
     opts := &Rtp_proxy_opts{
         Spath   : spath,
     }
