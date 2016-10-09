@@ -155,7 +155,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
     if req.triesleft <= 0 || self.worker == nil {
         delete(self.pending_requests, cookie)
         self.lock.Unlock()
-        self.owner.me.GoOffline()
+        self.owner.GoOffline()
         if req.result_callback != nil {
             req.result_callback("")
         }

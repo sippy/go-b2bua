@@ -38,6 +38,17 @@ import (
     "sippy/log"
 )
 
+type RtpProxyClient interface {
+}
+
+func NewRtpProxyClient(spath string, config sippy_conf.Config, logger sippy_log.ErrorLogger) (RtpProxyClient, error) {
+    opts := &Rtp_proxy_opts{
+        Spath   : spath,
+    }
+    rtpp, err := NewRtp_proxy_client_base(nil, config, nil, opts, logger)
+    return rtpp, err
+}
+
 type Rtp_proxy_client_impl interface {
     GoOnline()
     GoOffline()
@@ -45,7 +56,7 @@ type Rtp_proxy_client_impl interface {
 
 type Rtp_proxy_opts struct {
     No_version_check    *bool
-    Spath               *string
+    Spath               string
     Nworkers            *int
     Bind_address        *sippy_conf.HostPort
 }
@@ -57,9 +68,9 @@ func (self *Rtp_proxy_opts) no_version_check() bool {
     return *self.No_version_check
 }
 
-func (self *Rtp_proxy_opts) spath() *string {
+func (self *Rtp_proxy_opts) spath() string {
     if self == nil {
-        return nil
+        return ""
     }
     return self.Spath
 }
@@ -72,7 +83,7 @@ func (self *Rtp_proxy_opts) bind_address() *sippy_conf.HostPort {
 }
 
 type Rtp_proxy_client_base struct {
-    me              Rtp_proxy_client_impl
+    heir            Rtp_proxy_client_impl
     transport       rtp_proxy_transport
     proxy_address   string
     online          bool
@@ -120,11 +131,18 @@ func (self *Rtp_proxy_client_base) GetProxyAddress() string {
     return self.proxy_address
 }
 
-func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
+func (self *Rtp_proxy_client_base) me() Rtp_proxy_client_impl {
+    if self.heir != nil {
+        return self.heir
+    }
+    return self
+}
+
+func NewRtp_proxy_client_base(heir Rtp_proxy_client_impl, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
     var err error
     var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr, *Rtp_proxy_opts) (rtp_proxy_transport, error)
     self := &Rtp_proxy_client_base{
-        me              : me,
+        heir            : heir,
         caps_done       : false,
         shut_down       : false,
         hrtb_retr_ival  : 60 * time.Second,
@@ -139,9 +157,9 @@ func NewRtp_proxy_client_base(me Rtp_proxy_client_impl, global_config sippy_conf
         { "20150617", &self.wdnt_supported },
     }
     //print "Rtp_proxy_client_base", address
-    if address == nil && opts.spath() != nil {
+    if address == nil && opts.spath() != "" {
         var rtppa net.Addr
-        a := *opts.spath()
+        a := opts.spath()
         if strings.HasPrefix(a, "udp:") {
             tmp := strings.SplitN(a, ":", 3)
             if len(tmp) == 2 {
@@ -262,9 +280,9 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
         return
     }
     if version == "20040107" {
-        self.me.GoOnline()
+        self.me().GoOnline()
     } else if self.online {
-        self.me.GoOffline()
+        self.me().GoOffline()
     } else {
         StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, self.logger)
     }
@@ -285,7 +303,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
     }
     if stats == "" {
         self.active_sessions = 0
-        self.me.GoOffline()
+        self.me().GoOffline()
     } else {
         sessions_created := int64(0)
         active_sessions := int64(0)
