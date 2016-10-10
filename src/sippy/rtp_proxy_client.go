@@ -47,11 +47,6 @@ func NewRtpProxyClient(spath string, config sippy_conf.Config, logger sippy_log.
     return rtpp, err
 }
 
-type Rtp_proxy_client_impl interface {
-    GoOnline()
-    GoOffline()
-}
-
 type Rtp_proxy_opts struct {
     No_version_check    *bool
     Spath               string
@@ -81,7 +76,7 @@ func (self *Rtp_proxy_opts) bind_address() *sippy_conf.HostPort {
 }
 
 type Rtp_proxy_client_base struct {
-    heir            Rtp_proxy_client_impl
+    heir            sippy_types.RtpProxyClient
     transport       rtp_proxy_transport
     proxy_address   string
     online          bool
@@ -129,14 +124,14 @@ func (self *Rtp_proxy_client_base) GetProxyAddress() string {
     return self.proxy_address
 }
 
-func (self *Rtp_proxy_client_base) me() Rtp_proxy_client_impl {
+func (self *Rtp_proxy_client_base) me() sippy_types.RtpProxyClient {
     if self.heir != nil {
         return self.heir
     }
     return self
 }
 
-func NewRtp_proxy_client_base(heir Rtp_proxy_client_impl, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
+func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
     var err error
     var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr, *Rtp_proxy_opts) (rtp_proxy_transport, error)
     self := &Rtp_proxy_client_base{

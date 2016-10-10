@@ -361,4 +361,6 @@ type RtpProxyClient interface {
     TNotSupported() bool
     GetProxyAddress() string
     IsOnline() bool
+    GoOnline()
+    GoOffline()
 }
