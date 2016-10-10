@@ -341,7 +341,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     //if self.global_config.getdefault('hide_call_id', false) {
     //    cId = SipCallId(md5(str(cId)).hexdigest() + ("-b2b_%d" % oroute.rnum))
     //} else {
-        cId := sippy_header.NewSipCallIdFromString(self.eTry.GetSipCallId().CallId + fmt.Sprint("-b2b_%d", oroute.rnum))
+        cId := sippy_header.NewSipCallIdFromString(self.eTry.GetSipCallId().CallId + fmt.Sprintf("-b2b_%d", oroute.rnum))
     //}
     caller_name := oroute.caller_name
     if caller_name == "" {
