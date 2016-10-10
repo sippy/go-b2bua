@@ -27,7 +27,9 @@
 package main
 
 import (
+    "errors"
     "flag"
+    "strings"
     "time"
 
     "sippy/conf"
@@ -48,9 +50,7 @@ type myConfigParser struct {
 }
 
 func NewMyConfigParser() *myConfigParser {
-    error_logger := sippy_log.NewErrorLogger()
     return &myConfigParser{
-        Config              : sippy_conf.NewConfig(error_logger, sip_logger),
         rtp_proxy_clients   : make([]string, 0),
         accept_ips          : make(map[string]bool),
         //auth_enable         : false,
@@ -58,7 +58,7 @@ func NewMyConfigParser() *myConfigParser {
     }
 }
 
-func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger, error) {
+func (self *myConfigParser) Parse() error {
 /*
     global_config.digest_auth = true
     global_config.start_acct_enable = false
@@ -95,10 +95,11 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
         if o == '-P':
             global_config.check_and_set('pidfile', a)
             continue
-        if o == '-L':
-            global_config.check_and_set('logfile', a)
-            continue
             */
+    var logfile string
+    flag.StringVar(&logfile, "L", "/var/log/sip.log", "logfile")
+    flag.StringVar(&logfile, "logfile", "/var/log/sip.log", "path to the B2BUA log file")
+
     flag.StringVar(&self.static_route, "s", "", "static route for all SIP calls")
     flag.StringVar(&self.static_route, "static_route", "", "static route for all SIP calls")
 
@@ -224,21 +225,28 @@ func (self *myConfigParser) Parse() (sippy_log.ErrorLogger, sippy_log.SipLogger,
     case 0:
         // do nothing
     case 1:
-        global_config.keepalive_ans = 32 * time.Second
+        self.keepalive_ans = 32 * time.Second
     case 2:
-        global_config.keepalive_orig = 32 * time.Second
+        self.keepalive_orig = 32 * time.Second
     case 3:
-        global_config.keepalive_ans = 32 * time.Second
-        global_config.keepalive_orig = 32 * time.Second
+        self.keepalive_ans = 32 * time.Second
+        self.keepalive_orig = 32 * time.Second
     default:
-        return nil, nil, "-k argument not in the range 0-3"
+        return errors.New("-k argument not in the range 0-3")
     }
     if keepalive_ans > 0 {
-        global_config.keepalive_ans = time.Duration(keepalive_ans) * time.Second
+        self.keepalive_ans = time.Duration(keepalive_ans) * time.Second
     }
     if keepalive_orig > 0 {
-        global_config.keepalive_orig = time.Duration(keepalive_orig) * time.Second
+        self.keepalive_orig = time.Duration(keepalive_orig) * time.Second
     }
+    error_logger := sippy_log.NewErrorLogger()
+    sip_logger, err := sippy_log.NewSipLogger("b2bua", logfile)
+    if err != nil {
+        return err
+    }
+    self.Config = sippy_conf.NewConfig(error_logger, sip_logger)
+    return nil
 }
 /*
 from ConfigParser import RawConfigParser
@@ -465,6 +473,6 @@ func (self *myConfigParser) checkIP(ip string) bool {
     if len(self.accept_ips) == 0 {
         return true
     }
-    _, ok = self.accept_ips[ip]
+    _, ok := self.accept_ips[ip]
     return ok
 }

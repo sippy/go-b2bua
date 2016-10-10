@@ -86,7 +86,7 @@ func NewConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogge
 
 func (self *config) SipAddress() *MyAddress {
     if self.sip_address == nil {
-        return nil
+        return self.my_address
     }
     return self.sip_address
 }
@@ -97,7 +97,7 @@ func (self *config) SipLogger() sippy_log.SipLogger {
 
 func (self *config) SipPort() *MyPort {
     if self.sip_port == nil {
-        return nil
+        return self.my_port
     }
     return self.sip_port
 }
@@ -115,19 +115,11 @@ func (self *config) ErrorLogger() sippy_log.ErrorLogger {
 }
 
 func (self *config) SetSipAddress(addr *MyAddress) {
-    if addr == nil {
-        self.sip_address = nil
-    } else {
-        self.sip_address = addr
-    }
+    self.sip_address = addr
 }
 
 func (self *config) SetSipPort(port *MyPort) {
-    if port == nil {
-        self.sip_port = nil
-    } else {
-        self.sip_port = port
-    }
+    self.sip_port = port
 }
 
 func (self *config) GetMyAddress() (*MyAddress) {

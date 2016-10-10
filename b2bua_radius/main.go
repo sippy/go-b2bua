@@ -110,7 +110,7 @@ def usage(global_config, brief = false):
 
 func main() {
     global_config := NewMyConfigParser()
-    error_logger, sip_logger, err := global_config.Parse()
+    err := global_config.Parse()
     if err != nil {
         println(err.Error())
         return
@@ -137,7 +137,7 @@ func main() {
 */
     global_rtp_proxy_clients = make([]sippy_types.RtpProxyClient, len(global_config.rtp_proxy_clients))
     for _, address := range global_config.rtp_proxy_clients {
-        rtpp, err := sippy.NewRtpProxyClient(address, global_config, error_logger)
+        rtpp, err := sippy.NewRtpProxyClient(address, global_config, global_config.ErrorLogger())
         if err != nil {
             println("Cannot initialize rtpproxy client: " + err.Error())
             return

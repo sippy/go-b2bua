@@ -31,7 +31,6 @@ import (
     "net/url"
     "strings"
     "sync"
-    "time"
 
     "sippy"
     "sippy/conf"
@@ -251,9 +250,7 @@ func (self *callController) rDone(/*results*/) {
     if len(credit_time) > 0:
         credit_time = int(credit_time[0][1])
     else:
-*/
         credit_time := time.Duration(0)
-/*
     if ! self.global_config.has_key('_static_route'):
         routing = [x for x in results[0] if x[0] == "h323-ivr-in" && x[1].startswith("Routing:")]
         if len(routing) == 0:
