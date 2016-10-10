@@ -58,6 +58,7 @@ type B2BRoute struct {
     extra_headers   []sippy_header.SipHeader
     rtpp            bool
     outbound_proxy  *sippy_conf.HostPort
+    rnum            int
 }
 /*
 from sippy.SipHeader import SipHeader
@@ -211,65 +212,66 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
     }
     return self, nil
 }
-/*
-    def customize(self, rnum, default_cld, default_cli, default_credit_time, \
-      pass_headers, max_credit_time):
-        self.rnum = rnum
-        if ! self.cld_set:
-            self.cld = default_cld
-        if ! self.cli_set:
-            self.cli = default_cli
-        if ! self.crt_set:
-            self.crt_set = default_credit_time
-        if self.params.has_key("gt"):
-            timeout, skip = self.params["gt"].split(",", 1)
-            self.params["group_timeout"] = (int(timeout), rnum + int(skip))
-        if self.extra_headers != nil:
-            self.extra_headers = self.extra_headers + tuple(pass_headers)
-        else:
-            self.extra_headers = tuple(pass_headers)
-        if max_credit_time != nil:
-            if self.credit_time == nil or self.credit_time > max_credit_time:
-                self.credit_time = max_credit_time
 
-    def getCopy(self):
-        if cself != nil:
-            self.rnum = cself.rnum
-            self.addrinfo = cself.addrinfo
-            self.cld = cself.cld
-            self.cld_set = cself.cld_set
-            self.hostport = cself.hostport
-            self.hostonly = cself.hostonly
-            self.credit_time = cself.credit_time
-            self.crt_set = cself.crt_set
-            self.expires = cself.expires
-            self.no_progress_expires = cself.no_progress_expires
-            self.forward_on_fail = cself.forward_on_fail
-            self.user = cself.user
-            self.passw = cself.passw
-            self.cli = cself.cli
-            self.cli_set = cself.cli_set
-            self.params = dict(cself.params)
-            self.ainfo = cself.ainfo
-            if cself.extra_headers != nil:
-                self.extra_headers = tuple([x.getCopy() for x in cself.extra_headers])
-            return
-        return self.__class__(cself = self)
+func (self *B2BRoute) customize(rnum int, default_cld, default_cli string, default_credit_time time.Duration, pass_headers []sippy_header.SipHeader, max_credit_time time.Duration) {
+    self.rnum = rnum
+    if ! self.cld_set {
+        self.cld = default_cld
+    }
+    if ! self.cli_set {
+        self.cli = default_cli
+    }
+    if ! self.crt_set {
+        self.credit_time = default_credit_time
+    }
+    //if self.params.has_key("gt") {
+    //    timeout, skip = self.params["gt"].split(",", 1)
+    //    self.params["group_timeout"] = (int(timeout), rnum + int(skip))
+    //}
+    self.extra_headers = append(self.extra_headers, pass_headers...)
+    if max_credit_time != 0 {
+        if self.credit_time == 0 || self.credit_time > max_credit_time {
+            self.credit_time = max_credit_time
+        }
+    }
+}
 
-    def getNHAddr(self, source):
-        if source[0].startswith("["):
-            af = AF_INET6
-        else:
-            af = AF_INET
-        amatch = [x[4] for x in self.ainfo if x[0] == af]
-        same_af = true
-        if len(amatch) == 0:
-            same_af = false
-            amatch = self.ainfo[0][4]
-            af = self.ainfo[0][0]
-        else:
-            amatch = amatch[0]
-        if af == AF_INET6:
-            return ((("[%s]" % amatch[0], amatch[1]), same_af))
-        return (((amatch[0], amatch[1]), same_af))
-*/
+func (self *B2BRoute) getCopy() *B2BRoute {
+    if self == nil {
+        return nil
+    }
+    cself := *self
+    cself.outbound_proxy = self.outbound_proxy.GetCopy()
+
+    cself.huntstop_scodes = make([]int, len(self.huntstop_scodes))
+    copy(cself.huntstop_scodes, self.huntstop_scodes)
+
+    cself.ainfo = make([]net.IP, len(self.ainfo))
+    copy(cself.ainfo, self.ainfo)
+
+    cself.extra_headers = make([]sippy_header.SipHeader, len(self.extra_headers))
+    copy(cself.extra_headers, self.extra_headers)
+
+    return &cself
+}
+
+func (self *B2BRoute) getNHAddr(source *sippy_conf.HostPort) (*sippy_conf.HostPort, bool) {
+    if source[0].startswith("[") {
+        af = AF_INET6
+    } else {
+        af = AF_INET
+    }
+    amatch = [x[4] for x in self.ainfo if x[0] == af]
+    same_af = true
+    if len(amatch) == 0 {
+        same_af = false
+        amatch = self.ainfo[0][4]
+        af = self.ainfo[0][0]
+    } else {
+        amatch = amatch[0]
+    }
+    if af == AF_INET6 {
+        return ((("[%s]" % amatch[0], amatch[1]), same_af))
+    }
+    return (((amatch[0], amatch[1]), same_af))
+}

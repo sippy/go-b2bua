@@ -26,6 +26,13 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
 
+type fakeAccounting struct {
+}
+
+func NewFakeAccounting() *fakeAccounting {
+    return &fakeAccounting{
+    }
+}
 /*
 class FakeAccounting(object):
     def __init__(self, *args):
