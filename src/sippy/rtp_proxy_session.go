@@ -165,7 +165,7 @@ func (self *Rtp_proxy_session) Delete() {
         return
     }
     for self.max_index >= 0 {
-        command := fmt.Sprint("D %s-%d %s %s", self.call_id, self.max_index, self.from_tag, self.to_tag)
+        command := fmt.Sprintf("D %s-%d %s %s", self.call_id, self.max_index, self.from_tag, self.to_tag)
         self.rtp_proxy_client.SendCommand(command, nil)
         self.max_index--
     }

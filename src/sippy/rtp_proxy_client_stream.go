@@ -40,7 +40,7 @@ import (
 )
 
 const (
-    _RTPPLWorker_MAX_RECURSE = 10
+    _RTPPLWorker_MAX_RETRIES = 3
 )
 
 type rtpp_req_stream struct {
@@ -59,20 +59,20 @@ func NewRTPPLWorker(userv *Rtp_proxy_client_stream) *_RTPPLWorker {
         userv           : userv,
         shutdown_chan   : make(chan int, 1),
     }
-    self.connect()
+    self.reconnect()
     go self.run()
     return self
 }
 
-func (self *_RTPPLWorker) connect() (err error) {
+func (self *_RTPPLWorker) reconnect() (err error) {
+    if self.s != nil {
+        self.s.Close()
+    }
     self.s, err = net.Dial(self.userv.address.Network(), self.userv.address.String())
     return
 }
 
-func (self *_RTPPLWorker) send_raw(command string, _recurse int, stime *sippy_time.MonoTime) (string, time.Duration, error) {
-    if _recurse > _RTPPLWorker_MAX_RECURSE {
-        return "", 0, fmt.Errorf("Cannot reconnect: " + self.userv.address.String())
-    }
+func (self *_RTPPLWorker) send_raw(command string, stime *sippy_time.MonoTime) (string, time.Duration, error) {
     if command[len(command)-1] != '\n' {
         command += "\n"
     }
@@ -80,48 +80,33 @@ func (self *_RTPPLWorker) send_raw(command string, _recurse int, stime *sippy_ti
     if stime == nil {
         stime, _ = sippy_time.NewMonoTime()
     }
-LOOP1:
-    for {
-        if self.s == nil {
-            self.connect()
-            return self.send_raw(command, _recurse + 1, stime)
-        }
-        _, err := self.s.Write([]byte(command))
-        if err == nil {
-            break LOOP1
-        }
-        switch _net_errno(err) {
-        case syscall.EINTR:
-            continue
-        case syscall.EPIPE: fallthrough
-        case syscall.ENOTCONN: fallthrough
-        case syscall.ECONNRESET:
-            self.connect()
-            return self.send_raw(command, _recurse + 1, stime)
-        default:
-            return "", 0, err
-        }
-    }
-    buf := make([]byte, 1024)
+    var err error
+    var n int
+    retries := 0
     rval := ""
+    buf := make([]byte, 1024)
     for {
-        n, err := self.s.Read(buf)
-        if err != nil {
-            switch _net_errno(err) {
-            case syscall.EINTR:
+        if retries > _RTPPLWorker_MAX_RETRIES {
+            return "", 0, fmt.Errorf("Error sending to the rtpproxy on " + self.userv.address.String() + ": " + err.Error())
+        }
+        retries++
+
+        if self.s == nil || err != nil {
+            err = self.reconnect()
+            if err != nil {
+                time.Sleep(100 * time.Millisecond)
                 continue
-            case syscall.EPIPE: fallthrough
-            case syscall.ENOTCONN: fallthrough
-            case syscall.ECONNRESET:
-                self.connect()
-                return self.send_raw(command, _recurse + 1, stime)
-            default:
-                return "", 0, err
             }
         }
-        if n == 0 {
-            self.connect()
-            return self.send_raw(command, _RTPPLWorker_MAX_RECURSE, stime)
+        _, err = self.s.Write([]byte(command))
+        if err != nil {
+            time.Sleep(100 * time.Millisecond)
+            continue
+        }
+        n, err = self.s.Read(buf)
+        if err != nil {
+            time.Sleep(100 * time.Millisecond)
+            continue
         }
         rval = strings.TrimSpace(string(buf[:n]))
         break
@@ -139,7 +124,7 @@ func (self *_RTPPLWorker) run() {
             break
         }
         //command, result_callback, callback_parameters = wi
-        data, rtpc_delay, err := self.send_raw(req.command, 0, nil)
+        data, rtpc_delay, err := self.send_raw(req.command, nil)
         if err != nil {
             self.userv.owner.logger.Debug("Error communicating the rtpproxy: " + err.Error())
             data, rtpc_delay = "", -1
@@ -175,7 +160,7 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
             return nil, err
         }
     }
-    nworkers := 1
+    nworkers := 4
     if opts != nil && opts.Nworkers != nil {
         nworkers = *opts.Nworkers
     }
@@ -185,7 +170,7 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         nworkers    : nworkers,
         workers     : make([]*_RTPPLWorker, nworkers),
         delay_flt   : sippy_math.NewRecFilter(0.95, 0.25),
-        wi          : make(chan *rtpp_req_stream, 100),
+        wi          : make(chan *rtpp_req_stream, 1000),
     }
     if strings.HasPrefix(address.Network(), "unix") {
         self._is_local = true

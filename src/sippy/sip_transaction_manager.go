@@ -297,11 +297,18 @@ func (self *sipTransactionManager) NewClientTransaction(req sippy_types.SipReque
     }
     target := req.GetTarget()
     if userv == nil {
+        var uv *udpServer
         if laddress == nil {
-            userv = self.l4r.getServer(target, /*is_local =*/ false)
+            uv = self.l4r.getServer(target, /*is_local =*/ false)
         } else {
-            userv = self.l4r.getServer(laddress, /*is_local =*/ true)
+            uv = self.l4r.getServer(laddress, /*is_local =*/ true)
         }
+        if uv != nil {
+            userv = uv
+        }
+    }
+    if userv == nil {
+        return nil, errors.New("BUG: cannot get userv from local4remote!!!")
     }
     tid := req.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
     self.tclient_lock.Lock()
