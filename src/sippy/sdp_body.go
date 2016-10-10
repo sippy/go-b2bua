@@ -54,6 +54,7 @@ type sdpBody struct {
 }
 
 func ParseSdpBody(body string) (*sdpBody, error) {
+    var err error
     self := &sdpBody{
         a_headers       : make([]string, 0),
         sections        : make([]*sippy_sdp.SdpMediaDescription, 0),
@@ -80,7 +81,10 @@ func ParseSdpBody(body string) (*sdpBody, error) {
                 case "v":
                     self.v_header = sippy_sdp.ParseSdpGeneric(v)
                 case "o":
-                    self.o_header = sippy_sdp.ParseSdpOrigin(v)
+                    self.o_header, err = sippy_sdp.ParseSdpOrigin(v)
+                    if err != nil {
+                        return nil, err
+                    }
                 case "s":
                     self.s_header = sippy_sdp.ParseSdpGeneric(v)
                 case "i":

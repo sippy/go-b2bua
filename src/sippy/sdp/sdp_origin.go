@@ -27,6 +27,7 @@
 package sippy_sdp
 
 import (
+    "errors"
     "strings"
     "strconv"
     "sync/atomic"
@@ -46,44 +47,51 @@ func init() {
 type SdpOrigin struct {
     username        string
     session_id      string
-    version         string
+    version         int64
     network_type    string
     address_type    string
     address         *sippy_conf.MyAddress
 }
 
-func ParseSdpOrigin(body string) *SdpOrigin {
+func ParseSdpOrigin(body string) (*SdpOrigin, error) {
     arr := strings.Fields(body)
     if len(arr) != 6 {
-        return nil
+        return nil, errors.New("Malformed field: " + body)
+    }
+    version, err := strconv.ParseInt(arr[2], 10, 64)
+    if err != nil {
+        return nil, err
     }
     return &SdpOrigin{
         username        : arr[0],
         session_id      : arr[1],
-        version         : arr[2],
+        version         : version,
         network_type    : arr[3],
         address_type    : arr[4],
         address         : sippy_conf.NewMyAddress(arr[5]),
-    }
+    }, nil
 }
 
 func NewSdpOrigin(config sippy_conf.Config) *SdpOrigin {
+    sid := atomic.AddInt64(&_sdp_session_id, 1)
     self := &SdpOrigin {
         username        : "-",
-        session_id      : strconv.FormatInt(atomic.AddInt64(&_sdp_session_id, 1), 10),
+        session_id      : strconv.FormatInt(sid, 10),
         network_type    : "IN",
         address_type    : "IP4",
         address         : config.GetMyAddress(),
     }
-    self.version = self.session_id
+    self.version = sid
     return self
 }
 
 func (self *SdpOrigin) String() string {
-    return strings.Join([]string{ self.username, self.session_id, self.version, self.network_type, self.address_type, self.address.String() }, " ")
+    version := strconv.FormatInt(self.version, 10)
+    return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address.String() }, " ")
 }
 
 func (self *SdpOrigin) LocalStr(hostport *sippy_conf.HostPort) string {
+    version := strconv.FormatInt(self.version, 10)
     if hostport != nil && self.address.IsSystemDefault() {
         var address_type string
         local_addr := hostport.Host.String()
@@ -94,9 +102,9 @@ func (self *SdpOrigin) LocalStr(hostport *sippy_conf.HostPort) string {
         } else {
             address_type = "IP4"
         }
-        return strings.Join([]string{ self.username, self.session_id, self.version, self.network_type, address_type, local_addr }, " ")
+        return strings.Join([]string{ self.username, self.session_id, version, self.network_type, address_type, local_addr }, " ")
     }
-    return strings.Join([]string{ self.username, self.session_id, self.version, self.network_type, self.address_type, self.address.String() }, " ")
+    return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address.String() }, " ")
 }
 
 func (self *SdpOrigin) GetCopy() *SdpOrigin {
@@ -105,4 +113,8 @@ func (self *SdpOrigin) GetCopy() *SdpOrigin {
     }
     var ret SdpOrigin = *self
     return &ret
+}
+
+func (self *SdpOrigin) IncVersion() {
+    self.version++
 }

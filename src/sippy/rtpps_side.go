@@ -31,6 +31,7 @@ import (
     "math"
     "strconv"
     "strings"
+    "sync"
 
     "sippy/sdp"
     "sippy/conf"
@@ -46,6 +47,7 @@ type _rtpps_side struct {
     codecs          string
     origin          *sippy_sdp.SdpOrigin
     repacketize     int
+    origin_lock     sync.Mutex
 }
 
 func (self *_rtpps_side) _play(prompt_name string, times int, result_callback func(string), index int) {
@@ -194,7 +196,10 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtp_command_result, sdp_bod
         }
     }
     if num == 0 {
-        parsed_body.SetOHeader(self.origin)
+        self.origin_lock.Lock()
+        self.origin.IncVersion()
+        parsed_body.SetOHeader(self.origin.GetCopy())
+        self.origin_lock.Unlock()
         if self.owner.insert_nortpp {
             parsed_body.AppendAHeader("nortpproxy=yes")
         }
