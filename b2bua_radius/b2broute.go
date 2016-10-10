@@ -251,7 +251,9 @@ func (self *B2BRoute) getCopy() *B2BRoute {
         return nil
     }
     cself := *self
-    cself.outbound_proxy = self.outbound_proxy.GetCopy()
+    if self.outbound_proxy != nil {
+        cself.outbound_proxy = self.outbound_proxy.GetCopy()
+    }
 
     cself.huntstop_scodes = make([]int, len(self.huntstop_scodes))
     copy(cself.huntstop_scodes, self.huntstop_scodes)

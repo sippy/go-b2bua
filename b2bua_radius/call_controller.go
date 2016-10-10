@@ -320,7 +320,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     //self.uaO.SetConnCbs([]sippy_types.OnConnectListener{ self.oConn })
     self.uaO.SetDeadCbs([]sippy_types.OnDeadListener{ self.oDead })
     self.uaO.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
-    if self.source.String() != oroute.outbound_proxy.String() {
+    if oroute.outbound_proxy != nil && self.source.String() != oroute.outbound_proxy.String() {
         self.uaO.SetOutboundProxy(oroute.outbound_proxy)
     }
     var body sippy_types.MsgBody
@@ -329,7 +329,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
         self.uaO.SetOnRemoteSdpChange(self.rtp_proxy_session.OnCalleeSdpChange)
         self.rtp_proxy_session.SetCallerRaddress(nh_address)
         if self.eTry.GetBody() != nil {
-            body = body.GetCopy()
+            body = self.eTry.GetBody().GetCopy()
         }
         self.proxied = true
     }

@@ -136,13 +136,13 @@ func main() {
         daemonize(logfile = global_config['logfile'])
 */
     global_rtp_proxy_clients = make([]sippy_types.RtpProxyClient, len(global_config.rtp_proxy_clients))
-    for _, address := range global_config.rtp_proxy_clients {
+    for i, address := range global_config.rtp_proxy_clients {
         rtpp, err := sippy.NewRtpProxyClient(address, global_config, global_config.ErrorLogger())
         if err != nil {
             println("Cannot initialize rtpproxy client: " + err.Error())
             return
         }
-        global_rtp_proxy_clients = append(global_rtp_proxy_clients, rtpp)
+        global_rtp_proxy_clients[i] = rtpp
     }
 /*
     if global_config['auth_enable'] || global_config['acct_enable']:
