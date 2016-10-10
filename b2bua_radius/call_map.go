@@ -42,6 +42,7 @@ import (
 type callMap struct {
     global_config   *myConfigParser
     ccmap           map[int64]*callController
+    ccmap_lock      sync.Mutex
     gc_timeout      time.Duration
     debug_mode      bool
     safe_restart    bool
@@ -95,7 +96,7 @@ func NewCallMap(global_config *myConfigParser) *callMap {
     return self
 }
 
-func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.ServerTransaction) {
+func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
     to_tag := req.GetTo().GetTag()
     //except Exception as exception:
         //println(datetime.now(), "can\"t parse SIP request: %s:\n" % str(exception))
@@ -108,7 +109,7 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
         //return (nil, nil, nil)
     if to_tag != "" {
         // Request within dialog, but no such dialog
-        return req.GenResponse(481, "Call Leg/Transaction Does Not Exist", nil, nil)
+        return nil, nil, req.GenResponse(481, "Call Leg/Transaction Does Not Exist", nil, nil)
     }
     if req.GetMethod() == "INVITE" {
         // New dialog
@@ -125,8 +126,7 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
         // First check if request comes from IP that
         // we want to accept our traffic from
         if ! self.global_config.checkIP(source.Host.String())  {
-            resp := req.GenResponse(403, "Forbidden", nil, nil)
-            return resp, nil, nil
+            return nil, nil, req.GenResponse(403, "Forbidden", nil, nil)
         }
 /*
         var challenge *sippy_header.SipWWWAuthenticate
@@ -156,20 +156,22 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
         id := self.cc_id
         self.cc_id++
         self.cc_id_lock.Unlock()
-        cc := NewCallController(id, remote_ip, source, self.global_config, pass_headers)
+        cc := NewCallController(id, remote_ip, source, self.global_config, pass_headers, self.sip_tm)
         //cc.challenge = challenge
-        rval = cc.uaA.recvRequest(req, sip_t)
-        self.ccmap.append(cc)
-        return rval
+        //rval := cc.uaA.RecvRequest(req, sip_t)
+        self.ccmap_lock.Lock()
+        self.ccmap[id] = cc
+        self.ccmap_lock.Unlock()
+        return cc.uaA, cc.uaA, nil
     }
     if self.proxy != nil && (req.GetMethod() == "REGISTER" || req.GetMethod() == "SUBSCRIBE") {
-        return self.proxy.recvRequest(req)
+        return nil, self.proxy, nil
     }
     if (req.GetMethod() == "NOTIFY" || req.GetMethod() == "PING") {
         // Whynot?
-        return req.GenResponse(200, "OK", nil, nil)
+        return nil, nil, req.GenResponse(200, "OK", nil, nil)
     }
-    return req.GenResponse(501, "Not Implemented", nil, nil)
+    return nil, nil, req.GenResponse(501, "Not Implemented", nil, nil)
 }
 
 func (self *callMap) discAll(signum syscall.Signal) {
@@ -318,3 +320,9 @@ func (self *callMap) GClector() {
         clim.send("ERROR: unknown command\n")
         return false
 */
+
+func (self *callMap) DropCC(cc_id int64) {
+    self.ccmap_lock.Lock()
+    delete(self.ccmap, cc_id)
+    self.ccmap_lock.Unlock()
+}

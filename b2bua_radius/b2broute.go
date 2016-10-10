@@ -38,13 +38,22 @@ import (
     "sippy/headers"
 )
 
+type ainfo_item struct {
+    ip          net.IP
+    port        string
+}
+
+func (self *ainfo_item) HostPort() *sippy_conf.HostPort {
+    return sippy_conf.NewHostPort(self.ip.String(), self.port)
+}
+
 type B2BRoute struct {
     cld             string
     cld_set         bool
     hostport        string
     hostonly        string
     huntstop_scodes []int
-    ainfo           []net.IP
+    ainfo           []*ainfo_item
     credit_time     time.Duration
     crt_set         bool
     expires         time.Duration
@@ -120,15 +129,16 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
     } else {
         port = sippy_conf.NewMyPort(hostport[1])
     }
-    self.ainfo, err = net.LookupIP(hostport[0])
-    if ipv6only {
-        // get rid of IPv4 addresses
-        tmp := []net.IP{}
-        for _, ip := range self.ainfo {
-            if ip.To4() != nil { continue }
-            tmp = append(tmp, ip)
+    self.ainfo = make([]*ainfo_item, 0)
+    ips, err := net.LookupIP(hostport[0])
+    if err != nil {
+        return nil, errors.New("NewB2BRoute: error resolving host IP '" + hostport[0] + "': " + err.Error())
+    }
+    for _, ip := range ips {
+        if ipv6only && ip.To4() != nil {
+            continue
         }
-        self.ainfo = tmp
+        self.ainfo = append(self.ainfo, &ainfo_item{ ip, port.String() })
     }
     //self.params = []string{}
     for _, x := range route[1:] {
@@ -246,7 +256,7 @@ func (self *B2BRoute) getCopy() *B2BRoute {
     cself.huntstop_scodes = make([]int, len(self.huntstop_scodes))
     copy(cself.huntstop_scodes, self.huntstop_scodes)
 
-    cself.ainfo = make([]net.IP, len(self.ainfo))
+    cself.ainfo = make([]*ainfo_item, len(self.ainfo))
     copy(cself.ainfo, self.ainfo)
 
     cself.extra_headers = make([]sippy_header.SipHeader, len(self.extra_headers))
@@ -256,22 +266,20 @@ func (self *B2BRoute) getCopy() *B2BRoute {
 }
 
 func (self *B2BRoute) getNHAddr(source *sippy_conf.HostPort) (*sippy_conf.HostPort, bool) {
-    if source[0].startswith("[") {
-        af = AF_INET6
-    } else {
-        af = AF_INET
+    src_ip := net.ParseIP(source.Host.String())
+    if src_ip == nil {
+        return self.ainfo[0].HostPort(), true
     }
-    amatch = [x[4] for x in self.ainfo if x[0] == af]
-    same_af = true
-    if len(amatch) == 0 {
-        same_af = false
-        amatch = self.ainfo[0][4]
-        af = self.ainfo[0][0]
-    } else {
-        amatch = amatch[0]
+    src_is_ipv4 := true
+    if src_ip.To4() == nil {
+        src_is_ipv4 = false
     }
-    if af == AF_INET6 {
-        return ((("[%s]" % amatch[0], amatch[1]), same_af))
+    for _, it := range self.ainfo {
+        if src_is_ipv4 && it.ip.To4() != nil {
+            return it.HostPort(), true
+        } else if ! src_is_ipv4 && it.ip.To4() == nil {
+            return it.HostPort(), true
+        }
     }
-    return (((amatch[0], amatch[1]), same_af))
+    return self.ainfo[0].HostPort(), true
 }

@@ -27,6 +27,7 @@
 package main
 
 import (
+    "flag"
     "time"
 
     "sippy/conf"
@@ -47,6 +48,7 @@ type myConfigParser struct {
 }
 
 func NewMyConfigParser() *myConfigParser {
+    error_logger := sippy_log.NewErrorLogger()
     return &myConfigParser{
         Config              : sippy_conf.NewConfig(error_logger, sip_logger),
         rtp_proxy_clients   : make([]string, 0),

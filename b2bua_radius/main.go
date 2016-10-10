@@ -31,10 +31,11 @@ import (
 
     "sippy"
     "sippy/conf"
+    "sippy/types"
 )
 
 var global_static_route *B2BRoute
-var global_rtp_proxy_clients []sippy.RtpProxyClient
+var global_rtp_proxy_clients []sippy_types.RtpProxyClient
 var global_cmap *callMap
 /*
 from sippy.Timeout import Timeout
@@ -134,7 +135,7 @@ func main() {
     if ! global_config['foreground']:
         daemonize(logfile = global_config['logfile'])
 */
-    global_rtp_proxy_clients = make([]sippy.RtpProxyClient, len(global_config.rtp_proxy_clients))
+    global_rtp_proxy_clients = make([]sippy_types.RtpProxyClient, len(global_config.rtp_proxy_clients))
     for _, address := range global_config.rtp_proxy_clients {
         rtpp, err := sippy.NewRtpProxyClient(address, global_config, error_logger)
         if err != nil {
@@ -154,8 +155,12 @@ func main() {
     if global_config.getdefault('xmpp_b2bua_id', nil) != nil:
         global_config['_xmpp_mode'] = true
 */
-    sip_tm := sippy.NewSipTransactionManager(global_config, global_cmap)
-    sip_tm.nat_traversal = global_config.nat_traversal
+    sip_tm, err := sippy.NewSipTransactionManager(global_config, global_cmap)
+    if err != nil {
+        println("Cannot initialize SipTransactionManager: " + err.Error())
+        return
+    }
+    //sip_tm.nat_traversal = global_config.nat_traversal
     global_cmap.sip_tm = sip_tm
     if global_config.sip_proxy != "" {
         var sip_proxy *sippy_conf.HostPort
@@ -168,12 +173,12 @@ func main() {
         global_cmap.proxy = sippy.NewStatefulProxy(sip_tm, sip_proxy, global_config)
     }
 
+/*
     cmdfile = global_config.b2bua_socket
     if cmdfile.startswith("unix:") {
         cmdfile = cmdfile[5:]
     }
     cli_server = Cli_server_local(global_cmap.recvCommand, cmdfile)
-/*
     if ! global_config['foreground']:
         file(global_config['pidfile'], 'w').write(str(os.getpid()) + '\n')
         Signal(SIGUSR1, reopen, SIGUSR1, global_config['logfile'])

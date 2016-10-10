@@ -46,7 +46,7 @@ type callController struct {
     uaO             sippy_types.UA
     global_config   *myConfigParser
     state           CCState
-    remote_ip       string
+    remote_ip       *sippy_conf.MyAddress
     source          *sippy_conf.HostPort
     routes          []*B2BRoute
     pass_headers    []sippy_header.SipHeader
@@ -60,6 +60,8 @@ type callController struct {
     eTry            *sippy.CCEventTry
     huntstop_scodes []int
     acctA           *fakeAccounting
+    sip_tm          sippy_types.SipTransactionManager
+    proxied         bool
 }
 /*
 class CallController(object):
@@ -70,10 +72,9 @@ class CallController(object):
     rtp_proxy_session = nil
     huntstop_scodes = nil
     auth_proc = nil
-    proxied = false
     challenge = nil
 */
-func NewCallController(id int64, remote_ip string, source *sippy_conf.HostPort, global_config *myConfigParser, pass_headers []sippy_header.SipHeader, sip_tm sippy_types.SipTransactionManager) *callController {
+func NewCallController(id int64, remote_ip *sippy_conf.MyAddress, source *sippy_conf.HostPort, global_config *myConfigParser, pass_headers []sippy_header.SipHeader, sip_tm sippy_types.SipTransactionManager) *callController {
     self := &callController{
         id              : id,
         global_config   : global_config,
@@ -84,6 +85,8 @@ func NewCallController(id int64, remote_ip string, source *sippy_conf.HostPort, 
         pass_headers    : pass_headers,
         lock            : new(sync.Mutex),
         huntstop_scodes : make([]int, 0),
+        proxied         : false,
+        sip_tm          : sip_tm,
     }
     self.uaA = sippy.NewUA(sip_tm, global_config, nil, self, self.lock, nil)
     self.uaA.SetKaInterval(self.global_config.keepalive_ans)
@@ -156,7 +159,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                     self.state = CCStateDead
                     return
                 }
-                self.rtp_proxy_session.SetCalleeRaddress(sippy_conf.NewHostPort(self.remote_ip, "5060"))
+                self.rtp_proxy_session.SetCalleeRaddress(sippy_conf.NewHostPort(self.remote_ip.String(), "5060"))
                 self.rtp_proxy_session.SetInsertNortpp(true)
             }
             self.eTry = ev_try
@@ -307,31 +310,33 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     //    self.acctO.setParams(oroute.params.get('bill-to', self.username), oroute.params.get('bill-cli', oroute.cli), \
     //      oroute.params.get('bill-cld', cld), self.cGUID, self.cId, host)
     //else {
-        self.acctO = nil
+    //    self.acctO = nil
     //}
-    self.acctA.credit_time = oroute.credit_time
+    //self.acctA.credit_time = oroute.credit_time
     //disc_handlers = []
     //if ! oroute.forward_on_fail && self.global_config['acct_enable'] {
     //    disc_handlers.append(self.acctO.disc)
     //}
-    self.uaO = UA(self.global_config, self.RecvEvent, oroute.user, oroute.passw, nh_address, oroute.credit_time,
-      /*expire_time*/ oroute.expires, /*no_progress_time*/ oroute.no_progress_expires, /*extra_headers*/ oroute.extra_headers)
-    self.uaO.SetConnCbs([]sippy_types.OnConnectListener{ self.oConn })
+    self.uaO = sippy.NewUA(self.sip_tm, self.global_config, nh_address, self, self.lock, nil)
+    // oroute.user, oroute.passw, nh_address, oroute.credit_time,
+    //  /*expire_time*/ oroute.expires, /*no_progress_time*/ oroute.no_progress_expires, /*extra_headers*/ oroute.extra_headers)
+    //self.uaO.SetConnCbs([]sippy_types.OnConnectListener{ self.oConn })
     self.uaO.SetDeadCbs([]sippy_types.OnDeadListener{ self.oDead })
-    self.uaO.local_ua = self.global_config.GetMyUAName()
-    if self.source != oroute.outbound_proxy {
-        self.uaO.outbound_proxy = oroute.outbound_proxy
+    self.uaO.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
+    if self.source.String() != oroute.outbound_proxy.String() {
+        self.uaO.SetOutboundProxy(oroute.outbound_proxy)
     }
-    if self.rtp_proxy_session != nil && oroute.params.rtpp {
-        self.uaO.on_local_sdp_change = self.rtp_proxy_session.on_caller_sdp_change
-        self.uaO.on_remote_sdp_change = self.rtp_proxy_session.on_callee_sdp_change
-        self.rtp_proxy_session.caller.raddress = nh_address
-        if body != nil {
-            body = body.getCopy()
+    var body sippy_types.MsgBody
+    if self.rtp_proxy_session != nil && oroute.rtpp {
+        self.uaO.SetOnLocalSdpChange(self.rtp_proxy_session.OnCallerSdpChange)
+        self.uaO.SetOnRemoteSdpChange(self.rtp_proxy_session.OnCalleeSdpChange)
+        self.rtp_proxy_session.SetCallerRaddress(nh_address)
+        if self.eTry.GetBody() != nil {
+            body = body.GetCopy()
         }
         self.proxied = true
     }
-    self.uaO.kaInterval = self.global_config.keepalive_orig
+    self.uaO.SetKaInterval(self.global_config.keepalive_orig)
     //if oroute.params.has_key('group_timeout') {
     //    timeout, skipto = oroute.params['group_timeout']
     //    Timeout(self.group_expires, timeout, 1, skipto)
@@ -339,22 +344,22 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     //if self.global_config.getdefault('hide_call_id', false) {
     //    cId = SipCallId(md5(str(cId)).hexdigest() + ("-b2b_%d" % oroute.rnum))
     //} else {
-        cId += "-b2b_%d" % oroute.rnum
+        cId := sippy_header.NewSipCallIdFromString(self.eTry.GetSipCallId().CallId + fmt.Sprint("-b2b_%d", oroute.rnum))
     //}
-    caller_name := oroute.params.caller_name
+    caller_name := oroute.caller_name
     if caller_name == "" {
         caller_name = self.caller_name
     }
-    event = sippy.NewCCEventTry(cId, cGUID, oroute.cli, cld, body, auth, caller_name)
-    if self.eTry.max_forwards != nil {
-        event.max_forwards = self.eTry.max_forwards - 1
-        if event.max_forwards <= 0 {
-            self.uaA.RecvEvent(sippy.NewCCEventFail(483, "Too Many Hops", nil, ""))
-            self.state = CCStateDead
-            return
-        }
-    }
-    event.reason = self.eTry.reason
+    event := sippy.NewCCEventTry(cId, self.eTry.GetSipCiscoGUID(), oroute.cli, cld, body, self.eTry.GetSipAuthorization(), caller_name, nil, "")
+    //if self.eTry.max_forwards != nil {
+    //    event.max_forwards = self.eTry.max_forwards - 1
+    //    if event.max_forwards <= 0 {
+    //        self.uaA.RecvEvent(sippy.NewCCEventFail(483, "Too Many Hops", nil, ""))
+    //        self.state = CCStateDead
+    //        return
+    //    }
+    //}
+    event.SetReason(self.eTry.GetReason())
     self.uaO.RecvEvent(event)
 }
 
@@ -368,7 +373,7 @@ func (self *callController) disconnect() {
 */
 func (self *callController) aConn(rtime *sippy_time.MonoTime, origin string) {
     self.state = CCStateConnected
-    self.acctA.conn(rtime, origin)
+    //self.acctA.conn(rtime, origin)
 }
 
 func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, result int) {
@@ -381,32 +386,36 @@ func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, res
     } else {
         self.state = CCStateDead
     }
-    if self.acctA != nil {
-        self.acctA.disc(ua, rtime, origin, result)
-    }
+    //if self.acctA != nil {
+    //    self.acctA.disc(ua, rtime, origin, result)
+    //}
     self.rtp_proxy_session = nil
 }
 
 func (self *callController) aDead() {
-    if (self.uaO == nil || isinstance(self.uaO.state, UaStateDead)) {
+    _, is_dead := self.uaO.GetState().(*sippy.UaStateDead)
+    if self.uaO == nil || is_dead {
         if global_cmap.debug_mode {
             println("garbadge collecting", self)
         }
         self.acctA = nil
-        self.acctO = nil
-        global_cmap.ccmap.remove(self)
+        //self.acctO = nil
+        global_cmap.DropCC(self.id)
+    }
+}
+
+func (self *callController) oDead() {
+    if _, ok := self.uaA.GetState().(*sippy.UaStateDead); ok {
+        if global_cmap.debug_mode {
+            println("garbadge collecting", self)
+        }
+        self.acctA = nil
+        //self.acctO = nil
+        global_cmap.DropCC(self.id)
     }
 }
 
 /*
-    def oDead(self, ua):
-        if ua == self.uaO && isinstance(self.uaA.state, UaStateDead):
-            if global_cmap.debug_mode:
-                println("garbadge collecting", self)
-            self.acctA = nil
-            self.acctO = nil
-            global_cmap.ccmap.remove(self)
-
     def group_expires(self, skipto):
         if self.state != CCStateARComplete || len(self.routes) == 0 || self.routes[0][0] > skipto || \
           (! isinstance(self.uaA.state, UasStateTrying) && ! isinstance(self.uaA.state, UasStateRinging)):

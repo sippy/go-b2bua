@@ -172,11 +172,11 @@ func (self *Rtp_proxy_session) Delete() {
     self.rtp_proxy_client = nil
 }
 
-func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
+func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, cc_event sippy_types.CCEvent, result_callback func(sippy_types.MsgBody)) error {
     return self.caller._on_sdp_change(sdp_body, result_callback)
 }
 
-func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
+func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, msg sippy_types.SipMsg, result_callback func(sippy_types.MsgBody)) error {
     return self.callee._on_sdp_change(sdp_body, result_callback)
 }
 
@@ -188,6 +188,10 @@ func (self *Rtp_proxy_session) CallerSessionExists() bool { return self.caller_s
 
 func (self *Rtp_proxy_session) SetCallerLaddress(addr string) {
     self.caller.laddress = addr
+}
+
+func (self *Rtp_proxy_session) SetCallerRaddress(addr *sippy_conf.HostPort) {
+    self.caller.raddress = addr
 }
 
 func (self *Rtp_proxy_session) SetCalleeLaddress(addr string) {
