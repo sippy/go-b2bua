@@ -50,7 +50,6 @@ type rtpp_req_stream struct {
 
 type _RTPPLWorker struct {
     userv           *Rtp_proxy_client_stream
-    s               net.Conn
     shutdown_chan   chan int
 }
 
@@ -59,17 +58,8 @@ func NewRTPPLWorker(userv *Rtp_proxy_client_stream) *_RTPPLWorker {
         userv           : userv,
         shutdown_chan   : make(chan int, 1),
     }
-    self.reconnect()
     go self.run()
     return self
-}
-
-func (self *_RTPPLWorker) reconnect() (err error) {
-    if self.s != nil {
-        self.s.Close()
-    }
-    self.s, err = net.Dial(self.userv.address.Network(), self.userv.address.String())
-    return
 }
 
 func (self *_RTPPLWorker) send_raw(command string, stime *sippy_time.MonoTime) (string, time.Duration, error) {
@@ -85,31 +75,35 @@ func (self *_RTPPLWorker) send_raw(command string, stime *sippy_time.MonoTime) (
     retries := 0
     rval := ""
     buf := make([]byte, 1024)
+    var s net.Conn
     for {
         if retries > _RTPPLWorker_MAX_RETRIES {
             return "", 0, fmt.Errorf("Error sending to the rtpproxy on " + self.userv.address.String() + ": " + err.Error())
         }
         retries++
-
-        if self.s == nil || err != nil {
-            err = self.reconnect()
-            if err != nil {
-                time.Sleep(100 * time.Millisecond)
-                continue
-            }
+        if s != nil {
+            s.Close()
         }
-        _, err = self.s.Write([]byte(command))
+        s, err = net.Dial(self.userv.address.Network(), self.userv.address.String())
         if err != nil {
             time.Sleep(100 * time.Millisecond)
             continue
         }
-        n, err = self.s.Read(buf)
+        _, err = s.Write([]byte(command))
+        if err != nil {
+            time.Sleep(100 * time.Millisecond)
+            continue
+        }
+        n, err = s.Read(buf)
         if err != nil {
             time.Sleep(100 * time.Millisecond)
             continue
         }
         rval = strings.TrimSpace(string(buf[:n]))
         break
+    }
+    if s != nil {
+        s.Close()
     }
     rtpc_delay, _ := stime.OffsetFromNow()
     return rval, rtpc_delay, nil
