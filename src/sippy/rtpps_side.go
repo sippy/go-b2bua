@@ -141,12 +141,9 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     sects := []*sippy_sdp.SdpMediaDescription{}
     for _, sect := range parsed_body.GetSections() {
         switch strings.ToLower(sect.GetMHeader().GetTransport()) {
-        case "udp":
-        case "udptl":
-        case "rtp/avp":
-        case "rtp/savp":
-        default:
+        case "udp", "udptl", "rtp/avp", "rtp/savp":
             sects = append(sects, sect)
+        default:
         }
     }
     if len(sects) == 0 {
@@ -190,15 +187,18 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtp_command_result, sdp_bod
             sect.AddHeader("a", fmt.Sprintf("ptime:%d", self.repacketize))
         }
     }
+    num := 0
     for _, s := range sects {
         if s.NeedsUpdate() {
-            parsed_body.SetOHeader(self.origin)
-            if self.owner.insert_nortpp {
-                parsed_body.AppendAHeader("nortpproxy=yes")
-            }
-            sdp_body.SetNeedsUpdate(false)
-            result_callback(sdp_body)
-            return
+            num++
         }
+    }
+    if num == 0 {
+        parsed_body.SetOHeader(self.origin)
+        if self.owner.insert_nortpp {
+            parsed_body.AppendAHeader("nortpproxy=yes")
+        }
+        sdp_body.SetNeedsUpdate(false)
+        result_callback(sdp_body)
     }
 }
