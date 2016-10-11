@@ -28,10 +28,8 @@ package sippy
 
 import (
     "fmt"
-    "os"
     "net"
     "strings"
-    "syscall"
     "time"
 
     "sippy/conf"
@@ -102,9 +100,7 @@ func (self *_RTPPLWorker) send_raw(command string, stime *sippy_time.MonoTime) (
         rval = strings.TrimSpace(string(buf[:n]))
         break
     }
-    if s != nil {
-        s.Close()
-    }
+    s.Close()
     rtpc_delay, _ := stime.OffsetFromNow()
     return rval, rtpc_delay, nil
 }
@@ -223,13 +219,3 @@ if __name__ == "__main__":
     reactor.run(installSignalHandlers = 1)
     r.shutdown()
 */
-
-func _net_errno(err error) syscall.Errno {
-    oe, ok := err.(*net.OpError)
-    if ! ok { return 0 }
-    errno, ok := oe.Err.(*os.SyscallError)
-    if ! ok { return 0 }
-    ret, ok := errno.Err.(syscall.Errno)
-    if ! ok { return 0 }
-    return ret
-}
