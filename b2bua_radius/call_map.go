@@ -320,7 +320,7 @@ func (self *callMap) recvCommand(data string) string {
         }
         idx, err := strconv.ParseInt(args[0], 10, 64)
         if err != nil {
-            return "Bad argument: " + err.Error()
+            return "ERROR: non-integer argument: " + args[0] + "\n"
         }
         self.ccmap_lock.Lock()
         cc, ok := self.ccmap[idx]
