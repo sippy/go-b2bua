@@ -31,11 +31,14 @@ import (
     "os"
     "os/exec"
     "os/signal"
+    "strconv"
+    "strings"
     "sync"
     "syscall"
     "time"
 
     "sippy/headers"
+    "sippy/time"
     "sippy/types"
 )
 
@@ -179,7 +182,7 @@ func (self *callMap) discAll(signum syscall.Signal) {
         println(fmt.Sprintf("Signal %d received, disconnecting all calls", signum))
     }
     for _, cc := range self.ccmap {
-        cc.disconnect()
+        cc.disconnect(nil)
     }
 }
 
@@ -226,100 +229,119 @@ func (self *callMap) GClector() {
     }
 }
 
+func (self *callMap) recvCommand(data string) string {
+    args := strings.Split(strings.TrimSpace(data), " ")
+    cmd := strings.ToLower(args[0])
+    args = args[1:]
+    switch cmd {
+    case "q":
+        return ""
+    case "l":
+        res := "In-memory calls:\n"
+        total := 0
+        self.ccmap_lock.Lock()
+        defer self.ccmap_lock.Unlock()
+        for _, cc := range self.ccmap {
+            cc.lock.Lock()
+            res += fmt.Sprintf("%s: %s (", cc.cId.CallId, cc.state.String())
+            if cc.uaA != nil {
+                res += fmt.Sprintf("%s %s %s %s -> ", cc.uaA.GetState().String(), cc.uaA.GetRAddr0().String(),
+                  cc.uaA.GetCLD(), cc.uaA.GetCLI())
+            } else {
+                res += "N/A -> "
+            }
+            if cc.uaO != nil {
+                res += fmt.Sprintf("%s %s %s %s)\n", cc.uaO.GetState().String(), cc.uaO.GetRAddr0().String(),
+                  cc.uaO.GetCLI(), cc.uaO.GetCLD())
+            } else {
+                res += "N/A)\n"
+            }
+            total += 1
+            cc.lock.Unlock()
+        }
+        return res + fmt.Sprintf("Total: %d\n", total)
 /*
-    def recvCommand(self, clim, cmd):
-        args = cmd.split()
-        cmd = args.pop(0).lower()
-        if cmd == "q":
-            clim.close()
-            return false
-        if cmd == "l":
-            res = "In-memory calls:\n"
-            total = 0
-            for cc in self.ccmap:
-                res += "%s: %s (" % (cc.cId, cc.state.sname)
-                if cc.uaA != nil:
-                    res += "%s %s:%d %s %s -> " % (cc.uaA.state, cc.uaA.getRAddr0()[0], \
-                      cc.uaA.getRAddr0()[1], cc.uaA.getCLD(), cc.uaA.getCLI())
-                else:
-                    res += "N/A -> "
-                if cc.uaO != nil:
-                    res += "%s %s:%d %s %s)\n" % (cc.uaO.state, cc.uaO.getRAddr0()[0], \
-                      cc.uaO.getRAddr0()[1], cc.uaO.getCLI(), cc.uaO.getCLD())
-                else:
-                    res += "N/A)\n"
-                total += 1
-            res += "Total: %d\n" % total
-            clim.send(res)
-            return false
-        if cmd == "lt":
-            res = "In-memory server transactions:\n"
-            for tid, t in self.global_config["_sip_tm"].tserver.iteritems():
-                res += "%s %s %s\n" % (tid, t.method, t.state)
-            res += "In-memory client transactions:\n"
-            for tid, t in self.global_config["_sip_tm"].tclient.iteritems():
-                res += "%s %s %s\n" % (tid, t.method, t.state)
-            clim.send(res)
-            return false
-        if cmd in ("lt", "llt"):
-            if cmd == "llt":
-                mindur = 60.0
-            else:
-                mindur = 0.0
-            ctime = time()
-            res = "In-memory server transactions:\n"
-            for tid, t in self.global_config["_sip_tm"].tserver.iteritems():
-                duration = ctime - t.rtime
-                if duration < mindur:
-                    continue
-                res += "%s %s %s %s\n" % (tid, t.method, t.state, duration)
-            res += "In-memory client transactions:\n"
-            for tid, t in self.global_config["_sip_tm"].tclient.iteritems():
-                duration = ctime - t.rtime
-                if duration < mindur:
-                    continue
-                res += "%s %s %s %s\n" % (tid, t.method, t.state, duration)
-            clim.send(res)
-            return false
-        if cmd == "d":
-            if len(args) != 1:
-                clim.send("ERROR: syntax error: d <call-id>\n")
-                return false
-            if args[0] == "*":
-                self.discAll()
-                clim.send("OK\n")
-                return false
-            dlist = [x for x in self.ccmap if str(x.cId) == args[0]]
-            if len(dlist) == 0:
-                clim.send("ERROR: no call with id of %s has been found\n" % args[0])
-                return false
-            for cc in dlist:
-                cc.disconnect()
-            clim.send("OK\n")
-            return false
-        if cmd == "r":
-            if len(args) != 1:
-                clim.send("ERROR: syntax error: r [<id>]\n")
-                return false
-            idx = int(args[0])
-            dlist = [x for x in self.ccmap if x.id == idx]
-            if len(dlist) == 0:
-                clim.send("ERROR: no call with id of %d has been found\n" % idx)
-                return false
-            for cc in dlist:
-                if ! cc.proxied:
-                    continue
-                if cc.state == CCStateConnected:
-                    cc.disconnect(time() - 60)
-                    continue
-                if cc.state == CCStateARComplete:
-                    cc.uaO.disconnect(time() - 60)
-                    continue
-            clim.send("OK\n")
-            return false
-        clim.send("ERROR: unknown command\n")
-        return false
+    case "lt":
+        res = "In-memory server transactions:\n"
+        for tid, t in self.global_config["_sip_tm"].tserver.iteritems() {
+            res += "%s %s %s\n" % (tid, t.method, t.state)
+        }
+        res += "In-memory client transactions:\n"
+        for tid, t in self.global_config["_sip_tm"].tclient.iteritems():
+            res += "%s %s %s\n" % (tid, t.method, t.state)
+        return res
+    case "lt", "llt":
+        if cmd == "llt":
+            mindur = 60.0
+        else:
+            mindur = 0.0
+        ctime = time()
+        res = "In-memory server transactions:\n"
+        for tid, t in self.global_config["_sip_tm"].tserver.iteritems():
+            duration = ctime - t.rtime
+            if duration < mindur:
+                continue
+            res += "%s %s %s %s\n" % (tid, t.method, t.state, duration)
+        res += "In-memory client transactions:\n"
+        for tid, t in self.global_config["_sip_tm"].tclient.iteritems():
+            duration = ctime - t.rtime
+            if duration < mindur:
+                continue
+            res += "%s %s %s %s\n" % (tid, t.method, t.state, duration)
+        return res
 */
+    case "d":
+        if len(args) != 1 {
+            return "ERROR: syntax error: d <call-id>\n"
+        }
+        if args[0] == "*" {
+            self.discAll(0)
+            return "OK\n"
+        }
+        dlist := []*callController{}
+        self.ccmap_lock.Lock()
+        for _, cc := range self.ccmap {
+            if cc.cId.CallId != args[0] {
+                continue
+            }
+            dlist = append(dlist, cc)
+        }
+        self.ccmap_lock.Unlock()
+        if len(dlist) == 0 {
+            return fmt.Sprintf("ERROR: no call with id of %s has been found\n", args[0])
+        }
+        for _, cc := range dlist {
+            cc.disconnect(nil)
+        }
+        return "OK\n"
+    case "r":
+        if len(args) != 1 {
+            return "ERROR: syntax error: r [<id>]\n"
+        }
+        idx, err := strconv.ParseInt(args[0], 10, 64)
+        if err != nil {
+            return "Bad argument: " + err.Error()
+        }
+        self.ccmap_lock.Lock()
+        cc, ok := self.ccmap[idx]
+        self.ccmap_lock.Unlock()
+        if ! ok {
+            return fmt.Sprintf("ERROR: no call with id of %d has been found\n", idx)
+        }
+        if cc.proxied {
+            ts, _ := sippy_time.NewMonoTime()
+            ts = ts.Add(-60 * time.Second)
+            if cc.state == CCStateConnected {
+                cc.disconnect(ts)
+            } else if cc.state == CCStateARComplete {
+                cc.uaO.Disconnect(ts)
+            }
+        }
+        return "OK\n"
+    default:
+        return "ERROR: unknown command\n"
+    }
+}
 
 func (self *callMap) DropCC(cc_id int64) {
     self.ccmap_lock.Lock()

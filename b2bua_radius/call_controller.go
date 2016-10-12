@@ -360,8 +360,8 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     self.uaO.RecvEvent(event)
 }
 
-func (self *callController) disconnect() {
-    self.uaA.Disconnect(nil)
+func (self *callController) disconnect(rtime *sippy_time.MonoTime) {
+    self.uaA.Disconnect(rtime)
 }
 /*
     def oConn(self, ua, rtime, origin):

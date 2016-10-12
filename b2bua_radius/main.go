@@ -173,12 +173,17 @@ func main() {
         global_cmap.proxy = sippy.NewStatefulProxy(sip_tm, sip_proxy, global_config)
     }
 
-/*
-    cmdfile = global_config.b2bua_socket
-    if cmdfile.startswith("unix:") {
+    cmdfile := global_config.b2bua_socket
+    if strings.HasPrefix(cmdfile, "unix:") {
         cmdfile = cmdfile[5:]
     }
-    cli_server = Cli_server_local(global_cmap.recvCommand, cmdfile)
+    cli_server, err := NewCli_server_local(global_cmap.recvCommand, cmdfile, global_config.ErrorLogger())
+    if err != nil {
+        println("Cannot initialize Cli_server: " + err.Error())
+        return
+    }
+    cli_server.Start()
+/*
     if ! global_config['foreground']:
         file(global_config['pidfile'], 'w').write(str(os.getpid()) + '\n')
         Signal(SIGUSR1, reopen, SIGUSR1, global_config['logfile'])

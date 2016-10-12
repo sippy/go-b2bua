@@ -24,6 +24,20 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
+
+import (
+    "net"
+    "os"
+
+    "sippy/log"
+    "sippy/utils"
+)
+
+type Cli_server_local struct {
+    command_cb      func(string) string
+    listener        net.Listener
+    logger          sippy_log.ErrorLogger
+}
 /*
 from twisted.internet.protocol import Factory
 from twisted.internet import reactor
@@ -33,18 +47,56 @@ from os.path import exists
 
 class Cli_server_local(Factory):
     command_cb = nil
+*/
+func NewCli_server_local(command_cb func(string) string, address string, logger sippy_log.ErrorLogger/*, sock_owner = nil*/) (*Cli_server_local, error) {
+    if _, err := os.Stat(address); err == nil {
+        err = os.Remove(address)
+        if err != nil { return nil, err }
+    }
+    addr, err := net.ResolveUnixAddr("unix", address)
+    if err != nil { return nil, err }
 
-    def __init__(self, command_cb, address = nil, sock_owner = nil):
-        self.command_cb = command_cb
-        self.protocol = Cli_session
-        if address == nil:
-            address = '/var/run/ccm.sock'
-        if exists(address):
-            unlink(address)
-        reactor.listenUNIX(address, self)
-        if sock_owner != nil:
-            chown(address, sock_owner[0], sock_owner[1])
+    listener, err := net.ListenUnix("unix", addr)
+    if err != nil { return nil, err }
 
+    self := &Cli_server_local{
+        command_cb  : command_cb,
+//        protocol    : NewCli_session,
+        listener    : listener,
+        logger      : logger,
+    }
+    //if address == nil:
+    //    address = '/var/run/ccm.sock'
+    //if sock_owner != nil:
+    //    chown(address, sock_owner[0], sock_owner[1])
+    return self, nil
+}
+
+func (self *Cli_server_local) Start() {
+    go self.run()
+}
+
+func (self *Cli_server_local) run() {
+    for {
+        conn, err := self.listener.Accept()
+        if err != nil {
+            break
+        }
+        go sippy_utils.SafeCall(func() { self.handle_request(conn) }, nil, self.logger)
+    }
+}
+
+func (self *Cli_server_local) handle_request(conn net.Conn) {
+    buf := make([]byte, 2048)
+    n, err := conn.Read(buf)
+    if err != nil || n == 0 {
+        return
+    }
+    defer conn.Close()
+    res := self.command_cb(string(buf[:n]))
+    conn.Write([]byte(res))
+}
+/*
     def buildProtocol(self, addr):
         p = Factory.buildProtocol(self, addr)
         p.command_cb = self.command_cb
