@@ -79,6 +79,8 @@ func NewCallMap(global_config *myConfigParser) *callMap {
         signal.Notify(sigusr2_ch, syscall.SIGUSR2)
         sigprof_ch := make(chan os.Signal, 1)
         signal.Notify(sigprof_ch, syscall.SIGPROF)
+        sigterm_ch := make(chan os.Signal, 1)
+        signal.Notify(sigterm_ch, syscall.SIGTERM)
         for {
             select {
             case <-sighup_ch:
@@ -87,6 +89,8 @@ func NewCallMap(global_config *myConfigParser) *callMap {
                 self.toggleDebug()
             case <-sigprof_ch:
                 self.safeRestart()
+            case <-sigterm_ch:
+                self.safeStop()
             }
         }
     }()
@@ -175,6 +179,12 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
         return nil, nil, req.GenResponse(200, "OK", nil, nil)
     }
     return nil, nil, req.GenResponse(501, "Not Implemented", nil, nil)
+}
+
+func (self callMap) safeStop() {
+    self.discAll(0)
+    time.Sleep(time.Second)
+    os.Exit(0)
 }
 
 func (self *callMap) discAll(signum syscall.Signal) {
