@@ -26,6 +26,7 @@
 package main
 
 import (
+    "bufio"
     "net"
     "os"
 
@@ -87,14 +88,19 @@ func (self *Cli_server_local) run() {
 }
 
 func (self *Cli_server_local) handle_request(conn net.Conn) {
-    buf := make([]byte, 2048)
-    n, err := conn.Read(buf)
-    if err != nil || n == 0 {
-        return
-    }
     defer conn.Close()
-    res := self.command_cb(string(buf[:n]))
-    conn.Write([]byte(res))
+    reader := bufio.NewReader(conn)
+    for {
+        line, err := reader.ReadString('\n')
+        if err != nil {
+            break
+        }
+        res := self.command_cb(line)
+        _, err = conn.Write([]byte(res))
+        if err != nil {
+            break
+        }
+    }
 }
 /*
     def buildProtocol(self, addr):
