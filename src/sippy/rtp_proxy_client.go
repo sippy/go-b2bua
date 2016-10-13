@@ -63,7 +63,6 @@ type Rtp_proxy_client_base struct {
     active_streams  int64
     preceived       int64
     ptransmitted    int64
-    _CAPSTABLE      []struct{ vers string; attr *bool }
     logger          sippy_log.ErrorLogger
     global_config   sippy_conf.Config
 }
@@ -112,13 +111,6 @@ func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sip
         logger          : logger,
         opts            : opts,
         global_config   : global_config,
-    }
-    self._CAPSTABLE = []struct{ vers string; attr *bool }{
-        { "20071218", &self.copy_supported },
-        { "20080403", &self.stat_supported },
-        { "20081224", &self.tnot_supported },
-        { "20090810", &self.sbind_supported },
-        { "20150617", &self.wdnt_supported },
     }
     return self
 }
@@ -319,7 +311,7 @@ func (self *Rtp_proxy_client_base) GoOnline() {
     }
     if ! self.online {
         if ! self.caps_done {
-            NewRtpp_caps_checker(self)
+            newRtppCapsChecker(self)
             return
         }
         self.online = true
@@ -363,19 +355,26 @@ func (self *Rtp_proxy_client_base) GetOpts() sippy_types.RtpProxyClientOpts {
         self.transport.get_rtpc_delay(self)
 */
 
-type Rtpp_caps_checker struct {
+type rtppCapsChecker struct {
     caps_requested  int
     caps_received   int
     rtpc            *Rtp_proxy_client_base
 }
 
-func NewRtpp_caps_checker(rtpc *Rtp_proxy_client_base) *Rtpp_caps_checker {
-    self := &Rtpp_caps_checker{
+func newRtppCapsChecker(rtpc *Rtp_proxy_client_base) *rtppCapsChecker {
+    self := &rtppCapsChecker{
         rtpc    : rtpc,
     }
     rtpc.caps_done = false
-    self.caps_requested = len(rtpc._CAPSTABLE)
-    for _, it := range rtpc._CAPSTABLE {
+    CAPSTABLE := []struct{ vers string; attr *bool }{
+        { "20071218", &self.rtpc.copy_supported },
+        { "20080403", &self.rtpc.stat_supported },
+        { "20081224", &self.rtpc.tnot_supported },
+        { "20090810", &self.rtpc.sbind_supported },
+        { "20150617", &self.rtpc.wdnt_supported },
+    }
+    self.caps_requested = len(CAPSTABLE)
+    for _, it := range CAPSTABLE {
         attr := it.attr // For some reason the it.attr cannot be passed into the following
                         // function directly - the resulting value is always that of the
                         // last 'it.attr' value.
@@ -384,7 +383,7 @@ func NewRtpp_caps_checker(rtpc *Rtp_proxy_client_base) *Rtpp_caps_checker {
     return self
 }
 
-func (self *Rtpp_caps_checker) caps_query_done(result string, attr *bool) {
+func (self *rtppCapsChecker) caps_query_done(result string, attr *bool) {
     self.caps_received += 1
     if result == "1" {
         *attr = true
