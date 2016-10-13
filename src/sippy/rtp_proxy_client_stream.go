@@ -142,7 +142,7 @@ type Rtp_proxy_client_stream struct {
     wi          chan *rtpp_req_stream
 }
 
-func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (rtp_proxy_transport, error) {
+func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
     var err error
     if address == nil {
         address, err = net.ResolveUnixAddr("unix", "/var/run/rtpproxy.sock")
@@ -151,8 +151,8 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         }
     }
     nworkers := 4
-    if opts != nil && opts.Nworkers != nil {
-        nworkers = *opts.Nworkers
+    if owner.opts.nworkers != nil {
+        nworkers = *owner.opts.nworkers
     }
     self := &Rtp_proxy_client_stream{
         owner       : owner,

@@ -39,44 +39,14 @@ import (
     "sippy/types"
 )
 
-func NewRtpProxyClient(spath string, config sippy_conf.Config, logger sippy_log.ErrorLogger) (sippy_types.RtpProxyClient, error) {
-    opts := &Rtp_proxy_opts{
-        Spath   : spath,
-    }
+func NewRtpProxyClient(opts *rtpProxyClientOpts, config sippy_conf.Config, logger sippy_log.ErrorLogger) (sippy_types.RtpProxyClient, error) {
     rtpp, err := NewRtp_proxy_client_base(nil, config, nil, opts, logger)
     return rtpp, err
 }
 
-type Rtp_proxy_opts struct {
-    No_version_check    *bool
-    Spath               string
-    Nworkers            *int
-    Bind_address        *sippy_conf.HostPort
-}
-
-func (self *Rtp_proxy_opts) no_version_check() bool {
-    if self == nil || self.No_version_check == nil {
-        return false
-    }
-    return *self.No_version_check
-}
-
-func (self *Rtp_proxy_opts) spath() string {
-    if self == nil {
-        return ""
-    }
-    return self.Spath
-}
-
-func (self *Rtp_proxy_opts) bind_address() *sippy_conf.HostPort {
-    if self == nil {
-        return nil
-    }
-    return self.Bind_address
-}
-
 type Rtp_proxy_client_base struct {
     heir            sippy_types.RtpProxyClient
+    opts            *rtpProxyClientOpts
     transport       rtp_proxy_transport
     proxy_address   string
     online          bool
@@ -92,8 +62,6 @@ type Rtp_proxy_client_base struct {
     active_streams  int64
     preceived       int64
     ptransmitted    int64
-    hrtb_retr_ival  time.Duration
-    hrtb_ival       time.Duration
     _CAPSTABLE      []struct{ vers string; attr *bool }
     logger          sippy_log.ErrorLogger
 }
@@ -131,16 +99,18 @@ func (self *Rtp_proxy_client_base) me() sippy_types.RtpProxyClient {
     return self
 }
 
-func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
+func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, opts *rtpProxyClientOpts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
     var err error
-    var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr, *Rtp_proxy_opts) (rtp_proxy_transport, error)
+    var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr) (rtp_proxy_transport, error)
+    if opts == nil {
+        opts = NewRtpProxyClientOpts() // default settings
+    }
     self := &Rtp_proxy_client_base{
         heir            : heir,
         caps_done       : false,
         shut_down       : false,
-        hrtb_retr_ival  : 60 * time.Second,
-        hrtb_ival       : 10 * time.Second,
         logger          : logger,
+        opts            : opts,
     }
     self._CAPSTABLE = []struct{ vers string; attr *bool }{
         { "20071218", &self.copy_supported },
@@ -150,9 +120,9 @@ func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sip
         { "20150617", &self.wdnt_supported },
     }
     //print "Rtp_proxy_client_base", address
-    if address == nil && opts.spath() != "" {
+    if address == nil && opts.spath != "" {
         var rtppa net.Addr
-        a := opts.spath()
+        a := opts.spath
         if strings.HasPrefix(a, "udp:") {
             tmp := strings.SplitN(a, ":", 3)
             if len(tmp) == 2 {
@@ -226,25 +196,25 @@ func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sip
             self.proxy_address = global_config.SipAddress().String()
             rtpp_class = NewRtp_proxy_client_stream
         }
-        self.transport, err = rtpp_class(self, global_config, rtppa, opts)
+        self.transport, err = rtpp_class(self, global_config, rtppa)
         if err != nil {
             return nil, err
         }
     } else if strings.HasPrefix(address.Network(), "udp") {
-        self.transport, err = NewRtp_proxy_client_udp(self, global_config, address, opts)
+        self.transport, err = NewRtp_proxy_client_udp(self, global_config, address)
         if err != nil {
             return nil, err
         }
         self.proxy_address, _, err = net.SplitHostPort(address.String())
         if err != nil { return nil, err }
     } else {
-        self.transport, err = NewRtp_proxy_client_stream(self, global_config, address, opts)
+        self.transport, err = NewRtp_proxy_client_stream(self, global_config, address)
         if err != nil {
             return nil, err
         }
         self.proxy_address = global_config.SipAddress().String()
     }
-    if ! opts.no_version_check() {
+    if ! opts.no_version_check {
         self.version_check()
     } else {
         self.caps_done = true
@@ -277,7 +247,7 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
     } else if self.online {
         self.me().GoOffline()
     } else {
-        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, self.logger)
+        StartTimeout(self.version_check, nil, randomize(self.opts.hrtb_retr_ival, 0.1), 1, self.logger)
     }
 }
 
@@ -322,7 +292,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         }
         self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
-    StartTimeout(self.heartbeat, nil, randomize(self.hrtb_ival, 0.1), 1, self.logger)
+    StartTimeout(self.heartbeat, nil, randomize(self.opts.hrtb_ival, 0.1), 1, self.logger)
 }
 
 func (self *Rtp_proxy_client_base) GoOnline() {
@@ -346,7 +316,7 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     //print "go_offline", self.address, self.online
     if self.online {
         self.online = false
-        StartTimeout(self.version_check, nil, randomize(self.hrtb_retr_ival, 0.1), 1, self.logger)
+        StartTimeout(self.version_check, nil, randomize(self.opts.hrtb_retr_ival, 0.1), 1, self.logger)
     }
 }
 
@@ -384,7 +354,10 @@ func NewRtpp_caps_checker(rtpc *Rtp_proxy_client_base) *Rtpp_caps_checker {
     rtpc.caps_done = false
     self.caps_requested = len(rtpc._CAPSTABLE)
     for _, it := range rtpc._CAPSTABLE {
-        rtpc.transport.send_command("VF " + it.vers, func(res string) { self.caps_query_done(res, it.attr) })
+        attr := it.attr // For some reason the it.attr cannot be passed into the following
+                        // function directly - the resulting value is always that of the
+                        // last 'it.attr' value.
+        rtpc.transport.send_command("VF " + it.vers, func(res string) { self.caps_query_done(res, attr) })
     }
     return self
 }

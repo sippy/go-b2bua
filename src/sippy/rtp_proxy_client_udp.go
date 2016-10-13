@@ -92,7 +92,7 @@ func getnretrans(first_retr, timeout float64) (int64, error) {
     return n, nil
 }
 
-func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr, opts *Rtp_proxy_opts) (rtp_proxy_transport, error) {
+func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
     var err error
 
     self := &Rtp_proxy_client_udp{
@@ -106,11 +106,11 @@ func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_c
     if err != nil {
         return nil, err
     }
-    self.uopts = NewUdpServerOpts(opts.bind_address(), self.process_reply)
+    self.uopts = NewUdpServerOpts(owner.opts.bind_address, self.process_reply)
     //self.uopts.ploss_out_rate = self.ploss_out_rate
     //self.uopts.pdelay_out_max = self.pdelay_out_max
-    if opts != nil && opts.Nworkers != nil {
-        self.uopts.nworkers = *opts.Nworkers
+    if owner.opts.nworkers != nil {
+        self.uopts.nworkers = *owner.opts.nworkers
     }
     self.worker, err = NewUdpServer(global_config, self.uopts)
     return self, err

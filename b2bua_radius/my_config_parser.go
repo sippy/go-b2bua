@@ -47,6 +47,8 @@ type myConfigParser struct {
     keepalive_ans       time.Duration
     keepalive_orig      time.Duration
     b2bua_socket        string
+    hrtb_retr_ival      time.Duration
+    hrtb_ival           time.Duration
 }
 
 func NewMyConfigParser() *myConfigParser {
@@ -110,6 +112,11 @@ func (self *myConfigParser) Parse() error {
                                 "is not specified, we will accept from any IP and " +
                                 "then either try to authenticate if authentication " +
                                 "is enabled, or just let them to pass through")
+
+    var hrtb_ival int
+    flag.IntVar(&hrtb_ival, "rtpp_hrtb_ival", 10, "rtpproxy hearbeat interval (seconds)")
+    var hrtb_retr_ival int
+    flag.IntVar(&hrtb_retr_ival, "rtpp_hrtb_retr_ival", 60, "rtpproxy hearbeat retry interval (seconds)")
 /*
         if o == '-a':
             global_config.check_and_set('accept_ips', a)
@@ -245,6 +252,8 @@ func (self *myConfigParser) Parse() error {
     if err != nil {
         return err
     }
+    self.hrtb_ival = time.Duration(hrtb_ival) * time.Second
+    self.hrtb_retr_ival = time.Duration(hrtb_retr_ival) * time.Second
     self.Config = sippy_conf.NewConfig(error_logger, sip_logger)
     return nil
 }
