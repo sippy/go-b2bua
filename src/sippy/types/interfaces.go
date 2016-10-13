@@ -354,6 +354,11 @@ type OnDeadListener func()
 type OnLocalSdpChange func(MsgBody, CCEvent, func(MsgBody)) error
 type OnRemoteSdpChange func(MsgBody, SipMsg, func(MsgBody)) error
 
+type RtpProxyClientOpts interface {
+    GetNWorkers() *int
+    GetBindAddress() *sippy_conf.HostPort
+}
+
 type RtpProxyClient interface {
     SendCommand(string, func(string))
     SBindSupported() bool
@@ -363,4 +368,5 @@ type RtpProxyClient interface {
     IsOnline() bool
     GoOnline()
     GoOffline()
+    GetOpts() RtpProxyClientOpts
 }

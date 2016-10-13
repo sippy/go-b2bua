@@ -60,3 +60,11 @@ func (self *rtpProxyClientOpts) SetHeartbeatInterval(ival time.Duration) {
 func (self *rtpProxyClientOpts) SetHeartbeatRetryInterval(ival time.Duration) {
     self.hrtb_retr_ival = ival
 }
+
+func (self *rtpProxyClientOpts) GetNWorkers() *int {
+    return self.nworkers
+}
+
+func (self *rtpProxyClientOpts) GetBindAddress() *sippy_conf.HostPort {
+    return self.bind_address
+}

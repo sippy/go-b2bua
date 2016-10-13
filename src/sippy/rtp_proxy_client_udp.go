@@ -37,6 +37,7 @@ import (
     "sippy/conf"
     "sippy/math"
     "sippy/time"
+    "sippy/types"
     "sippy/utils"
 )
 
@@ -50,7 +51,7 @@ type Rtp_proxy_client_udp struct {
     host                string
     port                string
     lock                sync.Mutex
-    owner               *Rtp_proxy_client_base
+    owner               sippy_types.RtpProxyClient
 }
 
 type rtpp_req_udp struct {
@@ -92,7 +93,7 @@ func getnretrans(first_retr, timeout float64) (int64, error) {
     return n, nil
 }
 
-func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
+func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
     var err error
 
     self := &Rtp_proxy_client_udp{
@@ -106,11 +107,11 @@ func NewRtp_proxy_client_udp(owner *Rtp_proxy_client_base, global_config sippy_c
     if err != nil {
         return nil, err
     }
-    self.uopts = NewUdpServerOpts(owner.opts.bind_address, self.process_reply)
+    self.uopts = NewUdpServerOpts(owner.GetOpts().GetBindAddress(), self.process_reply)
     //self.uopts.ploss_out_rate = self.ploss_out_rate
     //self.uopts.pdelay_out_max = self.pdelay_out_max
-    if owner.opts.nworkers != nil {
-        self.uopts.nworkers = *owner.opts.nworkers
+    if owner.GetOpts().GetNWorkers() != nil {
+        self.uopts.nworkers = *owner.GetOpts().GetNWorkers()
     }
     self.worker, err = NewUdpServer(global_config, self.uopts)
     return self, err
@@ -133,11 +134,11 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
     }
     nretr, err := getnretrans(next_retr, exp_time)
     if err != nil {
-        self.owner.logger.Debug("getnretrans error: " + err.Error())
+        self.global_config.ErrorLogger().Debug("getnretrans error: " + err.Error())
         return
     }
     command = cookie + " " + command
-    timer := StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, self.owner.logger)
+    timer := StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
     preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback)
     self.worker.SendTo([]byte(command), self.host, self.port)
     self.lock.Lock()
@@ -163,7 +164,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
     }
     req.next_retr *= 2
     req.retransmits += 1
-    req.timer = StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, self.owner.logger)
+    req.timer = StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
     req.stime, _ = sippy_time.NewMonoTime()
     self.worker.SendTo([]byte(req.command), self.host, self.port)
     req.triesleft -= 1
@@ -173,7 +174,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
 func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_conf.HostPort, worker *udpServer, rtime *sippy_time.MonoTime) {
     arr := sippy_utils.FieldsN(string(data), 2)
     if len(arr) != 2 {
-        self.owner.logger.Debug("Rtp_proxy_client_udp.process_reply(): invalid response " + string(data))
+        self.global_config.ErrorLogger().Debug("Rtp_proxy_client_udp.process_reply(): invalid response " + string(data))
         return
     }
     cookie, result := arr[0], arr[1]

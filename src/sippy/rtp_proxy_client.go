@@ -40,7 +40,8 @@ import (
 )
 
 func NewRtpProxyClient(opts *rtpProxyClientOpts, config sippy_conf.Config, logger sippy_log.ErrorLogger) (sippy_types.RtpProxyClient, error) {
-    rtpp, err := NewRtp_proxy_client_base(nil, config, nil, opts, logger)
+    rtpp := NewRtp_proxy_client_base(nil, config, opts, logger)
+    err := rtpp.Init()
     return rtpp, err
 }
 
@@ -64,6 +65,7 @@ type Rtp_proxy_client_base struct {
     ptransmitted    int64
     _CAPSTABLE      []struct{ vers string; attr *bool }
     logger          sippy_log.ErrorLogger
+    global_config   sippy_conf.Config
 }
 
 type rtp_proxy_transport interface {
@@ -99,9 +101,7 @@ func (self *Rtp_proxy_client_base) me() sippy_types.RtpProxyClient {
     return self
 }
 
-func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, opts *rtpProxyClientOpts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base, error) {
-    var err error
-    var rtpp_class func(*Rtp_proxy_client_base, sippy_conf.Config, net.Addr) (rtp_proxy_transport, error)
+func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sippy_conf.Config, opts *rtpProxyClientOpts, logger sippy_log.ErrorLogger) (*Rtp_proxy_client_base) {
     if opts == nil {
         opts = NewRtpProxyClientOpts() // default settings
     }
@@ -111,6 +111,7 @@ func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sip
         shut_down       : false,
         logger          : logger,
         opts            : opts,
+        global_config   : global_config,
     }
     self._CAPSTABLE = []struct{ vers string; attr *bool }{
         { "20071218", &self.copy_supported },
@@ -119,108 +120,125 @@ func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, global_config sip
         { "20090810", &self.sbind_supported },
         { "20150617", &self.wdnt_supported },
     }
-    //print "Rtp_proxy_client_base", address
-    if address == nil && opts.spath != "" {
-        var rtppa net.Addr
-        a := opts.spath
-        if strings.HasPrefix(a, "udp:") {
-            tmp := strings.SplitN(a, ":", 3)
-            if len(tmp) == 2 {
-                rtppa, err = net.ResolveUDPAddr("udp", tmp[1] + ":22222")
-            } else {
-                rtppa, err = net.ResolveUDPAddr("udp", tmp[1] + ":" + tmp[2])
-            }
-            if err != nil { return nil, err }
-            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
-            if err != nil { return nil, err }
-            rtpp_class = NewRtp_proxy_client_udp
-        } else if strings.HasPrefix(a, "udp6:") {
-            tmp := strings.SplitN(a, ":", 2)
-            a := tmp[1]
-            rtp_proxy_host, rtp_proxy_port := a, "22222"
-            if a[len(a)-1] != ']' {
-                idx := strings.LastIndexByte(a, ':')
-                if idx < 0 {
-                    rtp_proxy_host = a
-                } else {
-                    rtp_proxy_host, rtp_proxy_port = a[:idx], a[idx+1:]
-                }
-            }
-            if rtp_proxy_host[0] != '[' {
-                rtp_proxy_host = "[" + rtp_proxy_host + "]"
-            }
-            rtppa, err = net.ResolveUDPAddr("udp", rtp_proxy_host + ":" + rtp_proxy_port)
-            if err != nil { return nil, err }
-            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
-            if err != nil { return nil, err }
-            rtpp_class = NewRtp_proxy_client_udp
-        } else if strings.HasPrefix(a, "tcp:") {
-            tmp := strings.SplitN(a, ":", 3)
-            if len(tmp) == 2 {
-                rtppa, err = net.ResolveTCPAddr("tcp", tmp[1] + ":22222")
-            } else {
-                rtppa, err = net.ResolveTCPAddr("tcp", tmp[1] + ":" + tmp[2])
-            }
-            if err != nil { return nil, err }
-            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
-            if err != nil { return nil, err }
-            rtpp_class = NewRtp_proxy_client_stream
-        } else if strings.HasPrefix(a, "tcp6:") {
-            tmp := strings.SplitN(a, ":", 2)
-            a := tmp[1]
-            rtp_proxy_host, rtp_proxy_port := a, "22222"
-            if a[len(a)-1] != ']' {
-                idx := strings.LastIndexByte(a, ':')
-                if idx < 0 {
-                    rtp_proxy_host = a
-                } else {
-                    rtp_proxy_host, rtp_proxy_port = a[:idx], a[idx+1:]
-                }
-            }
-            if rtp_proxy_host[0] != '[' {
-                rtp_proxy_host = "[" + rtp_proxy_host + "]"
-            }
-            rtppa, err = net.ResolveTCPAddr("tcp", rtp_proxy_host + ":" + rtp_proxy_port)
-            if err != nil { return nil, err }
-            self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
-            if err != nil { return nil, err }
-            rtpp_class = NewRtp_proxy_client_stream
+    return self
+}
+
+func (self *Rtp_proxy_client_base) Init() error {
+    var err error
+    var rtpp_class func(sippy_types.RtpProxyClient, sippy_conf.Config, net.Addr) (rtp_proxy_transport, error)
+    var rtppa net.Addr
+
+    a := self.opts.spath
+    if strings.HasPrefix(a, "udp:") {
+        tmp := strings.SplitN(a, ":", 3)
+        if len(tmp) == 2 {
+            rtppa, err = net.ResolveUDPAddr("udp", tmp[1] + ":22222")
         } else {
-            if strings.HasPrefix(a, "unix:") {
-                rtppa, err = net.ResolveUnixAddr("unix", a[5:])
-            } else if strings.HasPrefix(a, "cunix:") {
-                rtppa, err = net.ResolveUnixAddr("unix", a[6:])
+            rtppa, err = net.ResolveUDPAddr("udp", tmp[1] + ":" + tmp[2])
+        }
+        if err != nil { return err }
+        self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+        if err != nil { return err }
+        rtpp_class = newRtp_proxy_client_udp
+    } else if strings.HasPrefix(a, "udp6:") {
+        tmp := strings.SplitN(a, ":", 2)
+        a := tmp[1]
+        rtp_proxy_host, rtp_proxy_port := a, "22222"
+        if a[len(a)-1] != ']' {
+            idx := strings.LastIndexByte(a, ':')
+            if idx < 0 {
+                rtp_proxy_host = a
             } else {
-                rtppa, err = net.ResolveUnixAddr("unix", a)
+                rtp_proxy_host, rtp_proxy_port = a[:idx], a[idx+1:]
             }
-            self.proxy_address = global_config.SipAddress().String()
-            rtpp_class = NewRtp_proxy_client_stream
         }
-        self.transport, err = rtpp_class(self, global_config, rtppa)
-        if err != nil {
-            return nil, err
+        if rtp_proxy_host[0] != '[' {
+            rtp_proxy_host = "[" + rtp_proxy_host + "]"
         }
-    } else if strings.HasPrefix(address.Network(), "udp") {
-        self.transport, err = NewRtp_proxy_client_udp(self, global_config, address)
+        rtppa, err = net.ResolveUDPAddr("udp", rtp_proxy_host + ":" + rtp_proxy_port)
+        if err != nil { return err }
+        self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+        if err != nil { return err }
+        rtpp_class = newRtp_proxy_client_udp
+    } else if strings.HasPrefix(a, "tcp:") {
+        tmp := strings.SplitN(a, ":", 3)
+        if len(tmp) == 2 {
+            rtppa, err = net.ResolveTCPAddr("tcp", tmp[1] + ":22222")
+        } else {
+            rtppa, err = net.ResolveTCPAddr("tcp", tmp[1] + ":" + tmp[2])
+        }
+        if err != nil { return err }
+        self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+        if err != nil { return err }
+        rtpp_class = newRtp_proxy_client_stream
+    } else if strings.HasPrefix(a, "tcp6:") {
+        tmp := strings.SplitN(a, ":", 2)
+        a := tmp[1]
+        rtp_proxy_host, rtp_proxy_port := a, "22222"
+        if a[len(a)-1] != ']' {
+            idx := strings.LastIndexByte(a, ':')
+            if idx < 0 {
+                rtp_proxy_host = a
+            } else {
+                rtp_proxy_host, rtp_proxy_port = a[:idx], a[idx+1:]
+            }
+        }
+        if rtp_proxy_host[0] != '[' {
+            rtp_proxy_host = "[" + rtp_proxy_host + "]"
+        }
+        rtppa, err = net.ResolveTCPAddr("tcp", rtp_proxy_host + ":" + rtp_proxy_port)
+        if err != nil { return err }
+        self.proxy_address, _, err = net.SplitHostPort(rtppa.String())
+        if err != nil { return err }
+        rtpp_class = newRtp_proxy_client_stream
+    } else {
+        if strings.HasPrefix(a, "unix:") {
+            rtppa, err = net.ResolveUnixAddr("unix", a[5:])
+        } else if strings.HasPrefix(a, "cunix:") {
+            rtppa, err = net.ResolveUnixAddr("unix", a[6:])
+        } else {
+            rtppa, err = net.ResolveUnixAddr("unix", a)
+        }
+        self.proxy_address = self.global_config.SipAddress().String()
+        rtpp_class = newRtp_proxy_client_stream
+    }
+    self.transport, err = rtpp_class(self.me(), self.global_config, rtppa)
+    if err != nil {
+        return err
+    }
+    self.start()
+    return nil
+}
+
+func (self *Rtp_proxy_client_base) InitWithAddress(address net.Addr) error {
+    var err error
+    if strings.HasPrefix(address.Network(), "udp") {
+        self.transport, err = newRtp_proxy_client_udp(self.me(), self.global_config, address)
         if err != nil {
-            return nil, err
+            return err
         }
         self.proxy_address, _, err = net.SplitHostPort(address.String())
-        if err != nil { return nil, err }
-    } else {
-        self.transport, err = NewRtp_proxy_client_stream(self, global_config, address)
         if err != nil {
-            return nil, err
+            return err
         }
-        self.proxy_address = global_config.SipAddress().String()
+    } else {
+        self.transport, err = newRtp_proxy_client_stream(self.me(), self.global_config, address)
+        if err != nil {
+            return err
+        }
+        self.proxy_address = self.global_config.SipAddress().String()
     }
-    if ! opts.no_version_check {
+    self.start()
+    return nil
+}
+
+func (self *Rtp_proxy_client_base) start() {
+    if ! self.opts.no_version_check {
         self.version_check()
     } else {
         self.caps_done = true
         self.online = true
     }
-    return self, nil
 }
 
 func (self *Rtp_proxy_client_base) SendCommand(cmd string, cb func(string)) {
@@ -335,6 +353,10 @@ func (self *Rtp_proxy_client_base) Shutdown() {
     self.shut_down = true
     self.transport.shutdown()
     self.transport = nil
+}
+
+func (self *Rtp_proxy_client_base) GetOpts() sippy_types.RtpProxyClientOpts {
+    return self.opts
 }
 /*
     def get_rtpc_delay(self):

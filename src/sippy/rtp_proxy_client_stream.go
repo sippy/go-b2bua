@@ -35,6 +35,7 @@ import (
     "sippy/conf"
     "sippy/math"
     "sippy/time"
+    "sippy/types"
 )
 
 const (
@@ -51,7 +52,7 @@ type _RTPPLWorker struct {
     shutdown_chan   chan int
 }
 
-func NewRTPPLWorker(userv *Rtp_proxy_client_stream) *_RTPPLWorker {
+func newRTPPLWorker(userv *Rtp_proxy_client_stream) *_RTPPLWorker {
     self := &_RTPPLWorker{
         userv           : userv,
         shutdown_chan   : make(chan int, 1),
@@ -116,7 +117,7 @@ func (self *_RTPPLWorker) run() {
         //command, result_callback, callback_parameters = wi
         data, rtpc_delay, err := self.send_raw(req.command, nil)
         if err != nil {
-            self.userv.owner.logger.Debug("Error communicating the rtpproxy: " + err.Error())
+            self.userv.global_config.ErrorLogger().Debug("Error communicating the rtpproxy: " + err.Error())
             data, rtpc_delay = "", -1
         }
         if len(data) == 0 {
@@ -133,16 +134,17 @@ func (self *_RTPPLWorker) run() {
 }
 
 type Rtp_proxy_client_stream struct {
-    owner       *Rtp_proxy_client_base
+    owner       sippy_types.RtpProxyClient
     address     net.Addr
     nworkers    int
     workers     []*_RTPPLWorker
     delay_flt   sippy_math.RecFilter
     _is_local    bool
     wi          chan *rtpp_req_stream
+    global_config sippy_conf.Config
 }
 
-func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
+func newRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
     var err error
     if address == nil {
         address, err = net.ResolveUnixAddr("unix", "/var/run/rtpproxy.sock")
@@ -151,8 +153,8 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         }
     }
     nworkers := 4
-    if owner.opts.nworkers != nil {
-        nworkers = *owner.opts.nworkers
+    if owner.GetOpts().GetNWorkers() != nil {
+        nworkers = *owner.GetOpts().GetNWorkers()
     }
     self := &Rtp_proxy_client_stream{
         owner       : owner,
@@ -161,6 +163,7 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
         workers     : make([]*_RTPPLWorker, nworkers),
         delay_flt   : sippy_math.NewRecFilter(0.95, 0.25),
         wi          : make(chan *rtpp_req_stream, 1000),
+        global_config : global_config,
     }
     if strings.HasPrefix(address.Network(), "unix") {
         self._is_local = true
@@ -170,7 +173,7 @@ func NewRtp_proxy_client_stream(owner *Rtp_proxy_client_base, global_config sipp
     //self.wi_available = Condition()
     //self.wi = []
     for i := 0; i < self.nworkers; i++ {
-        self.workers[i] = NewRTPPLWorker(self)
+        self.workers[i] = newRTPPLWorker(self)
     }
     return self, nil
 }
