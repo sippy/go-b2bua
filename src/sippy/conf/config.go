@@ -75,6 +75,7 @@ func NewConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogge
         }
     }
     return &config{
+        ipv6_enabled    : true,
         error_logger    : error_logger,
         sip_logger      : sip_logger,
         my_address  : &MyAddress{ is_system : true, address : address },

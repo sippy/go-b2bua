@@ -221,7 +221,12 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
         laddress, err = net.ResolveUDPAddr("udp", "127.0.0.1:0")
     }
     if err != nil { return nil, err }
-    s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
+    ip4 := laddress.IP.To4()
+    proto := syscall.AF_INET
+    if ip4 == nil {
+        proto = syscall.AF_INET6
+    }
+    s, err := syscall.Socket(proto, syscall.SOCK_DGRAM, 0)
     if err != nil { return nil, err }
     if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
         syscall.Close(s)
@@ -233,7 +238,6 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
             return nil, err
         }
     }
-    ip4 := laddress.IP.To4()
     var sockaddr syscall.Sockaddr
     if ip4 != nil {
         sockaddr = &syscall.SockaddrInet4{
