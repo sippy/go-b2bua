@@ -213,7 +213,7 @@ func main() {
         Config : sippy_conf.NewConfig(error_logger, sip_logger),
         nh_addr      : sippy_conf.NewHostPort("192.168.0.102", "5060"), // next hop address
     }
-    config.SetIPV6Enabled(false)
+    //config.SetIPV6Enabled(false)
     if nh_addr != "" {
         var parts []string
         var addr string
