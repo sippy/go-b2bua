@@ -62,9 +62,6 @@ func newRTPPLWorker(userv *Rtp_proxy_client_stream) *_RTPPLWorker {
 }
 
 func (self *_RTPPLWorker) send_raw(command string, stime *sippy_time.MonoTime) (string, time.Duration, error) {
-    if command[len(command)-1] != '\n' {
-        command += "\n"
-    }
     //print "%s.send_raw(%s)" % (id(self), command)
     if stime == nil {
         stime, _ = sippy_time.NewMonoTime()
