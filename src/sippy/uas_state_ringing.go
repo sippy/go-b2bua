@@ -27,8 +27,6 @@
 package sippy
 
 import (
-    "fmt"
-
     "sippy/types"
     "sippy/time"
     "sippy/headers"
@@ -133,7 +131,8 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode()), nil
     }
-    return nil, fmt.Errorf("wrong event %s in the Ringing state", _event.String())
+    //return nil, fmt.Errorf("wrong event %s in the Ringing state", _event.String())
+    return nil, nil
 }
 
 func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {

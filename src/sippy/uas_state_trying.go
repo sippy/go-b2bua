@@ -27,8 +27,6 @@
 package sippy
 
 import (
-    "fmt"
-
     "sippy/types"
     "sippy/time"
     "sippy/headers"
@@ -130,7 +128,8 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode()), nil
     }
-    return nil, fmt.Errorf("uas-trying: wrong event %s in the Trying state", _event.String())
+    //return nil, fmt.Errorf("uas-trying: wrong event %s in the Trying state", _event.String())
+    return nil, nil
 }
 
 func (self *UasStateTrying) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {

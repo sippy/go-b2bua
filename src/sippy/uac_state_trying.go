@@ -27,8 +27,6 @@
 package sippy
 
 import (
-    "fmt"
-
     "sippy/types"
     "sippy/time"
 )
@@ -188,5 +186,6 @@ func (self *UacStateTrying) RecvEvent(event sippy_types.CCEvent) (sippy_types.Ua
         }
         return NewUacStateCancelling(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode()), nil
     }
-    return nil, fmt.Errorf("uac-trying: wrong event %s in the Trying state", event.String())
+    //return nil, fmt.Errorf("uac-trying: wrong event %s in the Trying state", event.String())
+    return nil, nil
 }

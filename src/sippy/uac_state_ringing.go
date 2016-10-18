@@ -27,8 +27,6 @@
 package sippy
 
 import (
-    "fmt"
-
     "sippy/types"
     "sippy/time"
 )
@@ -162,7 +160,8 @@ func (self *UacStateRinging) RecvEvent(event sippy_types.CCEvent) (sippy_types.U
     case *CCEventRedirect:
     case *CCEventDisconnect:
     default:
-        return nil, fmt.Errorf("wrong event %s in the Ringing state", event.String())
+        //return nil, fmt.Errorf("wrong event %s in the Ringing state", event.String())
+        return nil, nil
     }
     self.ua.GetClientTransaction().Cancel()
     self.ua.CancelExpireTimer()

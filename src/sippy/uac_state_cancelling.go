@@ -27,8 +27,6 @@
 package sippy
 
 import (
-    "fmt"
-
     "sippy/time"
     "sippy/types"
 )
@@ -111,5 +109,6 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
 }
 
 func (self *UacStateCancelling) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
-    return nil, fmt.Errorf("wrong event %s in the Cancelling state", event.String())
+    //return nil, fmt.Errorf("wrong event %s in the Cancelling state", event.String())
+    return nil, nil
 }
