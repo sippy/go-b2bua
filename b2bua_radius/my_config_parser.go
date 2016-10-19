@@ -29,6 +29,7 @@ package main
 import (
     "errors"
     "flag"
+    "strconv"
     "strings"
     "time"
 
@@ -90,9 +91,6 @@ func (self *myConfigParser) Parse() error {
             continue
         if o == '-l':
             global_config.check_and_set('sip_address', a)
-            continue
-        if o == '-p':
-            global_config.check_and_set('sip_port', a)
             continue
         if o == '-P':
             global_config.check_and_set('pidfile', a)
@@ -204,7 +202,15 @@ func (self *myConfigParser) Parse() error {
     flag.StringVar(&rtp_proxy_client, "rtp_proxy_client", "", "RTPproxy control socket. Address in the format \"udp:host[:port]\"")
     flag.StringVar(&self.sip_proxy, "sip_proxy", "", "address of the helper proxy to handle \"REGISTER\" " +
                                  "and \"SUBSCRIBE\" messages. Address in the format \"host[:port]\"")
+    var sip_port int
+    flag.IntVar(&sip_port, "p", 5060, "sip_port")
+    flag.IntVar(&sip_port, "sip_port", 5060, "local UDP port to listen for incoming SIP requests")
     flag.Parse()
+
+    if sip_port <= 0 || sip_port > 65535 {
+        return errors.New("sip_port should be in the range 1-65535")
+    }
+
     rtp_proxy_clients += "," + rtp_proxy_client
     arr := strings.Split(rtp_proxy_clients, ",")
     for _, s := range arr {
@@ -255,6 +261,7 @@ func (self *myConfigParser) Parse() error {
     self.hrtb_ival = time.Duration(hrtb_ival) * time.Second
     self.hrtb_retr_ival = time.Duration(hrtb_retr_ival) * time.Second
     self.Config = sippy_conf.NewConfig(error_logger, sip_logger)
+    self.SetMyPort(sippy_conf.NewMyPort(strconv.Itoa(sip_port)))
     return nil
 }
 /*

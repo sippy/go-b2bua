@@ -48,8 +48,7 @@ type Rtp_proxy_client_udp struct {
     global_config       sippy_conf.Config
     delay_flt           sippy_math.RecFilter
     worker              *udpServer
-    host                string
-    port                string
+    hostport            *sippy_conf.HostPort
     lock                sync.Mutex
     owner               sippy_types.RtpProxyClient
 }
@@ -103,7 +102,7 @@ func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sip
         global_config       : global_config,
         delay_flt           : sippy_math.NewRecFilter(0.95, 0.25),
     }
-    self.host, self.port, err = net.SplitHostPort(self.address.String())
+    self.hostport, err = sippy_conf.NewHostPortFromAddr(self.address)
     if err != nil {
         return nil, err
     }
@@ -140,7 +139,7 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
     command = cookie + " " + command
     timer := StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
     preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback)
-    self.worker.SendTo([]byte(command), self.host, self.port)
+    self.worker.SendTo([]byte(command), self.hostport)
     self.lock.Lock()
     self.pending_requests[cookie] = preq
     self.lock.Unlock()
@@ -166,7 +165,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
     req.retransmits += 1
     req.timer = StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
     req.stime, _ = sippy_time.NewMonoTime()
-    self.worker.SendTo([]byte(req.command), self.host, self.port)
+    self.worker.SendTo([]byte(req.command), self.hostport)
     req.triesleft -= 1
     self.lock.Unlock()
 }

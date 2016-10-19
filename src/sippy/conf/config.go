@@ -78,8 +78,8 @@ func NewConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogge
         ipv6_enabled    : true,
         error_logger    : error_logger,
         sip_logger      : sip_logger,
-        my_address  : &MyAddress{ is_system : true, address : address },
-        my_port     : &MyPort{ is_system : true, port : "5060" },
+        my_address  : newSystemAddress(address),
+        my_port     : newSystemPort("5060"),
         my_uaname   : "Sippy",
         allow_formats : make([]int, 0),
     }

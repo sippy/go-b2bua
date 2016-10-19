@@ -28,6 +28,11 @@
 
 package sippy_conf
 
+import (
+    "net"
+    "strings"
+)
+
 type MyAddress struct {
     is_system   bool
     address     string
@@ -41,14 +46,38 @@ type MyPort struct {
 /* MyAddress methods */
 
 func NewMyAddress(address string) (*MyAddress) {
-    return &MyAddress{
+    self := &MyAddress{
         is_system   : false,
         address     : address,
+    }
+    self.normalize()
+    return self
+}
+
+func newSystemAddress(address string) (*MyAddress) {
+    self := &MyAddress{
+        is_system   : true,
+        address     : address,
+    }
+    self.normalize()
+    return self
+}
+
+func (self *MyAddress) normalize() {
+    if self.address[0] != '[' && (strings.IndexByte(self.address, ':') >= 0 || strings.IndexByte(self.address, '%') >= 0) {
+        self.address = "[" + self.address + "]"
     }
 }
 
 func (self *MyAddress) IsSystemDefault() bool {
     return self.is_system
+}
+
+func (self *MyAddress) ParseIP() net.IP {
+    if self.address[0] == '[' {
+        return net.ParseIP(self.address[1:len(self.address)-1])
+    }
+    return net.ParseIP(self.address)
 }
 
 func (self *MyAddress) String() string {
@@ -65,6 +94,13 @@ func (self *MyAddress) GetCopy() *MyAddress {
 func NewMyPort(port string) (*MyPort) {
     return &MyPort{
         is_system   : false,
+        port        : port,
+    }
+}
+
+func newSystemPort(port string) (*MyPort) {
+    return &MyPort{
+        is_system   : true,
         port        : port,
     }
 }
@@ -93,6 +129,18 @@ func NewHostPort(host, port string) *HostPort {
         Host : NewMyAddress(host),
         Port : NewMyPort(port),
     }
+}
+
+func NewHostPortFromAddr(addr net.Addr) (*HostPort, error) {
+    host, port, err := net.SplitHostPort(addr.String())
+    if err != nil {
+        return nil, err
+    }
+    return NewHostPort(host, port), nil
+}
+
+func (self *HostPort) ParseIP() net.IP {
+    return self.Host.ParseIP()
 }
 
 func (self *HostPort) String() string {

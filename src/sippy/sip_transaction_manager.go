@@ -377,6 +377,10 @@ func (self *sipTransactionManager) new_server_transaction(server *udpServer, req
         // For messages received on the wildcard interface find
         // or create more specific server.
         userv = self.l4r.getServer(req.GetSource(), /*is_local*/ false)
+        if userv == nil {
+            self.config.ErrorLogger().Error("BUG! cannot create more specific server for transaction")
+            userv = server
+        }
     }
     t := NewServerTransaction(req, checksum, tid, userv, self)
     t.Lock()
@@ -495,7 +499,7 @@ func (self *sipTransactionManager) transmitMsg(userv sippy_types.UdpServer, msg 
 func (self *sipTransactionManager) transmitData(userv sippy_types.UdpServer, data []byte, address *sippy_conf.HostPort, cachesum, call_id string, lossemul int /*=0*/) {
     logop := "SENDING"
     if lossemul == 0 {
-        userv.SendTo(data, address.Host.String(), address.Port.String())
+        userv.SendTo(data, address)
     } else {
         logop = "DISCARDING"
     }

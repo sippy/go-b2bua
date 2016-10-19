@@ -113,7 +113,7 @@ type SipResponse interface {
 
 type UdpServer interface {
     GetLaddress() *sippy_conf.HostPort
-    SendTo([]byte, string, string)
+    SendTo([]byte, *sippy_conf.HostPort)
 }
 
 type MsgBody interface {

@@ -58,7 +58,7 @@ type write_req struct {
 }
 
 type resolv_req struct {
-    hostport    string
+    hostport    *sippy_conf.HostPort
     data        []byte
 }
 
@@ -87,7 +87,7 @@ LOOP:
             break LOOP
         }
         start, _ := sippy_time.NewMonoTime()
-        addr, err := net.ResolveUDPAddr("udp", wi.hostport)
+        addr, err := net.ResolveUDPAddr("udp", wi.hostport.String())
         delay, _ := start.OffsetFromNow()
         if err != nil {
             self.logger.Error(fmt.Sprintf("Udp_server: Cannot resolve '%s', dropping outgoing SIP message. Delay %s", wi.hostport, delay.String()))
@@ -287,14 +287,14 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
     return self, nil
 }
 
-func (self *udpServer) SendTo(data []byte, host, port string) {
-    hostport := net.JoinHostPort(host, port)
-    ip := net.ParseIP(host)
+func (self *udpServer) SendTo(data []byte, hostport *sippy_conf.HostPort) {
+    //hostport := net.JoinHostPort(host, port)
+    ip := hostport.ParseIP()
     if ip == nil {
         self.wi_resolv <- &resolv_req{ data : data, hostport : hostport }
         return
     }
-    address, err := net.ResolveUDPAddr("udp", hostport) // in fact no resolving is done here
+    address, err := net.ResolveUDPAddr("udp", hostport.String()) // in fact no resolving is done here
     if err != nil {
         return // not reached
     }

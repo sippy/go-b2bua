@@ -385,7 +385,10 @@ func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, res
     //if self.acctA != nil {
     //    self.acctA.disc(ua, rtime, origin, result)
     //}
-    self.rtp_proxy_session = nil
+    if self.rtp_proxy_session != nil {
+        self.rtp_proxy_session.Delete()
+        self.rtp_proxy_session = nil
+    }
 }
 
 func (self *callController) aDead() {
