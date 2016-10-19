@@ -288,7 +288,6 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
 }
 
 func (self *udpServer) SendTo(data []byte, hostport *sippy_conf.HostPort) {
-    //hostport := net.JoinHostPort(host, port)
     ip := hostport.ParseIP()
     if ip == nil {
         self.wi_resolv <- &resolv_req{ data : data, hostport : hostport }

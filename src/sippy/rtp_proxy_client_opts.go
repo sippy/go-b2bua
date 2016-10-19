@@ -28,15 +28,12 @@ package sippy
 
 import (
     "time"
-
-    "sippy/conf"
 )
 
 type rtpProxyClientOpts struct {
     no_version_check    bool
     spath               string
     nworkers            *int
-    bind_address        *sippy_conf.HostPort
     hrtb_retr_ival      time.Duration
     hrtb_ival           time.Duration
 }
@@ -63,8 +60,4 @@ func (self *rtpProxyClientOpts) SetHeartbeatRetryInterval(ival time.Duration) {
 
 func (self *rtpProxyClientOpts) GetNWorkers() *int {
     return self.nworkers
-}
-
-func (self *rtpProxyClientOpts) GetBindAddress() *sippy_conf.HostPort {
-    return self.bind_address
 }
