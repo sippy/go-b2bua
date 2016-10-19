@@ -8,5 +8,4 @@
 
 ## Known problems:
 
-- The standard GO library called net does not support the SO\_REUSEPORT thus you may experience crashes on b2bua\_simple running on default listen address (i.e. 0.0.0.0).
-- Only basic SIP stack is available at the moment. No rtpproxy, no CLI interface, no RADIUS.
+- No RADIUS support.
