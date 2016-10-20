@@ -31,6 +31,7 @@ import (
     "fmt"
     "math/big"
     "runtime"
+    "sync"
 
     "sippy/conf"
     "sippy/sdp"
@@ -50,6 +51,7 @@ type Rtp_proxy_session struct {
     insert_nortpp           bool
     caller                  _rtpps_side
     callee                  _rtpps_side
+    session_lock            sync.Locker
 }
 
 type rtp_command_result struct {
@@ -59,7 +61,7 @@ type rtp_command_result struct {
     sendonly            bool
 }
 
-func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string) (*Rtp_proxy_session, error) {
+func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker) (*Rtp_proxy_session, error) {
     self := &Rtp_proxy_session{
         notify_socket   : notify_socket,
         notify_tag      : notify_tag,
@@ -68,6 +70,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         to_tag          : to_tag,
         insert_nortpp   : false,
         max_index       : -1,
+        session_lock    : session_lock,
     }
     self.caller.otherside = &self.callee
     self.callee.otherside = &self.caller
@@ -127,7 +130,7 @@ func (self *Rtp_proxy_session) StopPlayCaller(result_callback func(string)/*= ni
         return
     }
     command := fmt.Sprintf("S %s-%d %s %s", self.call_id, index, self.from_tag, self.to_tag)
-    self.rtp_proxy_client.SendCommand(command, func(r string) { self.command_result(r, result_callback) })
+    self.rtp_proxy_client.SendCommand(command, func(r string) { self.command_result(r, result_callback) }, self.session_lock)
 }
 
 func (self *Rtp_proxy_session) StartRecording(rname/*= nil*/ string, result_callback func(string)/*= nil*/, index int/*= 0*/) {
@@ -141,16 +144,16 @@ func (self *Rtp_proxy_session) StartRecording(rname/*= nil*/ string, result_call
 func (self *Rtp_proxy_session) _start_recording(rname string, result_callback func(string), index int) {
     if rname == "" {
         command := fmt.Sprintf("R %s-%d %s %s", self.call_id, index, self.from_tag, self.to_tag)
-        self.rtp_proxy_client.SendCommand(command, func (r string) { self.command_result(r, result_callback) })
+        self.rtp_proxy_client.SendCommand(command, func (r string) { self.command_result(r, result_callback) }, self.session_lock)
         return
     }
     command := fmt.Sprintf("C %s-%d %s.a %s %s", self.call_id, index, rname, self.from_tag, self.to_tag)
-    self.rtp_proxy_client.SendCommand(command, func(string) { self._start_recording1(rname, result_callback, index) })
+    self.rtp_proxy_client.SendCommand(command, func(string) { self._start_recording1(rname, result_callback, index) }, self.session_lock)
 }
 
 func (self *Rtp_proxy_session) _start_recording1(rname string, result_callback func(string), index int) {
     command := fmt.Sprintf("C %s-%d %s.o %s %s", self.call_id, index, rname, self.to_tag, self.from_tag)
-    self.rtp_proxy_client.SendCommand(command, func (r string) { self.command_result(r, result_callback) })
+    self.rtp_proxy_client.SendCommand(command, func (r string) { self.command_result(r, result_callback) }, self.session_lock)
 }
 
 func (self *Rtp_proxy_session) command_result(result string, result_callback func(string)) {
@@ -166,7 +169,7 @@ func (self *Rtp_proxy_session) Delete() {
     }
     for self.max_index >= 0 {
         command := fmt.Sprintf("D %s-%d %s %s", self.call_id, self.max_index, self.from_tag, self.to_tag)
-        self.rtp_proxy_client.SendCommand(command, nil)
+        self.rtp_proxy_client.SendCommand(command, nil, self.session_lock)
         self.max_index--
     }
     self.rtp_proxy_client = nil

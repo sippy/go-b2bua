@@ -63,7 +63,7 @@ func (self *_rtpps_side) _play(prompt_name string, times int, result_callback fu
 
 func (self *_rtpps_side) __play(prompt_name string, times int, result_callback func(string), index int) {
     command := fmt.Sprintf("P%d %s-%d %s %s %s %s", times, self.owner.call_id, index, prompt_name, self.codecs, self.owner.from_tag, self.owner.to_tag)
-    self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.owner.command_result(r, result_callback) })
+    self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.owner.command_result(r, result_callback) }, self.owner.session_lock)
 }
 
 func (self *_rtpps_side) update(remote_ip string, remote_port string, result_callback func(*rtp_command_result), options/*= ""*/ string, index /*= 0*/int, atype /*= "IP4"*/string) {
@@ -90,7 +90,7 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     if self.owner.notify_socket != "" && index == 0 && self.owner.rtp_proxy_client.TNotSupported() {
         command += fmt.Sprintf(" %s %s", self.owner.notify_socket, self.owner.notify_tag)
     }
-    self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.update_result(r, remote_ip, atype, result_callback) })
+    self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.update_result(r, remote_ip, atype, result_callback) }, self.owner.session_lock)
 }
 
 func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_callback func(*rtp_command_result)) {
