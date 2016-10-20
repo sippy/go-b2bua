@@ -317,6 +317,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     // oroute.user, oroute.passw, nh_address, oroute.credit_time,
     //  /*expire_time*/ oroute.expires, /*no_progress_time*/ oroute.no_progress_expires, /*extra_headers*/ oroute.extra_headers)
     //self.uaO.SetConnCbs([]sippy_types.OnConnectListener{ self.oConn })
+    self.uaO.SetExtraHeaders(oroute.extra_headers)
     self.uaO.SetDeadCbs([]sippy_types.OnDeadListener{ self.oDead })
     self.uaO.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
     if oroute.outbound_proxy != nil && self.source.String() != oroute.outbound_proxy.String() {
