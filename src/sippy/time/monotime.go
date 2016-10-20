@@ -26,6 +26,8 @@
 
 package sippy_time
 //
+// #cgo linux LDFLAGS: -lrt
+//
 // #include <time.h>
 //
 // typedef struct timespec timespec_struct;
