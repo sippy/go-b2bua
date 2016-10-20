@@ -26,26 +26,9 @@
 
 package sippy_time
 //
-//  #include <time.h>
+// #include <time.h>
 //
-//  typedef struct {
-//      struct timespec ts;
-//      int res;
-//  } clock_gettime_result;
-//
-//  static clock_gettime_result 
-//  clock_getrealtime() {
-//      clock_gettime_result res;
-//      res.res = clock_gettime(CLOCK_REALTIME, &res.ts);
-//      return res;
-//  }
-//
-//  static clock_gettime_result
-//  clock_getmonotime() {
-//      clock_gettime_result res;
-//      res.res = clock_gettime(CLOCK_MONOTONIC, &res.ts);
-//      return res;
-//  }
+// typedef struct timespec timespec_struct;
 //
 import "C"
 import (
@@ -75,20 +58,10 @@ type monoGlobals struct {
 var globals *monoGlobals
 
 func init() {
-    var monot time.Time
-    var realt time.Time
-
-    res, _ := C.clock_getmonotime()
-    if res.res == 0 {
-        monot = time.Unix(int64(res.ts.tv_sec), int64(res.ts.tv_nsec))
-    }
-    res, _ = C.clock_getrealtime()
-    if res.res == 0 {
-        realt = time.Unix(int64(res.ts.tv_sec), int64(res.ts.tv_nsec))
-    }
+    t, _ := newMonoTime()
     globals = &monoGlobals{
-        monot_max : monot,
-        realt_flt : sippy_math.NewRecFilter(0.99, realt.Sub(monot).Seconds()),
+        monot_max : t.monot,
+        realt_flt : sippy_math.NewRecFilter(0.99, t.realt.Sub(t.monot).Seconds()),
     }
 }
 
@@ -125,11 +98,11 @@ func NewMonoTime1(realt time.Time) (*MonoTime, error) {
         monot : FloatToTime(monot),
     }
     if self.monot.After(globals.monot_max) {
-        res, _ := C.clock_getrealtime()
-        if res.res != 0 {
+        var ts C.timespec_struct
+        if res, _ := C.clock_gettime(C.CLOCK_REALTIME, &ts); res != 0 {
             return nil, errors.New("Cannot read realtime clock")
         }
-        monot_now := time.Unix(int64(res.ts.tv_sec), int64(res.ts.tv_nsec))
+        monot_now := time.Unix(int64(ts.tv_sec), int64(ts.tv_nsec))
         if monot_now.After(globals.monot_max) {
             globals.monot_max = monot_now
         }
@@ -145,25 +118,32 @@ func NewMonoTime2(monot time.Time, realt time.Time) (*MonoTime) {
     }
 }
 
-func NewMonoTime() (self *MonoTime, err error) {
-    res, _ := C.clock_getmonotime()
-    if res.res != 0 {
+func newMonoTime() (self *MonoTime, err error) {
+    var ts C.timespec_struct
+
+    if res, _ := C.clock_gettime(C.CLOCK_MONOTONIC, &ts); res != 0 {
         return nil, errors.New("Cannot read monolitic clock")
     }
-    monot := time.Unix(int64(res.ts.tv_sec), int64(res.ts.tv_nsec))
+    monot := time.Unix(int64(ts.tv_sec), int64(ts.tv_nsec))
 
-    res, _ = C.clock_getrealtime()
-    if res.res != 0 {
+    if res, _ := C.clock_gettime(C.CLOCK_REALTIME, &ts); res != 0 {
         return nil, errors.New("Cannot read realtime clock")
     }
-    realt := time.Unix(int64(res.ts.tv_sec), int64(res.ts.tv_nsec))
-    diff_flt := globals.Apply(realt, monot)
-    realt = monot.Add(diff_flt)
-
+    realt := time.Unix(int64(ts.tv_sec), int64(ts.tv_nsec))
     return &MonoTime{
         monot : monot,
         realt : realt,
     }, nil
+}
+
+func NewMonoTime() (self *MonoTime, err error) {
+    t, err := newMonoTime()
+    if err != nil {
+        return nil, err
+    }
+    diff_flt := globals.Apply(t.realt, t.monot)
+    t.realt = t.monot.Add(diff_flt)
+    return t, nil
 }
 
 func (self *MonoTime) Ftime() string {
@@ -201,11 +181,12 @@ func (self *MonoTime) Before(t *MonoTime) bool {
 }
 
 func (self *MonoTime) OffsetFromNow() (time.Duration, error) {
-    res, _ := C.clock_getmonotime()
-    if res.res != 0 {
+    var ts C.timespec_struct
+
+    if res, _ := C.clock_gettime(C.CLOCK_MONOTONIC, &ts); res != 0 {
         return 0, errors.New("Cannot read monolitic clock")
     }
-    monot_now := time.Unix(int64(res.ts.tv_sec), int64(res.ts.tv_nsec))
+    monot_now := time.Unix(int64(ts.tv_sec), int64(ts.tv_nsec))
     return monot_now.Sub(self.monot), nil
 }
 
