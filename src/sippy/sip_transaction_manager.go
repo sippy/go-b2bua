@@ -72,6 +72,8 @@ type sipTMRetransmitO struct {
 }
 
 func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.CallMap) (*sipTransactionManager, error) {
+    var err error
+
     self := &sipTransactionManager{
         call_map        : call_map,
         l1rcache        : make(map[string]*sipTMRetransmitO),
@@ -85,12 +87,16 @@ func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.Cal
         pass_t_to_cb    : false,
         provisional_retr : 0,
     }
-    l4r, err := NewLocal4Remote(config, self.handleIncoming)
-    if err != nil { return nil, err }
-    self.l4r = l4r
-    el := NewInactiveTimeout(self.rCachePurge, &self.rcache_lock, 32 * time.Second, -1, config.ErrorLogger())
-    el.SpreadRuns(time.Duration(0.1 * float64(time.Second)))
-    el.Start()
+    self.l4r, err = NewLocal4Remote(config, self.handleIncoming)
+    if err != nil {
+        return nil, err
+    }
+    go func() {
+        for {
+            time.Sleep(32 * time.Second)
+            self.rCachePurge()
+        }
+    }()
     return self, nil
 }
 
@@ -100,6 +106,8 @@ func (self *sipTransactionManager) Run() {
 }
 
 func (self *sipTransactionManager) rCachePurge() {
+    self.rcache_lock.Lock()
+    defer self.rcache_lock.Unlock()
     self.l2rcache = self.l1rcache
     self.l1rcache = make(map[string]*sipTMRetransmitO)
     self.l4r.rotateCache()
