@@ -52,7 +52,7 @@ func ParseSipReason(body string) ([]SipHeader, error) {
         protocol : strings.TrimSpace(protocol),
     }
     for _, reason_param := range strings.Split(reason_params, ";") {
-        arr = strings.SplitN(reason_param, ";", 2)
+        arr = strings.SplitN(reason_param, "=", 2)
         if len(arr) != 2 {
             return nil, errors.New("Error parsing Reason: (2)")
         }
@@ -72,7 +72,7 @@ func (self *SipReason) Body() string {
     if self.reason == "" {
         rval = self.protocol + "; cause=" + self.cause
     } else {
-        rval = self.Name() + ": " + self.protocol + "; cause=" + self.cause + "; text=\"" + self.reason + "\""
+        rval = self.protocol + "; cause=" + self.cause + "; text=\"" + self.reason + "\""
     }
     return rval
 }

@@ -48,10 +48,10 @@ func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime) (*sipResponse, err
 
     self := &sipResponse{}
     super, err := ParseSipMsg(buf, self, rtime)
-    self.sipMsg = *super
     if err != nil {
         return nil, err
     }
+    self.sipMsg = *super
     // parse startline
     sstartline := sippy_utils.FieldsN(self.startline, 3)
     if len(sstartline) == 2 {
