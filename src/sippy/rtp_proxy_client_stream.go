@@ -124,7 +124,7 @@ func (self *_RTPPLWorker) run() {
             rtpc_delay = -1
         }
         if req.result_callback != nil {
-            go sippy_utils.SafeCall(func() { req.result_callback(data) }, req.session_lock, self.userv.global_config.ErrorLogger())
+            sippy_utils.SafeCall(func() { req.result_callback(data) }, req.session_lock, self.userv.global_config.ErrorLogger())
         }
         if rtpc_delay != -1 {
             self.userv.register_delay(rtpc_delay)
