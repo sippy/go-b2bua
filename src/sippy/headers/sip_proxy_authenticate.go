@@ -31,7 +31,7 @@ import (
 )
 
 type SipProxyAuthenticate struct {
-    SipWWWAuthenticate
+    *SipWWWAuthenticate
 }
 
 var _sip_proxy_authenticate_name normalName = newNormalName("Proxy-Authenticate")
@@ -41,7 +41,7 @@ func ParseSipProxyAuthenticate(body string) ([]SipHeader, error) {
     super.normalName = _sip_proxy_authenticate_name
     if err != nil { return nil, err }
     return []SipHeader{ &SipProxyAuthenticate{
-                                        SipWWWAuthenticate : *super,
+                                        SipWWWAuthenticate : super,
                                       },
                                   }, nil
 }
@@ -56,7 +56,7 @@ func (self *SipProxyAuthenticate) LocalStr(hostport *sippy_conf.HostPort, compac
 
 func (self *SipProxyAuthenticate) GetCopy() *SipProxyAuthenticate {
     cself := &SipProxyAuthenticate{
-        SipWWWAuthenticate : *self.SipWWWAuthenticate.GetCopy(),
+        SipWWWAuthenticate : self.SipWWWAuthenticate.GetCopy(),
     }
     cself.normalName = _sip_proxy_authenticate_name
     return cself

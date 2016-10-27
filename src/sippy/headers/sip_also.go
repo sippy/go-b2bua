@@ -32,7 +32,7 @@ import (
 
 type SipAlso struct {
     normalName
-    sipAddressHF
+    *sipAddressHF
 }
 
 var _sip_also_name normalName = newNormalName("Also")
@@ -44,7 +44,7 @@ func ParseSipAlso(body string) ([]SipHeader, error) {
     for i, addr := range addresses {
         rval[i] = &SipAlso{
             normalName   : _sip_also_name,
-            sipAddressHF : *addr,
+            sipAddressHF : addr,
         }
     }
     return rval, nil
@@ -53,7 +53,7 @@ func ParseSipAlso(body string) ([]SipHeader, error) {
 func NewSipAlso(addr *sipAddress) *SipAlso {
     return &SipAlso{
         normalName   : _sip_also_name,
-        sipAddressHF : *NewSipAddressHF(addr),
+        sipAddressHF : NewSipAddressHF(addr),
     }
 }
 
@@ -79,7 +79,7 @@ func (self *SipAlso) GetCopy() *SipAlso {
     }
     return &SipAlso{
         normalName   : _sip_also_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
 }
 

@@ -32,7 +32,7 @@ import (
 )
 
 type UaStateDisconnected struct {
-    uaStateGeneric
+    *uaStateGeneric
     rtime   *sippy_time.MonoTime
     origin  string
     scode   int

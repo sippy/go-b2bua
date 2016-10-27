@@ -33,7 +33,7 @@ import (
 )
 
 type UasStateIdle struct {
-    uaStateGeneric
+    *uaStateGeneric
     config  sippy_conf.Config
 }
 

@@ -32,7 +32,7 @@ import (
 
 type SipReferTo struct {
     compactName
-    sipAddressHF
+    *sipAddressHF
 }
 
 var _sip_refer_to_name compactName = newCompactName("Refer-To", "r")
@@ -44,7 +44,7 @@ func ParseSipReferTo(body string) ([]SipHeader, error) {
     for i, addr := range addresses {
         rval[i] = &SipReferTo{
             compactName  : _sip_refer_to_name,
-            sipAddressHF : *addr,
+            sipAddressHF : addr,
         }
     }
     return rval, nil
@@ -53,7 +53,7 @@ func ParseSipReferTo(body string) ([]SipHeader, error) {
 func NewSipReferTo(addr *sipAddress) *SipReferTo {
     return &SipReferTo{
         compactName  : _sip_refer_to_name,
-        sipAddressHF : *NewSipAddressHF(addr),
+        sipAddressHF : NewSipAddressHF(addr),
     }
 }
 
@@ -80,14 +80,14 @@ func (self *SipReferTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) st
 func (self *SipReferTo) AsSipAlso() *SipAlso {
     return &SipAlso{
         normalName   : _sip_also_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
 }
 
 func (self *SipReferTo) GetCopy() *SipReferTo {
     return &SipReferTo{
         compactName  : _sip_refer_to_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
 }
 

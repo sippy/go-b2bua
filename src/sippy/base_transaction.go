@@ -72,8 +72,8 @@ type baseTransaction struct {
     logger          sippy_log.ErrorLogger
 }
 
-func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager, address *sippy_conf.HostPort, data []byte, needack bool, logger sippy_log.ErrorLogger) baseTransaction {
-    return baseTransaction{
+func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager, address *sippy_conf.HostPort, data []byte, needack bool, logger sippy_log.ErrorLogger) *baseTransaction {
+    return &baseTransaction{
         tout    : time.Duration(0.5 * float64(time.Second)),
         userv   : userv,
         tid     : tid,

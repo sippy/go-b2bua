@@ -33,7 +33,7 @@ import (
 )
 
 type UasStateUpdating struct {
-    uaStateGeneric
+    *uaStateGeneric
 }
 
 func NewUasStateUpdating(ua sippy_types.UA) *UasStateUpdating {

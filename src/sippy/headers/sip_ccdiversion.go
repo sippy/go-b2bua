@@ -32,7 +32,7 @@ import (
 
 type SipCCDiversion struct {
     normalName
-    sipAddressHF
+    *sipAddressHF
 }
 
 var _sip_cc_diversion_name normalName = newNormalName("CC-Diversion")
@@ -44,7 +44,7 @@ func ParseSipCCDiversion(body string) ([]SipHeader, error) {
     for i, addr := range addresses {
         rval[i] = &SipCCDiversion{
             normalName   : _sip_cc_diversion_name,
-            sipAddressHF : *addr,
+            sipAddressHF : addr,
         }
     }
     return rval, nil
@@ -69,7 +69,7 @@ func (self *SipCCDiversion) LocalStr(hostport *sippy_conf.HostPort, compact bool
 func (self *SipCCDiversion) GetCopy() *SipCCDiversion {
     rval := &SipCCDiversion{
         normalName   : _sip_cc_diversion_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
     return rval
 }

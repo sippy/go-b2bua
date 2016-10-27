@@ -33,7 +33,7 @@ import (
 )
 
 type UaStateConnected struct {
-    uaStateGeneric
+    *uaStateGeneric
     ka_tr       sippy_types.ClientTransaction
     rtime       *sippy_time.MonoTime
     origin      string

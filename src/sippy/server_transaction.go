@@ -36,7 +36,7 @@ import (
 )
 
 type serverTransaction struct {
-    baseTransaction
+    *baseTransaction
     lock            sync.Mutex
     checksum        string
     teD             *Timeout

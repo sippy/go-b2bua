@@ -32,7 +32,7 @@ import (
 
 type SipContact struct {
     compactName
-    sipAddressHF
+    *sipAddressHF
     Asterisk bool
 }
 
@@ -42,7 +42,7 @@ func NewSipContact(config sippy_conf.Config) *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
         Asterisk     : false,
-        sipAddressHF : *NewSipAddressHF(
+        sipAddressHF : NewSipAddressHF(
                             NewSipAddress("Anonymous",
                                 NewSipURL("", config.GetMyAddress(), config.GetMyPort(), false))),
     }
@@ -52,14 +52,14 @@ func NewSipContactFromAddress(addr *sipAddress) *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
         Asterisk : false,
-        sipAddressHF : *NewSipAddressHF(addr),
+        sipAddressHF : NewSipAddressHF(addr),
     }
 }
 
 func (self *SipContact) GetCopy() *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
         Asterisk     : self.Asterisk,
     }
 }
@@ -80,7 +80,7 @@ func ParseSipContact(body string) ([]SipHeader, error) {
         if err != nil { return nil, err }
         for _, addr := range addresses {
             rval = append(rval, &SipContact{
-                            sipAddressHF : *addr,
+                            sipAddressHF : addr,
                             Asterisk : false,
                             compactName  : _sip_contact_name,
                         })

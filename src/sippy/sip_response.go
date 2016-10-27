@@ -37,7 +37,7 @@ import (
 )
 
 type sipResponse struct {
-    sipMsg
+    *sipMsg
     scode int
     reason string
     sipver string
@@ -51,7 +51,7 @@ func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime) (*sipResponse, err
     if err != nil {
         return nil, err
     }
-    self.sipMsg = *super
+    self.sipMsg = super
     // parse startline
     sstartline := sippy_utils.FieldsN(self.startline, 3)
     if len(sstartline) == 2 {
@@ -80,7 +80,7 @@ func NewSipResponse(scode int, reason, sipver string, from *sippy_header.SipFrom
         reason : reason,
         sipver : sipver,
     }
-    self.sipMsg = *NewSipMsg(self, nil)
+    self.sipMsg = NewSipMsg(self, nil)
     for _, via := range vias {
         self.AppendHeader(via)
     }
@@ -108,7 +108,7 @@ func (self *sipResponse) GetCopy() sippy_types.SipResponse {
         reason  : self.reason,
         sipver  : self.sipver,
     }
-    rval.sipMsg = *self.sipMsg.getCopy(rval)
+    rval.sipMsg = self.sipMsg.getCopy(rval)
     return rval
 }
 

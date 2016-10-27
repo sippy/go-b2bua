@@ -36,8 +36,8 @@ type uaStateGeneric struct {
     connected   bool
 }
 
-func newUaStateGeneric(ua sippy_types.UA) uaStateGeneric {
-    return uaStateGeneric{
+func newUaStateGeneric(ua sippy_types.UA) *uaStateGeneric {
+    return &uaStateGeneric{
         ua          : ua,
         connected   : false,
     }

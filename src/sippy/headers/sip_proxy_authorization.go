@@ -32,7 +32,7 @@ import (
 
 type SipProxyAuthorization struct {
     normalName
-    SipAuthorization
+    *SipAuthorization
 }
 
 var _sip_proxy_authorization_name normalName = newNormalName("Proxy-Authorization")
@@ -40,7 +40,7 @@ var _sip_proxy_authorization_name normalName = newNormalName("Proxy-Authorizatio
 func NewSipProxyAuthorization(realm, nonce, method, uri, username, password string) SipHeader {
     return &SipProxyAuthorization{
         normalName       : _sip_proxy_authorization_name,
-        SipAuthorization : *NewSipAuthorization(realm, nonce, method, uri, username, password),
+        SipAuthorization : NewSipAuthorization(realm, nonce, method, uri, username, password),
     }
 }
 
@@ -49,7 +49,7 @@ func ParseSipProxyAuthorization(body string) ([]SipHeader, error) {
     if err != nil { return nil, err }
     return []SipHeader{ &SipProxyAuthorization{
                                         normalName       : _sip_proxy_authorization_name,
-                                        SipAuthorization : *super,
+                                        SipAuthorization : super,
                                       },
                                   }, nil
 }

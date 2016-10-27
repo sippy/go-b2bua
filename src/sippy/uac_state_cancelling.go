@@ -32,7 +32,7 @@ import (
 )
 
 type UacStateCancelling struct {
-    uaStateGeneric
+    *uaStateGeneric
     te      *Timeout
     rtime   *sippy_time.MonoTime
     origin  string

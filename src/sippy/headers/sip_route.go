@@ -32,7 +32,7 @@ import (
 
 type SipRoute struct {
     normalName
-    sipAddressHF
+    *sipAddressHF
 }
 
 var _sip_route_name normalName = newNormalName("Route")
@@ -40,7 +40,7 @@ var _sip_route_name normalName = newNormalName("Route")
 func NewSipRoute(addr *sipAddress) *SipRoute {
     return &SipRoute{
         normalName   : _sip_route_name,
-        sipAddressHF : *NewSipAddressHF(addr),
+        sipAddressHF : NewSipAddressHF(addr),
     }
 }
 
@@ -51,7 +51,7 @@ func ParseSipRoute(body string) ([]SipHeader, error) {
     for i, addr := range addresses {
         rval[i] = &SipRoute{
             normalName   : _sip_route_name,
-            sipAddressHF : *addr,
+            sipAddressHF : addr,
         }
     }
     return rval, nil
@@ -80,7 +80,7 @@ func (self *SipRoute) GetAddr(config sippy_conf.Config) *sippy_conf.HostPort {
 func (self *SipRoute) GetCopy() *SipRoute {
     return &SipRoute{
         normalName   : _sip_route_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
 }
 

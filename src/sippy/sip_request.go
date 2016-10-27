@@ -37,7 +37,7 @@ import (
 )
 
 type sipRequest struct {
-    sipMsg
+    *sipMsg
     method  string
     sipver  string
     ruri    *sippy_header.SipURL
@@ -49,10 +49,10 @@ type sipRequest struct {
 func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime) (*sipRequest, error) {
     self := &sipRequest{ nated : false }
     super, err := ParseSipMsg(buf, self, rtime)
-    self.sipMsg = *super
     if err != nil {
         return nil, err
     }
+    self.sipMsg = super
     arr := strings.Fields(self.startline)
     if len(arr) != 3 {
         return nil, errors.New("SIP bad start line in SIP request: " + self.startline)
@@ -80,7 +80,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         routes = make([]*sippy_header.SipRoute, 0)
     }
     self := &sipRequest{ nated : false }
-    self.sipMsg = *NewSipMsg(self, nil)
+    self.sipMsg = NewSipMsg(self, nil)
     self.method = method
     self.ruri = ruri
     if target == nil {

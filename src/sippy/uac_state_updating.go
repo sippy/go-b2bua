@@ -34,7 +34,7 @@ import (
 )
 
 type UacStateUpdating struct {
-    uaStateGeneric
+    *uaStateGeneric
     triedauth   bool
 }
 

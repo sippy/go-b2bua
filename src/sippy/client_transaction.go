@@ -37,7 +37,7 @@ import (
 )
 
 type clientTransaction struct {
-    baseTransaction
+    *baseTransaction
     teB             *Timeout
     teC             *Timeout
     teG             *Timeout

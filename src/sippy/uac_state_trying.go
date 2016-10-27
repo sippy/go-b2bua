@@ -32,7 +32,7 @@ import (
 )
 
 type UacStateTrying struct {
-    uaStateGeneric
+    *uaStateGeneric
 }
 
 func NewUacStateTrying(ua sippy_types.UA) *UacStateTrying {

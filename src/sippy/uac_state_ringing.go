@@ -32,7 +32,7 @@ import (
 )
 
 type UacStateRinging struct {
-    uaStateGeneric
+    *uaStateGeneric
     triedauth   bool
     rtime       *sippy_time.MonoTime
     origin      string

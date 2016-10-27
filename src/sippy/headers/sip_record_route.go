@@ -32,7 +32,7 @@ import (
 
 type SipRecordRoute struct {
     normalName
-    sipAddressHF
+    *sipAddressHF
 }
 
 var _sip_record_route_name normalName = newNormalName("Record-Route")
@@ -46,7 +46,7 @@ func ParseSipRecordRoute(body string) ([]SipHeader, error) {
     for i, address := range addresses {
         rval[i] = &SipRecordRoute{
             normalName   : _sip_record_route_name,
-            sipAddressHF : *address,
+            sipAddressHF : address,
         }
     }
     return rval, nil
@@ -55,7 +55,7 @@ func ParseSipRecordRoute(body string) ([]SipHeader, error) {
 func (self *SipRecordRoute) GetCopy() *SipRecordRoute {
     return &SipRecordRoute{
         normalName   : _sip_record_route_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
 }
 
@@ -82,6 +82,6 @@ func (self *SipRecordRoute) LocalStr(hostport *sippy_conf.HostPort, compact bool
 func (self *SipRecordRoute) AsSipRoute() *SipRoute {
     return &SipRoute{
         normalName   : _sip_route_name,
-        sipAddressHF : *self.sipAddressHF.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
 }

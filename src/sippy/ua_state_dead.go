@@ -32,7 +32,7 @@ import (
 )
 
 type UaStateDead struct {
-    uaStateGeneric
+    *uaStateGeneric
     rtime   *sippy_time.MonoTime
     origin  string
 }
