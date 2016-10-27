@@ -63,7 +63,6 @@ type sipMsg struct {
     record_routes       []*sippy_header.SipRecordRoute
     routes              []*sippy_header.SipRoute
     target              *sippy_conf.HostPort
-    me                  SipMsgDescendant
     reason_hf           *sippy_header.SipReason
     sip_warning         *sippy_header.SipWarning
     sip_www_authenticate *sippy_header.SipWWWAuthenticate
@@ -76,7 +75,7 @@ type sipMsg struct {
     sip_h323_conf_id    *sippy_header.SipH323ConfId
 }
 
-func NewSipMsg(me SipMsgDescendant, rtime *sippy_time.MonoTime) *sipMsg {
+func NewSipMsg(rtime *sippy_time.MonoTime) *sipMsg {
     self := &sipMsg{
         headers         : make([]sippy_header.SipHeader, 0),
         __mbody         : nil,
@@ -85,14 +84,13 @@ func NewSipMsg(me SipMsgDescendant, rtime *sippy_time.MonoTime) *sipMsg {
         record_routes   : make([]*sippy_header.SipRecordRoute, 0),
         routes          : make([]*sippy_header.SipRoute, 0),
         also            : make([]*sippy_header.SipAlso, 0),
-        me              : me,
         rtime           : rtime,
     }
     return self
 }
 
-func ParseSipMsg(_buf []byte, me SipMsgDescendant, rtime *sippy_time.MonoTime) (*sipMsg, error) {
-    self := NewSipMsg(me, rtime)
+func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime) (*sipMsg, error) {
+    self := NewSipMsg(rtime)
     buf := string(_buf)
     // Locate a body
     for _, bdel := range []string{ "\r\n\r\n", "\r\r", "\n\n" } {
@@ -298,8 +296,8 @@ func (self *sipMsg) Bytes() []byte {
     return ret
 }
 
-func (self *sipMsg) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
-    s := self.me.GetSL() + "\r\n"
+func (self *sipMsg) localStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+    s := ""
     for _, via := range self.vias {
         s += via.LocalStr(hostport, compact) + "\r\n"
     }
@@ -406,8 +404,8 @@ func (self *sipMsg) getTIds() []*sippy_header.TID {
     return ret
 }
 
-func (self *sipMsg) getCopy(me SipMsgDescendant) *sipMsg {
-    cself := NewSipMsg(me, self.rtime)
+func (self *sipMsg) getCopy() *sipMsg {
+    cself := NewSipMsg(self.rtime)
     for _, header := range self.vias {
         cself.AppendHeader(header.GetCopyAsIface())
     }

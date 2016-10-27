@@ -48,7 +48,7 @@ type sipRequest struct {
 
 func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime) (*sipRequest, error) {
     self := &sipRequest{ nated : false }
-    super, err := ParseSipMsg(buf, self, rtime)
+    super, err := ParseSipMsg(buf, rtime)
     if err != nil {
         return nil, err
     }
@@ -80,7 +80,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         routes = make([]*sippy_header.SipRoute, 0)
     }
     self := &sipRequest{ nated : false }
-    self.sipMsg = NewSipMsg(self, nil)
+    self.sipMsg = NewSipMsg(nil)
     self.method = method
     self.ruri = ruri
     if target == nil {
@@ -135,6 +135,10 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
     }
     self.setBody(body)
     return self
+}
+
+func (self *sipRequest) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+    return self.GetSL() + "\r\n" + self.localStr(hostport, compact)
 }
 
 func (self *sipRequest) GetTo() *sippy_header.SipTo {

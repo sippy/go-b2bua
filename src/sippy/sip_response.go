@@ -30,6 +30,7 @@ import (
     "errors"
     "strconv"
 
+    "sippy/conf"
     "sippy/headers"
     "sippy/time"
     "sippy/types"
@@ -47,7 +48,7 @@ func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime) (*sipResponse, err
     var scode string
 
     self := &sipResponse{}
-    super, err := ParseSipMsg(buf, self, rtime)
+    super, err := ParseSipMsg(buf, rtime)
     if err != nil {
         return nil, err
     }
@@ -80,7 +81,7 @@ func NewSipResponse(scode int, reason, sipver string, from *sippy_header.SipFrom
         reason : reason,
         sipver : sipver,
     }
-    self.sipMsg = NewSipMsg(self, nil)
+    self.sipMsg = NewSipMsg(nil)
     for _, via := range vias {
         self.AppendHeader(via)
     }
@@ -98,6 +99,10 @@ func NewSipResponse(scode int, reason, sipver string, from *sippy_header.SipFrom
     return self
 }
 
+func (self *sipResponse) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+    return self.GetSL() + "\r\n" + self.localStr(hostport, compact)
+}
+
 func (self *sipResponse) GetSL() string {
     return self.sipver + " " + strconv.Itoa(self.scode) + " " + self.reason
 }
@@ -108,7 +113,7 @@ func (self *sipResponse) GetCopy() sippy_types.SipResponse {
         reason  : self.reason,
         sipver  : self.sipver,
     }
-    rval.sipMsg = self.sipMsg.getCopy(rval)
+    rval.sipMsg = self.sipMsg.getCopy()
     return rval
 }
 
