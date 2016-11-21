@@ -549,6 +549,22 @@ func (self *sipMsg) GetHFs(name string) []sippy_header.SipHeader {
             rval = append(rval, hf)
         }
     }
+    if self.content_length != nil && match_name(name, self.content_length) {
+        rval = append(rval, self.content_length)
+    }
+    if self.content_type != nil && match_name(name, self.content_type) {
+        rval = append(rval, self.content_type)
+    }
+    if len(self.vias) > 0 && match_name(name, self.vias[0]) {
+        for _, via := range self.vias {
+            rval = append(rval, via)
+        }
+    }
+    if len(self.routes) > 0 && match_name(name, self.routes[0]) {
+        for _, route := range self.routes {
+            rval = append(rval, route)
+        }
+    }
     return rval
 }
 
