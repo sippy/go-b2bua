@@ -68,6 +68,7 @@ var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader
     "replaces"          : sippy_header.ParseSipReplaces,
     "reason"            : sippy_header.ParseSipReason,
     "warning"           : sippy_header.ParseSipWarning,
+    "diversion"         : sippy_header.ParseSipDiversion,
 }
 
 func ParseSipHeader(s string) ([]sippy_header.SipHeader, error) {
