@@ -40,6 +40,8 @@ type ErrorLogger interface {
     ErrorAndTraceback(interface{})
     Error(...interface{})
     Debug(...interface{})
+    Errorf(string, ...interface{})
+    Debugf(string, ...interface{})
 }
 
 type errorLogger struct {
@@ -66,8 +68,16 @@ func (self *errorLogger) Debug(params...interface{}) {
     self.write("DEBUG:", params...)
 }
 
+func (self *errorLogger) Debugf(format string, params...interface{}) {
+    self.write("DEBUG:", fmt.Sprintf(format, params...))
+}
+
 func (self *errorLogger) Error(params...interface{}) {
     self.write("ERROR:", params...)
+}
+
+func (self *errorLogger) Errorf(format string, params...interface{}) {
+    self.write("ERROR:", fmt.Sprintf(format, params...))
 }
 
 func (*errorLogger) Reopen() {
