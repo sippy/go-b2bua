@@ -87,6 +87,10 @@ func (self *genericMsgBody) RemoveSection(int) {
     // NO OP
 }
 
+func (self *genericMsgBody) GetOHeader() *sippy_sdp.SdpOrigin {
+    return nil
+}
+
 func (self *genericMsgBody) SetOHeader(*sippy_sdp.SdpOrigin) {
     // NO OP
 }

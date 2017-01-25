@@ -52,6 +52,7 @@ type Rtp_proxy_session struct {
     caller                  _rtpps_side
     callee                  _rtpps_side
     session_lock            sync.Locker
+    config                  sippy_conf.Config
 }
 
 type rtp_command_result struct {
@@ -71,6 +72,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         insert_nortpp   : false,
         max_index       : -1,
         session_lock    : session_lock,
+        config          : config,
     }
     self.caller.otherside = &self.callee
     self.callee.otherside = &self.caller

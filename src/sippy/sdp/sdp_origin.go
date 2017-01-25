@@ -118,3 +118,11 @@ func (self *SdpOrigin) GetCopy() *SdpOrigin {
 func (self *SdpOrigin) IncVersion() {
     self.version++
 }
+
+func (self *SdpOrigin) GetSessionId() string {
+    return self.session_id
+}
+
+func (self *SdpOrigin) GetVersion() int64 {
+    return self.version
+}

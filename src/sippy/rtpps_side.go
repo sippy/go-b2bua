@@ -48,6 +48,7 @@ type _rtpps_side struct {
     origin          *sippy_sdp.SdpOrigin
     repacketize     int
     origin_lock     sync.Mutex
+    oh_remote       *sippy_sdp.SdpOrigin
 }
 
 func (self *_rtpps_side) _play(prompt_name string, times int, result_callback func(string), index int) {
@@ -197,7 +198,14 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtp_command_result, sdp_bod
     }
     if num == 0 {
         self.origin_lock.Lock()
-        self.origin.IncVersion()
+        if self.oh_remote != nil {
+            if parsed_body.GetOHeader() != nil && self.oh_remote.GetSessionId() != parsed_body.GetOHeader().GetSessionId() {
+                self.origin = sippy_sdp.NewSdpOrigin(self.owner.config)
+            } else if self.oh_remote.GetVersion() != parsed_body.GetOHeader().GetVersion() {
+                self.origin.IncVersion()
+            }
+        }
+        self.oh_remote = parsed_body.GetOHeader().GetCopy()
         parsed_body.SetOHeader(self.origin.GetCopy())
         self.origin_lock.Unlock()
         if self.owner.insert_nortpp {

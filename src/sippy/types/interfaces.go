@@ -135,6 +135,7 @@ type ParsedMsgBody interface {
     GetSections() []*sippy_sdp.SdpMediaDescription
     SetSections([]*sippy_sdp.SdpMediaDescription)
     RemoveSection(int)
+    GetOHeader() *sippy_sdp.SdpOrigin
     SetOHeader(*sippy_sdp.SdpOrigin)
     AppendAHeader(string)
 }
