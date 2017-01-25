@@ -37,7 +37,7 @@ import (
     "sippy/utils"
 )
 
-type ua struct {
+type Ua struct {
     sip_tm          sippy_types.SipTransactionManager
     config          sippy_conf.Config
     call_controller sippy_types.CallController
@@ -112,23 +112,23 @@ type ua struct {
     uas_lossemul    int
 }
 
-func (self *ua) me() sippy_types.UA {
+func (self *Ua) me() sippy_types.UA {
     if self.heir == nil {
         return self
     }
     return self.heir
 }
 
-func (self *ua) UasLossEmul() int {
+func (self *Ua) UasLossEmul() int {
     return self.uas_lossemul
 }
 
-func (self *ua) String() string {
+func (self *Ua) String() string {
     return "UA state: " + self.state.String() + ", Call-Id: " + self.cId.CallId
 }
 
-func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, nh_address *sippy_conf.HostPort, call_controller sippy_types.CallController, session_lock sync.Locker, heir sippy_types.UA) *ua {
-    return &ua{
+func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, nh_address *sippy_conf.HostPort, call_controller sippy_types.CallController, session_lock sync.Locker, heir sippy_types.UA) *Ua {
+    return &Ua{
         sip_tm          : sip_tm,
         call_controller : call_controller,
         equeue          : make([]sippy_types.CCEvent, 0),
@@ -159,7 +159,7 @@ func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, n
     }
 }
 
-func (self *ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) (*sippy_types.Ua_context) {
+func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) (*sippy_types.Ua_context) {
     //print "Received request %s in state %s instance %s" % (req.getMethod(), self.state, self)
     //print self.rCSeq, req.getHFBody("cseq").getCSeqNum()
     if self.remote_ua == "" {
@@ -196,7 +196,7 @@ func (self *ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     }
 }
 
-func (self *ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
+func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
     var err error
     if self.state == nil {
         return
@@ -239,7 +239,7 @@ func (self *ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     self.emitPendingEvents()
 }
 
-func (self *ua) RecvEvent(event sippy_types.CCEvent) {
+func (self *Ua) RecvEvent(event sippy_types.CCEvent) {
     //print self, event
     if self.state == nil {
         switch event.(type) {
@@ -262,7 +262,7 @@ func (self *ua) RecvEvent(event sippy_types.CCEvent) {
     self.emitPendingEvents()
 }
 
-func (self *ua) Disconnect(rtime *sippy_time.MonoTime) {
+func (self *Ua) Disconnect(rtime *sippy_time.MonoTime) {
     if self.sip_tm == nil {
         return // we are already in a dead state
     }
@@ -273,27 +273,27 @@ func (self *ua) Disconnect(rtime *sippy_time.MonoTime) {
     self.RecvEvent(NewCCEventDisconnect(nil, rtime, ""))
 }
 
-func (self *ua) expires() {
+func (self *Ua) expires() {
     self.expire_timer = nil
     self.me().Disconnect(nil)
 }
 
-func (self *ua) no_progress_expires() {
+func (self *Ua) no_progress_expires() {
     self.no_progress_timer = nil
     self.me().Disconnect(nil)
 }
 
-func (self *ua) no_reply_expires() {
+func (self *Ua) no_reply_expires() {
     self.no_reply_timer = nil
     self.me().Disconnect(nil)
 }
 
-func (self *ua) credit_expires(rtime *sippy_time.MonoTime) {
+func (self *Ua) credit_expires(rtime *sippy_time.MonoTime) {
     self.credit_timer = nil
     self.me().Disconnect(rtime)
 }
 
-func (self *ua) ChangeState(newstate sippy_types.UaState) {
+func (self *Ua) ChangeState(newstate sippy_types.UaState) {
     if self.state != nil {
         self.state.OnStateChange()
     }
@@ -301,7 +301,7 @@ func (self *ua) ChangeState(newstate sippy_types.UaState) {
     newstate.OnActivation()
 }
 
-func (self *ua) EmitEvent(event sippy_types.CCEvent) {
+func (self *Ua) EmitEvent(event sippy_types.CCEvent) {
     if self.call_controller != nil {
         if self.elast_seq != -1 && self.elast_seq >= event.GetSeq() {
             //print "ignoring out-of-order event", event, event.seq, self.elast_seq, self.cId
@@ -312,7 +312,7 @@ func (self *ua) EmitEvent(event sippy_types.CCEvent) {
     }
 }
 
-func (self *ua) emitPendingEvents() {
+func (self *Ua) emitPendingEvents() {
     for len(self.equeue) != 0 && self.call_controller != nil {
         event := self.equeue[0]; self.equeue = self.equeue[1:]
         if self.elast_seq != -1 && self.elast_seq >= event.GetSeq() {
@@ -324,7 +324,7 @@ func (self *ua) emitPendingEvents() {
     }
 }
 
-func (self *ua) GenRequest(method string, body sippy_types.MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) sippy_types.SipRequest {
+func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) sippy_types.SipRequest {
     var target *sippy_conf.HostPort
     if self.outbound_proxy != nil {
         target = self.outbound_proxy
@@ -350,15 +350,15 @@ func (self *ua) GenRequest(method string, body sippy_types.MsgBody, nonce string
     return req
 }
 
-func (self *ua) GetUasResp() sippy_types.SipResponse {
+func (self *Ua) GetUasResp() sippy_types.SipResponse {
     return self.uasResp
 }
 
-func (self *ua) SetUasResp(resp sippy_types.SipResponse) {
+func (self *Ua) SetUasResp(resp sippy_types.SipResponse) {
     self.uasResp = resp
 }
 
-func (self *ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reason string, body sippy_types.MsgBody /*= nil*/, contact *sippy_header.SipContact /*= nil*/, ack_wait bool, extra_headers ...sippy_header.SipHeader) {
+func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reason string, body sippy_types.MsgBody /*= nil*/, contact *sippy_header.SipContact /*= nil*/, ack_wait bool, extra_headers ...sippy_header.SipHeader) {
     uasResp := self.uasResp.GetCopy()
     uasResp.SetSCode(scode, reason)
     uasResp.SetBody(body)
@@ -380,7 +380,7 @@ func (self *ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reas
     }
 }
 
-func (self *ua) recvACK(req sippy_types.SipRequest) {
+func (self *Ua) recvACK(req sippy_types.SipRequest) {
     if !self.isConnected() {
         return
     }
@@ -389,7 +389,7 @@ func (self *ua) recvACK(req sippy_types.SipRequest) {
     self.emitPendingEvents()
 }
 
-func (self *ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) bool {
+func (self *Ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) bool {
     //print self.branch, req.getHFBody("via").getBranch()
     if req.GetMethod() != "BYE" && self.branch != "" && self.branch != req.GetVias()[0].GetBranch() {
         return false
@@ -412,13 +412,13 @@ func (self *ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) 
     return true
 }
 
-func (self *ua) DelayedRemoteSdpUpdate(event sippy_types.CCEvent, remote_sdp_body sippy_types.MsgBody) {
+func (self *Ua) DelayedRemoteSdpUpdate(event sippy_types.CCEvent, remote_sdp_body sippy_types.MsgBody) {
     self.rSDP = remote_sdp_body.GetCopy()
     self.me().Enqueue(event)
     self.emitPendingEvents()
 }
 
-func (self *ua) update_ua(msg sippy_types.SipMsg) {
+func (self *Ua) update_ua(msg sippy_types.SipMsg) {
     if msg.GetSipUserAgent() != nil {
         self.remote_ua = msg.GetSipUserAgent().UserAgent
     } else if msg.GetSipServer() != nil {
@@ -426,7 +426,7 @@ func (self *ua) update_ua(msg sippy_types.SipMsg) {
     }
 }
 
-func (self *ua) CancelCreditTimer() {
+func (self *Ua) CancelCreditTimer() {
     //print("UA::cancelCreditTimer()")
     if self.credit_timer != nil {
         self.credit_timer.Cancel()
@@ -434,7 +434,7 @@ func (self *ua) CancelCreditTimer() {
     }
 }
 
-func (self *ua) StartCreditTimer(rtime *sippy_time.MonoTime) {
+func (self *Ua) StartCreditTimer(rtime *sippy_time.MonoTime) {
     //print("UA::startCreditTimer()")
     if self.credit_time != nil {
         self.credit_times[0] = rtime.Add(*self.credit_time)
@@ -455,7 +455,7 @@ func (self *ua) StartCreditTimer(rtime *sippy_time.MonoTime) {
     self.credit_timer = StartTimeout(func () { self.credit_expires(credit_time) }, self.session_lock, credit_time.Sub(now), 1, self.config.ErrorLogger())
 }
 
-func (self *ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool /*true*/, reverse_routes bool /*true*/) {
+func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool /*true*/, reverse_routes bool /*true*/) {
     if update_rtarget && len(resp.GetContacts()) > 0 {
         self.rTarget = resp.GetContacts()[0].GetUrl().GetCopy()
     }
@@ -484,260 +484,260 @@ func (self *ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool 
     }
 }
 
-func (self *ua) SipTM() sippy_types.SipTransactionManager {
+func (self *Ua) SipTM() sippy_types.SipTransactionManager {
     return self.sip_tm
 }
 
-func (self *ua) GetSetupTs() *sippy_time.MonoTime {
+func (self *Ua) GetSetupTs() *sippy_time.MonoTime {
     return self.setup_ts
 }
 
-func (self *ua) SetSetupTs(ts *sippy_time.MonoTime) {
+func (self *Ua) SetSetupTs(ts *sippy_time.MonoTime) {
     self.setup_ts = ts
 }
 
-func (self *ua) GetOrigin()string {
+func (self *Ua) GetOrigin()string {
     return self.origin
 }
 
-func (self *ua) SetOrigin(origin string) {
+func (self *Ua) SetOrigin(origin string) {
     self.origin = origin
 }
 
-func (self *ua) OnLocalSdpChange(body sippy_types.MsgBody, event sippy_types.CCEvent, cb func(sippy_types.MsgBody)) error {
+func (self *Ua) OnLocalSdpChange(body sippy_types.MsgBody, event sippy_types.CCEvent, cb func(sippy_types.MsgBody)) error {
     if self.on_local_sdp_change == nil {
         return nil
     }
     return self.on_local_sdp_change(body, event, cb)
 }
 
-func (self *ua) HasOnLocalSdpChange() bool {
+func (self *Ua) HasOnLocalSdpChange() bool {
     return self.on_local_sdp_change != nil
 }
 
-func (self *ua) SetCallId(call_id *sippy_header.SipCallId) {
+func (self *Ua) SetCallId(call_id *sippy_header.SipCallId) {
     self.cId = call_id
 }
 
-func (self *ua) GetCallId() *sippy_header.SipCallId {
+func (self *Ua) GetCallId() *sippy_header.SipCallId {
     return self.cId
 }
 
-func (self *ua) SetRTarget(url *sippy_header.SipURL) {
+func (self *Ua) SetRTarget(url *sippy_header.SipURL) {
     self.rTarget = url
 }
 
-func (self *ua) GetRAddr0() *sippy_conf.HostPort {
+func (self *Ua) GetRAddr0() *sippy_conf.HostPort {
     return self.rAddr0
 }
 
-func (self *ua) SetRAddr0(addr *sippy_conf.HostPort) {
+func (self *Ua) SetRAddr0(addr *sippy_conf.HostPort) {
     self.rAddr0 = addr
 }
 
-func (self *ua) GetRTarget() *sippy_header.SipURL {
+func (self *Ua) GetRTarget() *sippy_header.SipURL {
     return self.rTarget
 }
 
-func (self *ua) SetRUri(ruri *sippy_header.SipTo) {
+func (self *Ua) SetRUri(ruri *sippy_header.SipTo) {
     self.rUri = ruri
 }
 
-func (self *ua) GetRuriUserparams() []string {
+func (self *Ua) GetRuriUserparams() []string {
     return self.ruri_userparams
 }
 
-func (self *ua) SetRuriUserparams(ruri_userparams []string) {
+func (self *Ua) SetRuriUserparams(ruri_userparams []string) {
     self.ruri_userparams = ruri_userparams
 }
 
-func (self *ua) GetRUri() *sippy_header.SipTo {
+func (self *Ua) GetRUri() *sippy_header.SipTo {
     return self.rUri
 }
 
-func (self *ua) GetToUsername() string {
+func (self *Ua) GetToUsername() string {
     return self.to_username
 }
 
-func (self *ua) SetToUsername(to_username string) {
+func (self *Ua) SetToUsername(to_username string) {
     self.to_username = to_username
 }
 
-func (self *ua) SetLUri(from *sippy_header.SipFrom) {
+func (self *Ua) SetLUri(from *sippy_header.SipFrom) {
     self.lUri = from
 }
 
-func (self *ua) GetLUri() *sippy_header.SipFrom {
+func (self *Ua) GetLUri() *sippy_header.SipFrom {
     return self.lUri
 }
 
-func (self *ua) GetFromDomain() string {
+func (self *Ua) GetFromDomain() string {
     return self.from_domain
 }
 
-func (self *ua) SetFromDomain(from_domain string) {
+func (self *Ua) SetFromDomain(from_domain string) {
     self.from_domain = from_domain
 }
 
-func (self *ua) GetLTag() string {
+func (self *Ua) GetLTag() string {
     return self.ltag
 }
 
-func (self *ua) SetLCSeq(cseq int) {
+func (self *Ua) SetLCSeq(cseq int) {
     self.lCSeq = cseq
 }
 
-func (self *ua) GetLContact() *sippy_header.SipContact {
+func (self *Ua) GetLContact() *sippy_header.SipContact {
     return self.lContact
 }
 
-func (self *ua) SetLContact(contact *sippy_header.SipContact) {
+func (self *Ua) SetLContact(contact *sippy_header.SipContact) {
     self.lContact = contact
 }
 
-func (self *ua) SetRoutes(routes []*sippy_header.SipRoute) {
+func (self *Ua) SetRoutes(routes []*sippy_header.SipRoute) {
     self.routes = routes
 }
 
-func (self *ua) GetCGUID() *sippy_header.SipCiscoGUID {
+func (self *Ua) GetCGUID() *sippy_header.SipCiscoGUID {
     return self.cGUID
 }
 
-func (self *ua) SetCGUID(cguid *sippy_header.SipCiscoGUID) {
+func (self *Ua) SetCGUID(cguid *sippy_header.SipCiscoGUID) {
     self.cGUID = cguid
 }
 
-func (self *ua) GetLSDP() sippy_types.MsgBody {
+func (self *Ua) GetLSDP() sippy_types.MsgBody {
     return self.lSDP
 }
 
-func (self *ua) SetLSDP(msg sippy_types.MsgBody) {
+func (self *Ua) SetLSDP(msg sippy_types.MsgBody) {
     self.lSDP = msg
 }
 
-func (self *ua) GetRSDP() sippy_types.MsgBody {
+func (self *Ua) GetRSDP() sippy_types.MsgBody {
     return self.rSDP
 }
 
-func (self *ua) SetRSDP(sdp sippy_types.MsgBody) {
+func (self *Ua) SetRSDP(sdp sippy_types.MsgBody) {
     self.rSDP = sdp
 }
 
-func (self *ua) IncLCSeq() {
+func (self *Ua) IncLCSeq() {
     self.lCSeq += 1
 }
 
-func (self *ua) GetSourceAddress() *sippy_conf.HostPort {
+func (self *Ua) GetSourceAddress() *sippy_conf.HostPort {
     return self.source_address
 }
 
-func (self *ua) SetSourceAddress(addr *sippy_conf.HostPort) {
+func (self *Ua) SetSourceAddress(addr *sippy_conf.HostPort) {
     self.source_address = addr
 }
 
-func (self *ua) SetClientTransaction(tr sippy_types.ClientTransaction) {
+func (self *Ua) SetClientTransaction(tr sippy_types.ClientTransaction) {
     self.tr = tr
 }
 
-func (self *ua) GetClientTransaction() sippy_types.ClientTransaction {
+func (self *Ua) GetClientTransaction() sippy_types.ClientTransaction {
     return self.tr
 }
 
-func (self *ua) GetOutboundProxy() *sippy_conf.HostPort {
+func (self *Ua) GetOutboundProxy() *sippy_conf.HostPort {
     return self.outbound_proxy
 }
 
-func (self *ua) SetOutboundProxy(outbound_proxy *sippy_conf.HostPort) {
+func (self *Ua) SetOutboundProxy(outbound_proxy *sippy_conf.HostPort) {
     self.outbound_proxy = outbound_proxy
 }
 
-func (self *ua) GetNoReplyTime() time.Duration {
+func (self *Ua) GetNoReplyTime() time.Duration {
     return self.no_reply_time
 }
 
-func (self *ua) SetNoReplyTime(no_reply_time time.Duration) {
+func (self *Ua) SetNoReplyTime(no_reply_time time.Duration) {
     self.no_reply_time = no_reply_time
 }
 
-func (self *ua) GetExpireTime() time.Duration {
+func (self *Ua) GetExpireTime() time.Duration {
     return self.expire_time
 }
 
-func (self *ua) SetExpireTime(expire_time time.Duration) {
+func (self *Ua) SetExpireTime(expire_time time.Duration) {
     self.expire_time = expire_time
 }
 
-func (self *ua) GetNoProgressTime() time.Duration {
+func (self *Ua) GetNoProgressTime() time.Duration {
     return self.no_progress_time
 }
 
-func (self *ua) SetNoProgressTime(no_progress_time time.Duration) {
+func (self *Ua) SetNoProgressTime(no_progress_time time.Duration) {
     self.no_progress_time = no_progress_time
 }
 
-func (self *ua) StartNoReplyTimer(t *sippy_time.MonoTime) {
+func (self *Ua) StartNoReplyTimer(t *sippy_time.MonoTime) {
     now, _ := sippy_time.NewMonoTime()
     self.no_reply_timer = StartTimeout(self.no_reply_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
 }
 
-func (self *ua) StartNoProgressTimer(t *sippy_time.MonoTime) {
+func (self *Ua) StartNoProgressTimer(t *sippy_time.MonoTime) {
     now, _ := sippy_time.NewMonoTime()
     self.no_progress_timer = StartTimeout(self.no_progress_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
 }
 
-func (self *ua) StartExpireTimer(t *sippy_time.MonoTime) {
+func (self *Ua) StartExpireTimer(t *sippy_time.MonoTime) {
     now, _ := sippy_time.NewMonoTime()
     self.expire_timer = StartTimeout(self.expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
 }
 
-func (self *ua) CancelExpireTimer() {
+func (self *Ua) CancelExpireTimer() {
     if self.expire_timer != nil {
         self.expire_timer.Cancel()
         self.expire_timer = nil
     }
 }
 
-func (self *ua) GetDisconnectTs() *sippy_time.MonoTime {
+func (self *Ua) GetDisconnectTs() *sippy_time.MonoTime {
     return self.disconnect_ts
 }
 
-func (self *ua) SetDisconnectTs(ts *sippy_time.MonoTime) {
+func (self *Ua) SetDisconnectTs(ts *sippy_time.MonoTime) {
     self.disconnect_ts = ts
 }
 
-func (self *ua) GetDiscCbs() []sippy_types.OnDisconnectListener {
+func (self *Ua) GetDiscCbs() []sippy_types.OnDisconnectListener {
     return self.disc_cbs
 }
 
-func (self *ua) SetDiscCbs(disc_cbs []sippy_types.OnDisconnectListener) {
+func (self *Ua) SetDiscCbs(disc_cbs []sippy_types.OnDisconnectListener) {
     self.disc_cbs = disc_cbs
 }
 
-func (self *ua) GetFailCbs() []sippy_types.OnFailureListener {
+func (self *Ua) GetFailCbs() []sippy_types.OnFailureListener {
     return self.fail_cbs
 }
 
-func (self *ua) SetFailCbs(fail_cbs []sippy_types.OnFailureListener) {
+func (self *Ua) SetFailCbs(fail_cbs []sippy_types.OnFailureListener) {
     self.fail_cbs = fail_cbs
 }
 
-func (self *ua) GetDeadCbs() []sippy_types.OnDeadListener {
+func (self *Ua) GetDeadCbs() []sippy_types.OnDeadListener {
     return self.dead_cbs
 }
 
-func (self *ua) SetDeadCbs(dead_cbs []sippy_types.OnDeadListener) {
+func (self *Ua) SetDeadCbs(dead_cbs []sippy_types.OnDeadListener) {
     self.dead_cbs = dead_cbs
 }
 
-func (self *ua) GetRAddr() *sippy_conf.HostPort {
+func (self *Ua) GetRAddr() *sippy_conf.HostPort {
     return self.rAddr
 }
 
-func (self *ua) SetRAddr(addr *sippy_conf.HostPort) {
+func (self *Ua) SetRAddr(addr *sippy_conf.HostPort) {
     self.rAddr = addr
 }
 
-func (self *ua) OnDead() {
+func (self *Ua) OnDead() {
     if self.sip_tm == nil {
         return
     }
@@ -763,241 +763,241 @@ func (self *ua) OnDead() {
     self.sip_tm = nil
 }
 
-func (self *ua) GetLocalUA() *sippy_header.SipUserAgent {
+func (self *Ua) GetLocalUA() *sippy_header.SipUserAgent {
     return self.local_ua
 }
 
-func (self *ua) SetLocalUA(ua *sippy_header.SipUserAgent) {
+func (self *Ua) SetLocalUA(ua *sippy_header.SipUserAgent) {
     self.local_ua = ua
 }
 
-func (self *ua) Enqueue(event sippy_types.CCEvent) {
+func (self *Ua) Enqueue(event sippy_types.CCEvent) {
     self.equeue = append(self.equeue, event)
 }
 
-func (self *ua) OnRemoteSdpChange(body sippy_types.MsgBody, req sippy_types.SipMsg, f func(x sippy_types.MsgBody)) error {
+func (self *Ua) OnRemoteSdpChange(body sippy_types.MsgBody, req sippy_types.SipMsg, f func(x sippy_types.MsgBody)) error {
     if self.on_remote_sdp_change != nil {
         return self.on_remote_sdp_change(body, req, f)
     }
     return nil
 }
 
-func (self *ua) ShouldUseRefer() bool {
+func (self *Ua) ShouldUseRefer() bool {
     return self.useRefer
 }
 
-func (self *ua) GetState() sippy_types.UaState {
+func (self *Ua) GetState() sippy_types.UaState {
     return self.state
 }
 
-func (self *ua) GetUsername() string {
+func (self *Ua) GetUsername() string {
     return self.username
 }
 
-func (self *ua) SetUsername(username string) {
+func (self *Ua) SetUsername(username string) {
     self.username = username
 }
 
-func (self *ua) GetPassword() string {
+func (self *Ua) GetPassword() string {
     return self.password
 }
 
-func (self *ua) SetPassword(passwd string) {
+func (self *Ua) SetPassword(passwd string) {
     self.password = passwd
 }
 
-func (self *ua) GetKaInterval() time.Duration {
+func (self *Ua) GetKaInterval() time.Duration {
     return self.kaInterval
 }
 
-func (self *ua) SetKaInterval(ka time.Duration) {
+func (self *Ua) SetKaInterval(ka time.Duration) {
     self.kaInterval = ka
 }
 
-func (self *ua) ResetOnLocalSdpChange() {
+func (self *Ua) ResetOnLocalSdpChange() {
     self.on_local_sdp_change = nil
 }
 
-func (self *ua) GetOnLocalSdpChange() sippy_types.OnLocalSdpChange {
+func (self *Ua) GetOnLocalSdpChange() sippy_types.OnLocalSdpChange {
     return self.on_local_sdp_change
 }
 
-func (self *ua) SetOnLocalSdpChange(on_local_sdp_change sippy_types.OnLocalSdpChange) {
+func (self *Ua) SetOnLocalSdpChange(on_local_sdp_change sippy_types.OnLocalSdpChange) {
     self.on_local_sdp_change = on_local_sdp_change
 }
 
-func (self *ua) GetOnRemoteSdpChange() sippy_types.OnRemoteSdpChange {
+func (self *Ua) GetOnRemoteSdpChange() sippy_types.OnRemoteSdpChange {
     return self.on_remote_sdp_change
 }
 
-func (self *ua) SetOnRemoteSdpChange(on_remote_sdp_change sippy_types.OnRemoteSdpChange) {
+func (self *Ua) SetOnRemoteSdpChange(on_remote_sdp_change sippy_types.OnRemoteSdpChange) {
     self.on_remote_sdp_change = on_remote_sdp_change
 }
 
-func (self *ua) ResetOnRemoteSdpChange() {
+func (self *Ua) ResetOnRemoteSdpChange() {
     self.on_remote_sdp_change = nil
 }
 
-func (self *ua) GetGoDeadTimeout() time.Duration {
+func (self *Ua) GetGoDeadTimeout() time.Duration {
     return self.godead_timeout
 }
 
-func (self *ua) GetLastScode() int {
+func (self *Ua) GetLastScode() int {
     return self.last_scode
 }
 
-func (self *ua) SetLastScode(scode int) {
+func (self *Ua) SetLastScode(scode int) {
     self.last_scode = scode
 }
 
-func (self *ua) HasNoReplyTimer() bool {
+func (self *Ua) HasNoReplyTimer() bool {
     return self.no_reply_timer != nil
 }
 
-func (self *ua) CancelNoReplyTimer() {
+func (self *Ua) CancelNoReplyTimer() {
     if self.no_reply_timer != nil {
         self.no_reply_timer.Cancel()
         self.no_reply_timer = nil
     }
 }
 
-func (self *ua) GetNpMtime() *sippy_time.MonoTime {
+func (self *Ua) GetNpMtime() *sippy_time.MonoTime {
     return self._np_mtime
 }
 
-func (self *ua) GetExMtime() *sippy_time.MonoTime {
+func (self *Ua) GetExMtime() *sippy_time.MonoTime {
     return self._ex_mtime
 }
 
-func (self *ua) SetExMtime(t *sippy_time.MonoTime) {
+func (self *Ua) SetExMtime(t *sippy_time.MonoTime) {
     self._ex_mtime = t
 }
 
-func (self *ua) GetP100Ts() *sippy_time.MonoTime {
+func (self *Ua) GetP100Ts() *sippy_time.MonoTime {
     return self.p100_ts
 }
 
-func (self *ua) SetP100Ts(ts *sippy_time.MonoTime) {
+func (self *Ua) SetP100Ts(ts *sippy_time.MonoTime) {
     if self.p100_ts == nil {
         self.p100_ts = ts
     }
 }
 
-func (self *ua) HasNoProgressTimer() bool {
+func (self *Ua) HasNoProgressTimer() bool {
     return self.no_progress_timer != nil
 }
 
-func (self *ua) CancelNoProgressTimer() {
+func (self *Ua) CancelNoProgressTimer() {
     if self.no_progress_timer != nil {
         self.no_progress_timer.Cancel()
         self.no_progress_timer = nil
     }
 }
 
-func (self *ua) HasOnRemoteSdpChange() bool {
+func (self *Ua) HasOnRemoteSdpChange() bool {
     return self.on_remote_sdp_change != nil
 }
 
-func (self *ua) GetP1xxTs() *sippy_time.MonoTime {
+func (self *Ua) GetP1xxTs() *sippy_time.MonoTime {
     return self.p1xx_ts
 }
 
-func (self *ua) SetP1xxTs(ts *sippy_time.MonoTime) {
+func (self *Ua) SetP1xxTs(ts *sippy_time.MonoTime) {
     self.p1xx_ts = ts
 }
 
-func (self *ua) GetRingCbs() []sippy_types.OnRingingListener {
+func (self *Ua) GetRingCbs() []sippy_types.OnRingingListener {
     return self.ring_cbs
 }
 
-func (self *ua) GetConnectTs() *sippy_time.MonoTime {
+func (self *Ua) GetConnectTs() *sippy_time.MonoTime {
     return self.connect_ts
 }
 
-func (self *ua) SetConnectTs(connect_ts *sippy_time.MonoTime) {
+func (self *Ua) SetConnectTs(connect_ts *sippy_time.MonoTime) {
     self.connect_ts = connect_ts
 }
 
-func (self *ua) SetBranch(branch string) {
+func (self *Ua) SetBranch(branch string) {
     self.branch = branch
 }
 
-func (self *ua) GetConnCbs() []sippy_types.OnConnectListener {
+func (self *Ua) GetConnCbs() []sippy_types.OnConnectListener {
     return self.conn_cbs
 }
 
-func (self *ua) SetConnCbs(conn_cbs []sippy_types.OnConnectListener) {
+func (self *Ua) SetConnCbs(conn_cbs []sippy_types.OnConnectListener) {
     self.conn_cbs = conn_cbs
 }
 
-func (self *ua) SetH323ConfId(h323_conf_id *sippy_header.SipH323ConfId) {
+func (self *Ua) SetH323ConfId(h323_conf_id *sippy_header.SipH323ConfId) {
     self.h323_conf_id = h323_conf_id
 }
 
-func (self *ua) SetAuth(auth sippy_header.SipHeader) {
+func (self *Ua) SetAuth(auth sippy_header.SipHeader) {
     self.auth = auth
 }
 
-func (self *ua) SetNpMtime(t *sippy_time.MonoTime) {
+func (self *Ua) SetNpMtime(t *sippy_time.MonoTime) {
     self._np_mtime = t
 }
 
-func (self *ua) GetNrMtime() *sippy_time.MonoTime {
+func (self *Ua) GetNrMtime() *sippy_time.MonoTime {
     return self._nr_mtime
 }
 
-func (self *ua) SetNrMtime(t *sippy_time.MonoTime) {
+func (self *Ua) SetNrMtime(t *sippy_time.MonoTime) {
     self._nr_mtime = t
 }
 
-func (self *ua) logError(args ...interface{}) {
+func (self *Ua) logError(args ...interface{}) {
     self.config.ErrorLogger().Error(args...)
 }
 
-func (self *ua) GetController() sippy_types.CallController {
+func (self *Ua) GetController() sippy_types.CallController {
     return self.call_controller
 }
 
-func (self *ua) SetCreditTime(credit_time time.Duration) {
+func (self *Ua) SetCreditTime(credit_time time.Duration) {
     self.credit_time = &credit_time
 }
 
-func (self *ua) GetSessionLock() sync.Locker {
+func (self *Ua) GetSessionLock() sync.Locker {
     return self.session_lock
 }
 
-func (self *ua) isConnected() bool {
+func (self *Ua) isConnected() bool {
     if self.state != nil {
         return self.state.IsConnected()
     }
     return false
 }
 
-func (self *ua) GetPendingTr() sippy_types.ClientTransaction {
+func (self *Ua) GetPendingTr() sippy_types.ClientTransaction {
     return self.pending_tr
 }
 
-func (self *ua) SetPendingTr(tr sippy_types.ClientTransaction) {
+func (self *Ua) SetPendingTr(tr sippy_types.ClientTransaction) {
     self.pending_tr = tr
 }
 
-func (self *ua) GetLateMedia() bool {
+func (self *Ua) GetLateMedia() bool {
     return self.late_media
 }
 
-func (self *ua) SetLateMedia(late_media bool) {
+func (self *Ua) SetLateMedia(late_media bool) {
     self.late_media = late_media
 }
 
-func (self *ua) GetPassAuth() bool {
+func (self *Ua) GetPassAuth() bool {
     return self.pass_auth
 }
 
-func (self *ua) GetRemoteUA() string {
+func (self *Ua) GetRemoteUA() string {
     return self.remote_ua
 }
 
-func (self *ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map[int64]*sippy_time.MonoTime) {
+func (self *Ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map[int64]*sippy_time.MonoTime) {
     for k, v := range new_credit_times {
         self.credit_times[k] = v
     }
@@ -1007,14 +1007,14 @@ func (self *ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map
     }
 }
 
-func (self *ua) SetExtraHeaders(extra_headers []sippy_header.SipHeader) {
+func (self *Ua) SetExtraHeaders(extra_headers []sippy_header.SipHeader) {
     self.extra_headers = extra_headers
 }
 
-func (self *ua) OnUnregister() {
+func (self *Ua) OnUnregister() {
 }
 
-func (self *ua) GetAcct(disconnect_ts *sippy_time.MonoTime) (duration time.Duration, delay time.Duration, connected bool, disconnected bool) {
+func (self *Ua) GetAcct(disconnect_ts *sippy_time.MonoTime) (duration time.Duration, delay time.Duration, connected bool, disconnected bool) {
     if self.disconnect_ts != nil {
         disconnect_ts = self.disconnect_ts
         disconnected = true
@@ -1036,24 +1036,24 @@ func (self *ua) GetAcct(disconnect_ts *sippy_time.MonoTime) (duration time.Durat
     return
 }
 
-func (self *ua) GetCLD() string {
+func (self *Ua) GetCLD() string {
     if self.rUri == nil {
         return ""
     }
     return self.rUri.GetUrl().Username
 }
 
-func (self *ua) GetCLI() string {
+func (self *Ua) GetCLI() string {
     if self.lUri == nil {
         return ""
     }
     return self.lUri.GetUrl().Username
 }
 
-func (self *ua) GetUasLossEmul() int {
+func (self *Ua) GetUasLossEmul() int {
     return 0
 }
 
-func (self *ua) Config() sippy_conf.Config {
+func (self *Ua) Config() sippy_conf.Config {
     return self.config
 }
