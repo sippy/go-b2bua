@@ -143,7 +143,7 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     sects := []*sippy_sdp.SdpMediaDescription{}
     for _, sect := range parsed_body.GetSections() {
         switch strings.ToLower(sect.GetMHeader().GetTransport()) {
-        case "udp", "udptl", "rtp/avp", "rtp/savp":
+        case "udp", "udptl", "rtp/avp", "rtp/savp", "udp/bfcp":
             sects = append(sects, sect)
         default:
         }
