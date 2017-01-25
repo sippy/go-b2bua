@@ -482,6 +482,10 @@ func (self *sipTransactionManager) UnregConsumer(consumer sippy_types.UA, call_i
 }
 
 func (self *sipTransactionManager) SendResponse(resp sippy_types.SipResponse, lock bool, ack_cb func(sippy_types.SipRequest)) {
+    self.SendResponseWithLossEmul(resp, lock, ack_cb, 0)
+}
+
+func (self *sipTransactionManager) SendResponseWithLossEmul(resp sippy_types.SipResponse, lock bool, ack_cb func(sippy_types.SipRequest), lossemul int) {
     //print self.tserver
     tid := resp.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
     self.tserver_lock.Lock()
@@ -492,7 +496,7 @@ func (self *sipTransactionManager) SendResponse(resp sippy_types.SipResponse, lo
             t.Lock()
             defer t.Unlock()
         }
-        t.SendResponse(resp, /*retrans*/ false, ack_cb)
+        t.SendResponseWithLossEmul(resp, /*retrans*/ false, ack_cb, lossemul)
     } else {
         self.logError("Cannot get server transaction")
         return

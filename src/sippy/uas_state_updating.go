@@ -53,11 +53,11 @@ func (self *UasStateUpdating) OnActivation() {
 
 func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "INVITE" {
-        t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponseWithLossEmul(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
         return nil
     } else if req.GetMethod() == "BYE" {
         self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
-        t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponseWithLossEmul(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
         //print "BYE received in the Updating state, going to the Disconnected state"
         event := NewCCEventDisconnect(nil, req.GetRtime(), self.ua.GetOrigin())
         event.SetReason(req.GetReason())
@@ -67,11 +67,11 @@ func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0)
     } else if req.GetMethod() == "REFER" {
         if req.GetReferTo() == nil {
-            t.SendResponse(req.GenResponse(400, "Bad Request", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
+            t.SendResponseWithLossEmul(req.GenResponse(400, "Bad Request", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
             return nil
         }
         self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
-        t.SendResponse(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponseWithLossEmul(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
         also := req.GetReferTo().GetUrl().GetCopy()
         self.ua.Enqueue(NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin()))
         self.ua.CancelCreditTimer()

@@ -109,6 +109,7 @@ type ua struct {
     pending_tr      sippy_types.ClientTransaction
     late_media      bool
     heir            sippy_types.UA
+    uas_lossemul    int
 }
 
 func (self *ua) me() sippy_types.UA {
@@ -116,6 +117,10 @@ func (self *ua) me() sippy_types.UA {
         return self
     }
     return self.heir
+}
+
+func (self *ua) UasLossEmul() int {
+    return self.uas_lossemul
 }
 
 func (self *ua) String() string {
@@ -368,10 +373,10 @@ func (self *ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reas
         ack_cb = self.recvACK
     }
     if t != nil {
-        t.SendResponse(uasResp, /*retrans*/ false, ack_cb)
+        t.SendResponseWithLossEmul(uasResp, /*retrans*/ false, ack_cb, self.uas_lossemul)
     } else {
         // the lock on the server transaction is already aquired so find it but do not try to lock
-        self.sip_tm.SendResponse(uasResp, /*lock*/ false, ack_cb)
+        self.sip_tm.SendResponseWithLossEmul(uasResp, /*lock*/ false, ack_cb, self.uas_lossemul)
     }
 }
 

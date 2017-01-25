@@ -278,6 +278,7 @@ type UA interface {
     GetCLD() string
     GetUasLossEmul() int
     Config() sippy_conf.Config
+    UasLossEmul() int
 }
 
 type baseTransaction interface {
@@ -315,6 +316,7 @@ type SipTransactionManager interface {
     UnregConsumer(UA, string)
     NewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer) (ClientTransaction, error)
     SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))
+    SendResponseWithLossEmul(resp SipResponse, lock bool, ack_cb func(SipRequest), lossemul int)
     Run()
     Shutdown()
 }
