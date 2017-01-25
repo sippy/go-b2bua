@@ -28,9 +28,7 @@ package sippy
 
 import (
     "bufio"
-    "math/rand"
     "net"
-    "time"
     "strconv"
     "strings"
     "sync"
@@ -258,7 +256,7 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
     } else if self.online {
         self.me().GoOffline()
     } else {
-        StartTimeout(self.version_check, nil, randomize(self.opts.hrtb_retr_ival, 0.1), 1, self.logger)
+        StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.logger, 0.1)
     }
 }
 
@@ -303,7 +301,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         }
         self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
-    StartTimeout(self.heartbeat, nil, randomize(self.opts.hrtb_ival, 0.1), 1, self.logger)
+    StartTimeoutWithSpread(self.heartbeat, nil, self.opts.hrtb_ival, 1, self.logger, 0.1)
 }
 
 func (self *Rtp_proxy_client_base) GoOnline() {
@@ -327,7 +325,7 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     //print "go_offline", self.address, self.online
     if self.online {
         self.online = false
-        StartTimeout(self.version_check, nil, randomize(self.opts.hrtb_retr_ival, 0.1), 1, self.logger)
+        StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.logger, 0.1)
     }
 }
 
@@ -396,8 +394,4 @@ func (self *rtppCapsChecker) caps_query_done(result string, attr *bool) {
         self.rtpc.GoOnline()
         self.rtpc = nil
     }
-}
-
-func randomize(x time.Duration, p float64) time.Duration {
-    return time.Duration(x.Seconds() * (1.0 + p * (1.0 - 2.0 * rand.Float64())) * float64(time.Second))
 }

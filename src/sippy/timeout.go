@@ -41,17 +41,22 @@ type Timeout struct {
     logger          sippy_log.ErrorLogger
     shutdown_chan   chan struct{}
     shutdown        bool
-    spread          time.Duration
+    spread          float64
     nticks          int
     lock            sync.Mutex
     cb_lock         sync.Locker
     started         bool
 }
 
-func StartTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *Timeout {
+func StartTimeoutWithSpread(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger, spread float64) *Timeout {
     self := NewInactiveTimeout(callback, cb_lock, _timeout, nticks, logger)
+    self.spread = spread
     self.Start()
     return self
+}
+
+func StartTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *Timeout {
+    return StartTimeoutWithSpread(callback, cb_lock, _timeout, nticks, logger, 0)
 }
 
 func NewInactiveTimeout(callback func(), cb_lock sync.Locker, _timeout time.Duration, nticks int, logger sippy_log.ErrorLogger) *Timeout {
@@ -78,7 +83,7 @@ func (self *Timeout) Start() {
     self.lock.Unlock()
 }
 
-func (self *Timeout) SpreadRuns(spread time.Duration) {
+func (self *Timeout) SpreadRuns(spread float64) {
     self.spread = spread
 }
 
@@ -106,7 +111,7 @@ func (self *Timeout) _run() {
         }
         t := self.timeout
         if self.spread > 0 {
-            t += time.Duration(float64(self.spread) * (rand.Float64() - 0.5))
+            t = time.Duration(float64(t) * (1 + self.spread * (1 - 2 * rand.Float64())))
         }
         select {
         case <-self.shutdown_chan:
