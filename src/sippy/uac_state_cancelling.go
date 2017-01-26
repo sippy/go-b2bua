@@ -58,7 +58,7 @@ func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin
 func (self *UacStateCancelling) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetDiscCbs() {
-            listener(self.rtime, self.origin, self.scode)
+            listener(self.rtime, self.origin, self.scode, nil)
         }
     }
 }
@@ -103,7 +103,7 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
         req := self.ua.GenRequest("BYE", nil, "", "", nil)
         self.ua.IncLCSeq()
         self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)
-        return NewUaStateDisconnected(self.ua, nil, "", 0)
+        return NewUaStateDisconnected(self.ua, nil, "", 0, nil)
     }
     return NewUaStateDead(self.ua, nil, "")
 }

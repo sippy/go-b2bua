@@ -36,14 +36,16 @@ type UaStateDisconnected struct {
     rtime   *sippy_time.MonoTime
     origin  string
     scode   int
+    inreq   sippy_types.SipRequest
 }
 
-func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *UaStateDisconnected {
+func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, inreq sippy_types.SipRequest) *UaStateDisconnected {
     self := &UaStateDisconnected{
         uaStateGeneric  : newUaStateGeneric(ua),
         rtime           : rtime,
         origin          : origin,
         scode           : scode,
+        inreq           : inreq,
     }
     ua.ResetOnLocalSdpChange()
     ua.ResetOnRemoteSdpChange()
@@ -53,7 +55,7 @@ func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origi
 func (self *UaStateDisconnected) OnActivation() {
     if self.rtime != nil {
         for _, listener := range self.ua.GetDiscCbs() {
-            listener(self.rtime, self.origin, self.scode)
+            listener(self.rtime, self.origin, self.scode, self.inreq)
         }
     }
     StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, self.ua.Config().ErrorLogger())

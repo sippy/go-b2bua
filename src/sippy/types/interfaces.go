@@ -350,7 +350,7 @@ type StatefulProxy interface {
 }
 
 type OnRingingListener func(*sippy_time.MonoTime, string, int)
-type OnDisconnectListener func(*sippy_time.MonoTime, string, int)
+type OnDisconnectListener func(*sippy_time.MonoTime, string, int, SipRequest)
 type OnFailureListener func(*sippy_time.MonoTime, string, int)
 type OnConnectListener func(*sippy_time.MonoTime, string)
 type OnDeadListener func()

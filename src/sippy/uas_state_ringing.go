@@ -129,7 +129,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.SendUasResponse(nil, 500, "Disconnected", nil, nil, false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode()), nil
+        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), nil), nil
     }
     //return nil, fmt.Errorf("wrong event %s in the Ringing state", _event.String())
     return nil, nil
@@ -149,7 +149,7 @@ func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_typ
         self.ua.Enqueue(event)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
-        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0)
+        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
     }
     return nil
 }
@@ -160,6 +160,6 @@ func (self *UasStateRinging) Cancel(rtime *sippy_time.MonoTime, req sippy_types.
         event.SetReason(req.GetReason())
     }
     self.ua.SetDisconnectTs(rtime)
-    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0))
+    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0, req))
     self.ua.EmitEvent(event)
 }

@@ -64,7 +64,7 @@ func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.Enqueue(event)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
-        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0)
+        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
     } else if req.GetMethod() == "REFER" {
         if req.GetReferTo() == nil {
             t.SendResponseWithLossEmul(req.GenResponse(400, "Bad Request", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
@@ -76,7 +76,7 @@ func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.Enqueue(NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin()))
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
-        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0)
+        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
     }
     //print "wrong request %s in the state Updating" % req.getMethod()
     return nil
@@ -131,7 +131,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0), nil
+        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0, nil), nil
     }
     //return nil, fmt.Errorf("wrong event %s in the Updating state", _event.String())
     return nil, nil
@@ -143,7 +143,7 @@ func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_typ
     self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
     self.ua.CancelCreditTimer()
     self.ua.SetDisconnectTs(rtime)
-    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0))
+    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0, inreq))
     event := NewCCEventDisconnect(nil, rtime, self.ua.GetOrigin())
     if inreq != nil {
         event.SetReason(inreq.GetReason())

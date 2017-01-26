@@ -121,7 +121,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.Enqueue(event)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
-        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0)
+        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
     }
     if req.GetMethod() == "INFO" {
         t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
@@ -174,7 +174,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         }
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0), nil
+        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0, nil), nil
     }
     if _event, ok := event.(*CCEventUpdate); ok {
         body := _event.GetBody()

@@ -67,7 +67,7 @@ func (self *UacStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.Enqueue(event)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
-        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0)
+        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
     }
     //print "wrong request %s in the state Updating" % req.getMethod()
     return nil
@@ -132,7 +132,7 @@ func (self *UacStateUpdating) updateFailed(event sippy_types.CCEvent) sippy_type
     self.ua.SetDisconnectTs(event.GetRtime())
     event = NewCCEventDisconnect(nil, event.GetRtime(), self.ua.GetOrigin())
     self.ua.Enqueue(event)
-    return NewUaStateDisconnected(self.ua, event.GetRtime(), self.ua.GetOrigin(), 0)
+    return NewUaStateDisconnected(self.ua, event.GetRtime(), self.ua.GetOrigin(), 0, nil)
 }
 
 func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
@@ -149,7 +149,7 @@ func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0), nil
+        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0, nil), nil
     }
     //return nil, fmt.Errorf("wrong event %s in the Updating state", event.String())
     return nil, nil
