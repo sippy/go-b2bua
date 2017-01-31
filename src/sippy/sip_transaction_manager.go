@@ -59,8 +59,8 @@ type sipTransactionManager struct {
     req_consumers   map[string][]sippy_types.UA
     consumers_lock  sync.Mutex
     pass_t_to_cb    bool
-    sip_to_q850     func(int) (string, string)
     provisional_retr time.Duration
+    before_response_sent func(sippy_types.SipResponse)
 }
 
 type sipTMRetransmitO struct {
@@ -557,4 +557,14 @@ func (self *sipTransactionManager) tserver_replace(old_tid, new_tid *sippy_heade
 
 func (self *sipTransactionManager) Shutdown() {
     self.shutdown_chan <- 1
+}
+
+func (self *sipTransactionManager) beforeResponseSent(resp sippy_types.SipResponse) {
+    if self.before_response_sent != nil {
+        self.before_response_sent(resp)
+    }
+}
+
+func (self *sipTransactionManager) SetBeforeResponseSent(cb func(sippy_types.SipResponse)) {
+    self.before_response_sent = cb
 }

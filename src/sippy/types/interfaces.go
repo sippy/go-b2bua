@@ -318,6 +318,7 @@ type SipTransactionManager interface {
     NewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer) (ClientTransaction, error)
     SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))
     SendResponseWithLossEmul(resp SipResponse, lock bool, ack_cb func(SipRequest), lossemul int)
+    SetBeforeResponseSent(func(SipResponse))
     Run()
     Shutdown()
 }

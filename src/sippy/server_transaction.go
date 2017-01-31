@@ -247,6 +247,7 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
     if resp.GetSCodeNum() > 100 && resp.GetTo().GetTag() == "" {
         resp.GetTo().GenTag()
     }
+    self.sip_tm.beforeResponseSent(resp)
     self.data = []byte(resp.LocalStr(self.userv.GetLaddress(), /*compact*/ false))
     self.address = resp.GetVias()[0].GetTAddr(self.sip_tm.config)
     need_cleanup := false
