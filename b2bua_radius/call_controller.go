@@ -91,7 +91,7 @@ func NewCallController(id int64, remote_ip *sippy_conf.MyAddress, source *sippy_
     self.uaA.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
     self.uaA.SetConnCbs([]sippy_types.OnConnectListener{ self.aConn})
     self.uaA.SetDiscCbs([]sippy_types.OnDisconnectListener{ self.aDisc })
-    self.uaA.SetFailCbs([]sippy_types.OnFailureListener{ self.aDisc })
+    self.uaA.SetFailCbs([]sippy_types.OnFailureListener{ self.aFail })
     self.uaA.SetDeadCbs([]sippy_types.OnDeadListener{ self.aDead })
     return self
 }
@@ -373,7 +373,11 @@ func (self *callController) aConn(rtime *sippy_time.MonoTime, origin string) {
     //self.acctA.conn(rtime, origin)
 }
 
-func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, result int) {
+func (self *callController) aFail(rtime *sippy_time.MonoTime, origin string, result int) {
+    self.aDisc(rtime, origin, result, nil)
+}
+
+func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, result int, inreq sippy_types.SipRequest) {
     //if self.state == CCStateWaitRoute && self.auth_proc != nil {
     //    self.auth_proc.cancel()
     //    self.auth_proc = nil
