@@ -60,11 +60,22 @@ func NewLocal4Remote(config sippy_conf.Config, handleIncoming UdpPacketReceiver)
         laddresses = append(laddresses, sippy_conf.NewHostPort(config.SipAddress().String(), config.GetMyPort().String()))
         self.fixed = true
     }
+    var last_error error
     for _, laddress := range laddresses {
         sopts := NewUdpServerOpts(laddress, handleIncoming)
         server, err := NewUdpServer(config, sopts)
-        if err != nil { return nil, err }
-        self.cache_l2s[laddress.String()] = server
+        if err != nil {
+            if ! config.SipAddress().IsSystemDefault() {
+                return nil, err
+            } else {
+                last_error = err
+            }
+        } else {
+            self.cache_l2s[laddress.String()] = server
+        }
+    }
+    if len(self.cache_l2s) == 0 && last_error != nil {
+        return nil, last_error
     }
     return self, nil
 }
