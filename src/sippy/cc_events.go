@@ -343,3 +343,5 @@ func NewCCEventPreConnect(scode int, scode_reason string, body sippy_types.MsgBo
 }
 
 func (self *CCEventPreConnect) String() string { return "CCEventPreConnect" }
+func (self *CCEventPreConnect) GetScode() int { return self.scode }
+func (self *CCEventPreConnect) GetScodeReason() string { return self.scode_reason }
