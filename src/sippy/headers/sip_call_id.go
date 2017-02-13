@@ -39,7 +39,7 @@ type SipCallId struct {
     CallId string
 }
 
-var _sip_call_id_name compactName = newCompactName("Call-Id",  "i")
+var _sip_call_id_name compactName = newCompactName("Call-ID",  "i")
 
 func ParseSipCallId(body string) ([]SipHeader, error) {
     self := &SipCallId{
