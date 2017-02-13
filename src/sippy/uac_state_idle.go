@@ -129,8 +129,6 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             self.ua.StartExpireTimer(self.ua.GetExMtime())
         }
         return NewUacStateTrying(self.ua), nil
-    }
-    switch _event.(type) {
     case *CCEventFail:
     case *CCEventRedirect:
     case *CCEventDisconnect:
