@@ -72,7 +72,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(resp.GetRtime())
         }
-        event := NewCCEventRing(code, reason, body, /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+        event := NewCCEventRing(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         for _, ring_cb := range self.ua.GetRingCbs() {
             ring_cb(resp.GetRtime(), self.ua.GetOrigin(), code)
         }
@@ -95,11 +95,11 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         tag := resp.GetTo().GetTag()
         if tag == "" {
             //print "tag-less 200 OK, disconnecting"
-            event := NewCCEventFail(502, "Bad Gateway", /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+            event := NewCCEventFail(502, "Bad Gateway", resp.GetRtime(), self.ua.GetOrigin())
             self.ua.Enqueue(event)
             req := self.ua.GenRequest("BYE", nil, "", "", nil)
             self.ua.IncLCSeq()
-            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)
+            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime())  {
                 self.ua.SetDisconnectTs(resp.GetRtime())
             } else {
@@ -113,12 +113,12 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         var rval sippy_types.UaState
         if !self.ua.GetLateMedia() || body == nil {
             self.ua.SetLateMedia(false)
-            event = NewCCEventConnect(code, reason, resp.GetBody(), /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+            event = NewCCEventConnect(code, reason, resp.GetBody(), resp.GetRtime(), self.ua.GetOrigin())
             self.ua.StartCreditTimer(resp.GetRtime())
             self.ua.SetConnectTs(resp.GetRtime())
             rval = NewUaStateConnected(self.ua, resp.GetRtime(), self.ua.GetOrigin())
         } else {
-            event = NewCCEventPreConnect(code, reason, resp.GetBody(), /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+            event = NewCCEventPreConnect(code, reason, resp.GetBody(), resp.GetRtime(), self.ua.GetOrigin())
             tr.SetUAck(true)
             self.ua.SetPendingTr(tr)
             rval = NewUaStateConnected(self.ua, nil, "")
@@ -139,9 +139,9 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
     }
     var event sippy_types.CCEvent
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
-        event = NewCCEventRedirect(code, reason, body, resp.GetContacts()[0].GetUrl().GetCopy(), /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+        event = NewCCEventRedirect(code, reason, body, resp.GetContacts()[0].GetUrl().GetCopy(), resp.GetRtime(), self.ua.GetOrigin())
     } else {
-        event = NewCCEventFail(code, reason, /*body,*/ /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+        event = NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event.SetReason(resp.GetReason())
     }
     self.ua.Enqueue(event)

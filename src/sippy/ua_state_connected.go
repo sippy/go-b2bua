@@ -67,17 +67,17 @@ func (self *UaStateConnected) String() string {
 func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "REFER" {
         if req.GetReferTo() == nil {
-            t.SendResponse(req.GenResponse(400, "Bad Request", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
+            t.SendResponse(req.GenResponse(400, "Bad Request", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
             return nil
         }
-        t.SendResponse(req.GenResponse(202, "Accepted", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponse(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         also := req.GetReferTo().GetUrl().GetCopy()
         self.ua.Enqueue(NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin()))
         self.ua.RecvEvent(NewCCEventDisconnect(nil, req.GetRtime(), self.ua.GetOrigin()))
         return nil
     }
     if req.GetMethod() == "INVITE" {
-        self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()))
+        self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
         t.SendResponse(self.ua.GetUasResp(), false, nil)
         body := req.GetBody()
         if body == nil {
@@ -92,7 +92,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             }
             parsed_body.SetCHeaderAddr("0.0.0.0")
         } else if self.ua.GetRSDP().String() == body.String() {
-            t.SendResponse(req.GenResponse(200, "OK", self.ua.GetLSDP(), /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
+            t.SendResponse(req.GenResponse(200, "OK", self.ua.GetLSDP(), self.ua.GetLocalUA().AsSipServer()), false, nil)
             return nil
         }
         event := NewCCEventUpdate(req.GetRtime(), self.ua.GetOrigin(), req.GetReason(), req.GetMaxForwards(), body)
@@ -110,7 +110,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         return NewUasStateUpdating(self.ua)
     }
     if req.GetMethod() == "BYE" {
-        t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         //print "BYE received in the Connected state, going to the Disconnected state"
         var also *sippy_header.SipURL
         if len(req.GetAlso()) > 0 {
@@ -124,14 +124,14 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
     }
     if req.GetMethod() == "INFO" {
-        t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
-        event := NewCCEventInfo(/*rtime*/ req.GetRtime(), /*origin*/ self.ua.GetOrigin(), req.GetBody())
+        t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
+        event := NewCCEventInfo(req.GetRtime(), self.ua.GetOrigin(), req.GetBody())
         event.SetReason(req.GetReason())
         self.ua.Enqueue(event)
         return nil
     }
     if req.GetMethod() == "OPTIONS" || req.GetMethod() == "UPDATE" {
-        t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         return nil
     }
     //print "wrong request %s in the state Connected" % req.GetMethod()
@@ -158,19 +158,19 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         if redirect != nil && self.ua.ShouldUseRefer() {
             req := self.ua.GenRequest("REFER", nil, "", "", nil, eh...)
             self.ua.IncLCSeq()
-            also := sippy_header.NewSipReferTo(/*address*/ sippy_header.NewSipAddress("", /*url*/ redirect))
+            also := sippy_header.NewSipReferTo(sippy_header.NewSipAddress("", redirect))
             req.AppendHeader(also)
-            rby := sippy_header.NewSipReferredBy(/*address*/ sippy_header.NewSipAddress("", /*url*/ self.ua.GetLUri().GetUrl()))
+            rby := sippy_header.NewSipReferredBy(sippy_header.NewSipAddress("", self.ua.GetLUri().GetUrl()))
             req.AppendHeader(rby)
-            self.ua.SipTM().NewClientTransaction(req, newRedirectController(self.ua), self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)
+            self.ua.SipTM().NewClientTransaction(req, newRedirectController(self.ua), self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
         } else {
             req := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
             self.ua.IncLCSeq()
             if redirect != nil {
-                also := sippy_header.NewSipAlso(/*address*/ sippy_header.NewSipAddress("", /*url*/ redirect))
+                also := sippy_header.NewSipAlso(sippy_header.NewSipAddress("", redirect))
                 req.AppendHeader(also)
             }
-            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)
+            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
         }
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
@@ -180,9 +180,9 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         body := _event.GetBody()
         if self.ua.GetLSDP() != nil && body != nil && self.ua.GetLSDP().String() == body.String() {
             if self.ua.GetRSDP() != nil {
-                self.ua.Enqueue(NewCCEventConnect(200, "OK", self.ua.GetRSDP().GetCopy(), /*rtime*/ event.GetRtime(), /*origin*/ event.GetOrigin()))
+                self.ua.Enqueue(NewCCEventConnect(200, "OK", self.ua.GetRSDP().GetCopy(), event.GetRtime(), event.GetOrigin()))
             } else {
-                self.ua.Enqueue(NewCCEventConnect(200, "OK", nil, /*rtime*/ event.GetRtime(), /*origin*/ event.GetOrigin()))
+                self.ua.Enqueue(NewCCEventConnect(200, "OK", nil, event.GetRtime(), event.GetOrigin()))
             }
             return nil, nil
         }
@@ -206,7 +206,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         req := self.ua.GenRequest("INVITE", body, "", "", nil, eh2...)
         self.ua.IncLCSeq()
         self.ua.SetLSDP(body)
-        t, err := self.ua.SipTM().NewClientTransaction(req, self.ua, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)
+        t, err := self.ua.SipTM().NewClientTransaction(req, self.ua, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
         if err != nil {
             return nil, err
         }
@@ -219,13 +219,11 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         req := self.ua.GenRequest("INFO", nil, "", "", nil, eh...)
         req.SetBody(body)
         self.ua.IncLCSeq()
-        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)
+        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
         return nil, nil
     }
     if _event, ok := event.(*CCEventConnect); ok && self.ua.GetPendingTr() != nil {
-    //if self.ua.GetPendingTr() != nil && isinstance(event, CCEventConnect) {
         self.ua.CancelExpireTimer()
-        //code, reason, body = event.getData()
         body := _event.GetBody()
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
             self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
@@ -259,8 +257,7 @@ func (self *UaStateConnected) OnStateChange() {
 
 func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
     body := req.GetBody()
-    //scode = ('ACK', 'ACK', body)
-    event := NewCCEventConnect(0, "ACK", nil, /*rtime*/ req.GetRtime(), /*origin*/ self.ua.GetOrigin())
+    event := NewCCEventConnect(0, "ACK", nil, req.GetRtime(), self.ua.GetOrigin())
     self.ua.CancelExpireTimer()
     self.ua.StartCreditTimer(req.GetRtime())
     self.ua.SetConnectTs(req.GetRtime())

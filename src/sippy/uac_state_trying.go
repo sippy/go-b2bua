@@ -51,7 +51,6 @@ func (self *UacStateTrying) String() string {
 func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
     body := resp.GetBody()
     code, reason := resp.GetSCode()
-    //scode = (code, reason, body)
     self.ua.SetLastScode(code)
 
     if self.ua.HasNoReplyTimer() {
@@ -64,7 +63,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     }
     if code == 100 {
         self.ua.SetP100Ts(resp.GetRtime())
-        self.ua.Enqueue(NewCCEventRing(code, reason, body, /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin()))
+        self.ua.Enqueue(NewCCEventRing(code, reason, body, resp.GetRtime(), self.ua.GetOrigin()))
         return nil
     }
     if self.ua.HasNoProgressTimer() {
@@ -74,7 +73,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         }
     }
     if code < 200 {
-        event := NewCCEventRing(code, reason, body, /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+        event := NewCCEventRing(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, resp, func(x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
@@ -96,11 +95,11 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         tag := resp.GetTo().GetTag()
         if tag == "" {
             //logger.Debug("tag-less 200 OK, disconnecting")
-            self.ua.Enqueue(NewCCEventFail(502, "Bad Gateway", /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin()))
+            self.ua.Enqueue(NewCCEventFail(502, "Bad Gateway", resp.GetRtime(), self.ua.GetOrigin()))
             // Generate and send BYE
             req := self.ua.GenRequest("BYE", nil, "", "", nil)
             self.ua.IncLCSeq()
-            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil)
+            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime()) {
                 self.ua.SetDisconnectTs(resp.GetRtime())
             } else {
@@ -140,9 +139,9 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     }
     var event sippy_types.CCEvent
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
-        event = NewCCEventRedirect(code, reason, body, resp.GetContacts()[0].GetUrl().GetCopy(), /*rtime*/ resp.GetRtime(), /*origin*/ self.ua.GetOrigin())
+        event = NewCCEventRedirect(code, reason, body, resp.GetContacts()[0].GetUrl().GetCopy(), resp.GetRtime(), self.ua.GetOrigin())
     } else {
-        event_fail := NewCCEventFail(code, reason, /*body,*/ resp.GetRtime(), self.ua.GetOrigin())
+        event_fail := NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event = event_fail
         if self.ua.GetPassAuth() {
             if code == 401 && resp.GetSipWWWAuthenticate() != nil {
