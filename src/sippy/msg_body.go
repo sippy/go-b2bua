@@ -197,7 +197,7 @@ func (self *msgBody) GetCopy() sippy_types.MsgBody {
         mtype                   : self.mtype,
         parsed_body             : parsed_body,
         string_content          : self.string_content,
-        needs_update            : self.needs_update,
+        needs_update            : true,
     }
 }
 
