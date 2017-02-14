@@ -193,7 +193,7 @@ func (self *serverTransaction) doCancel(rtime *sippy_time.MonoTime, req sippy_ty
         rtime, _ = sippy_time.NewMonoTime()
     }
     if self.r487 != nil {
-        self.SendResponse(self.r487, true, nil)
+        self.SendResponse(self.r487, true, nil, nil)
     }
     self.cancel_cb(rtime, req)
 }
@@ -233,11 +233,11 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
     }
 }
 
-func (self *serverTransaction) SendResponse(resp sippy_types.SipResponse, retrans bool, ack_cb func(sippy_types.SipRequest)) {
-    self.SendResponseWithLossEmul(resp, retrans, ack_cb, 0)
+func (self *serverTransaction) SendResponse(resp sippy_types.SipResponse, retrans bool, ack_cb func(sippy_types.SipRequest), ua sippy_types.UA) {
+    self.SendResponseWithLossEmul(resp, retrans, ack_cb, 0, ua)
 }
 
-func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResponse, retrans bool, ack_cb func(sippy_types.SipRequest), lossemul int) {
+func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResponse, retrans bool, ack_cb func(sippy_types.SipRequest), lossemul int, ua sippy_types.UA) {
     if self.sip_tm == nil {
         return
     }
@@ -285,6 +285,9 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
             self.sip_tm.tserver_del(self.tid)
             need_cleanup = true
         }
+    }
+    if ua != nil {
+        ua.BeforeResponseSent(resp)
     }
     self.sip_tm.transmitData(self.userv, self.data, self.address, self.checksum, self.tid.CallId, lossemul)
     if need_cleanup {

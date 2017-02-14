@@ -68,9 +68,9 @@ func (self *UaStateDisconnected) String() string {
 func (self *UaStateDisconnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "BYE" {
         //print "BYE received in the Disconnected state"
-        t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua)
     } else {
-        t.SendResponse(req.GenResponse(500, "Disconnected", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
+        t.SendResponse(req.GenResponse(500, "Disconnected", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua)
     }
     return nil
 }

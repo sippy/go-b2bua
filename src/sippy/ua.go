@@ -210,7 +210,7 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         challenge := resp.GetSipWWWAuthenticate()
         req := self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), /*SipXXXAuthorization*/ nil)
         self.lCSeq += 1
-        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil)
+        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me())
         if err == nil {
             self.tr.SetOutboundProxy(self.outbound_proxy)
             delete(self.reqs, cseq)
@@ -222,7 +222,7 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         challenge := resp.GetSipProxyAuthenticate()
         req := self.me().GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         self.lCSeq += 1
-        self.tr, err = self.sip_tm.NewClientTransaction(req, self, self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil)
+        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me())
         if err == nil {
             self.tr.SetOutboundProxy(self.outbound_proxy)
         }
@@ -373,10 +373,10 @@ func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reas
         ack_cb = self.recvACK
     }
     if t != nil {
-        t.SendResponseWithLossEmul(uasResp, /*retrans*/ false, ack_cb, self.uas_lossemul)
+        t.SendResponseWithLossEmul(uasResp, /*retrans*/ false, ack_cb, self.uas_lossemul, self.me())
     } else {
         // the lock on the server transaction is already aquired so find it but do not try to lock
-        self.sip_tm.SendResponseWithLossEmul(uasResp, /*lock*/ false, ack_cb, self.uas_lossemul)
+        self.sip_tm.SendResponseWithLossEmul(uasResp, /*lock*/ false, ack_cb, self.uas_lossemul, self.me())
     }
 }
 
@@ -1056,4 +1056,10 @@ func (self *Ua) GetUasLossEmul() int {
 
 func (self *Ua) Config() sippy_conf.Config {
     return self.config
+}
+
+func (self *Ua) BeforeResponseSent(sippy_types.SipResponse) {
+}
+
+func (self *Ua) BeforeRequestSent(sippy_types.SipRequest) {
 }

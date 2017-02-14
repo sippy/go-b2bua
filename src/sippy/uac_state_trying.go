@@ -99,7 +99,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             // Generate and send BYE
             req := self.ua.GenRequest("BYE", nil, "", "", nil)
             self.ua.IncLCSeq()
-            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil)
+            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime()) {
                 self.ua.SetDisconnectTs(resp.GetRtime())
             } else {

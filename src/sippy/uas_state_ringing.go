@@ -138,7 +138,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
 func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "BYE" {
         self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
-        t.SendResponseWithLossEmul(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
+        t.SendResponseWithLossEmul(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul(), self.ua)
         //print "BYE received in the Ringing state, going to the Disconnected state"
         var also *sippy_header.SipURL = nil
         if len(req.GetAlso()) > 0 {

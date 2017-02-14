@@ -52,11 +52,11 @@ func (self *statefulProxy) RecvRequest(req sippy_types.SipRequest, t sippy_types
     req.InsertFirstVia(via0)
     req.SetTarget(self.destination)
     //print req
-    self.sip_tm.NewClientTransaction(req, self, nil, nil, nil)
+    self.sip_tm.NewClientTransaction(req, self, nil, nil, nil, nil)
     return &sippy_types.Ua_context{}
 }
 
 func (self *statefulProxy) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) {
     resp.RemoveFirstVia()
-    self.sip_tm.SendResponse(resp, /*lock*/true, nil)
+    self.sip_tm.SendResponse(resp, /*lock*/true, nil, nil)
 }

@@ -53,9 +53,10 @@ type clientTransaction struct {
     uack            bool
     ack_rAddr       *sippy_conf.HostPort
     ack_checksum    string
+    ua              sippy_types.UA
 }
 
-func NewClientTransaction(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort) sippy_types.ClientTransaction {
+func NewClientTransaction(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, ua sippy_types.UA) sippy_types.ClientTransaction {
     var r408 sippy_types.SipResponse = nil
     if resp_receiver != nil {
         r408 = req.GenResponse(408, "Request Timeout", /*body*/ nil, /*server*/ nil)
@@ -80,6 +81,7 @@ func NewClientTransaction(req sippy_types.SipRequest, tid *sippy_header.TID, use
         cancel          : cancel,
         session_lock    : session_lock,
         uack            : false,
+        ua              : ua,
     }
     self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
     return self
@@ -189,7 +191,7 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
     if self.state == TRYING {
         self.state = RINGING
         if self.cancelPending {
-            self.sip_tm.NewClientTransaction(self.cancel, nil, self.session_lock, nil, self.userv)
+            self.sip_tm.NewClientTransaction(self.cancel, nil, self.session_lock, nil, self.userv, self.ua)
             self.cancelPending = false
         }
     }
@@ -289,7 +291,7 @@ func (self *clientTransaction) Cancel(extra_headers ...sippy_header.SipHeader) {
                 self.cancel.AppendHeader(h)
             }
         }
-        self.sip_tm.NewClientTransaction(self.cancel, nil, self.session_lock, nil, self.userv)
+        self.sip_tm.NewClientTransaction(self.cancel, nil, self.session_lock, nil, self.userv, self.ua)
     }
 }
 
