@@ -57,8 +57,8 @@ func (self *errorLogger) ErrorAndTraceback(err interface{}) {
     defer self.lock.Unlock()
     self.Error(err)
     buf := make([]byte, 16384)
-    runtime.Stack(buf, false)
-    s := string(buf)
+    n := runtime.Stack(buf, false)
+    s := string(buf[:n])
     for _, l := range strings.Split(s, "\n") {
         self.Error(l)
     }
