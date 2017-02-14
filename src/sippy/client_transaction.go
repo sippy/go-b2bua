@@ -48,8 +48,6 @@ type clientTransaction struct {
     outbound_proxy  *sippy_conf.HostPort
     cancel          sippy_types.SipRequest
     cancelPending   bool
-    session_lock    sync.Locker
-    lock            sync.Mutex
     uack            bool
     ack_rAddr       *sippy_conf.HostPort
     ack_checksum    string
@@ -79,11 +77,10 @@ func NewClientTransaction(req sippy_types.SipRequest, tid *sippy_header.TID, use
         expires         : expires,
         ack             : ack,
         cancel          : cancel,
-        session_lock    : session_lock,
         uack            : false,
         ua              : ua,
     }
-    self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
+    self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
     return self
 }
 
@@ -111,7 +108,7 @@ func (self *clientTransaction) startTeC() {
     if self.teC != nil {
         self.teC.Cancel()
     }
-    self.teC = StartTimeout(self.timerC, self, 32 * time.Second, 1, self.logger)
+    self.teC = StartTimeout(self.timerC, self.lock, 32 * time.Second, 1, self.logger)
 }
 
 func (self *clientTransaction) timerB() {
@@ -161,7 +158,7 @@ func (self *clientTransaction) startTeB(timeout time.Duration) {
     if self.teB != nil {
         self.teB.Cancel()
     }
-    self.teB = StartTimeout(self.timerB, self, timeout, 1, self.logger)
+    self.teB = StartTimeout(self.timerB, self.lock, timeout, 1, self.logger)
 }
 
 func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string) {
@@ -191,7 +188,7 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
     if self.state == TRYING {
         self.state = RINGING
         if self.cancelPending {
-            self.sip_tm.NewClientTransaction(self.cancel, nil, self.session_lock, nil, self.userv, self.ua)
+            self.sip_tm.NewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.ua)
             self.cancelPending = false
         }
     }
@@ -264,7 +261,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             self.ack_rAddr = rAddr
             self.ack_checksum = checksum
             self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
-            self.teG = StartTimeout(self.timerG, self, 64 * time.Second, 1, self.logger)
+            self.teG = StartTimeout(self.timerG, self.lock, 64 * time.Second, 1, self.logger)
             return
         }
     } else {
@@ -291,24 +288,16 @@ func (self *clientTransaction) Cancel(extra_headers ...sippy_header.SipHeader) {
                 self.cancel.AppendHeader(h)
             }
         }
-        self.sip_tm.NewClientTransaction(self.cancel, nil, self.session_lock, nil, self.userv, self.ua)
+        self.sip_tm.NewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.ua)
     }
 }
 
 func (self *clientTransaction) Lock() {
-    if self.session_lock != nil {
-        self.session_lock.Lock()
-    } else {
-        self.lock.Lock()
-    }
+    self.lock.Lock()
 }
 
 func (self *clientTransaction) Unlock() {
-    if self.session_lock != nil {
-        self.session_lock.Unlock()
-    } else {
-        self.lock.Unlock()
-    }
+    self.lock.Unlock()
 }
 
 func (self *clientTransaction) SendACK() {
