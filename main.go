@@ -62,7 +62,7 @@ func init() {
 type callController struct {
     uaA             sippy_types.UA
     uaO             sippy_types.UA
-    lock            *sync.Mutex
+    lock            *sync.Mutex // this must be a reference to prevent memory leak
     id              int64
     cmap            *callMap
 }

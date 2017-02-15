@@ -48,7 +48,7 @@ type callController struct {
     source          *sippy_conf.HostPort
     routes          []*B2BRoute
     pass_headers    []sippy_header.SipHeader
-    lock            *sync.Mutex
+    lock            *sync.Mutex // this must be a reference to prevent memory leak
     cId             *sippy_header.SipCallId
     cGUID           *sippy_header.SipCiscoGUID
     cli             string
