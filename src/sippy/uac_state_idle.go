@@ -114,15 +114,15 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         self.ua.SetClientTransaction(tr)
         self.ua.SetAuth(nil)
 
-        if self.ua.GetExpireTime() != 0 {
+        if self.ua.GetExpireTime() > 0 {
             self.ua.SetExMtime(event.GetRtime().Add(self.ua.GetExpireTime()))
         }
-        if self.ua.GetNoProgressTime() != 0 && (self.ua.GetExpireTime() == 0 || self.ua.GetNoProgressTime() < self.ua.GetExpireTime()) {
+        if self.ua.GetNoProgressTime() > 0 && (self.ua.GetExpireTime() <= 0 || self.ua.GetNoProgressTime() < self.ua.GetExpireTime()) {
             self.ua.SetNpMtime(event.GetRtime().Add(self.ua.GetNoProgressTime()))
         }
-        if (self.ua.GetNoReplyTime() != 0 && self.ua.GetNoReplyTime() < time.Duration(32 * time.Second)) &&
-          (self.ua.GetExpireTime() == 0 || self.ua.GetNoReplyTime() < self.ua.GetExpireTime()) &&
-          (self.ua.GetNoProgressTime() == 0 || self.ua.GetNoReplyTime() < self.ua.GetNoProgressTime()) {
+        if (self.ua.GetNoReplyTime() > 0 && self.ua.GetNoReplyTime() < time.Duration(32 * time.Second)) &&
+          (self.ua.GetExpireTime() <= 0 || self.ua.GetNoReplyTime() < self.ua.GetExpireTime()) &&
+          (self.ua.GetNoProgressTime() <= 0 || self.ua.GetNoReplyTime() < self.ua.GetNoProgressTime()) {
             self.ua.SetNrMtime(event.GetRtime().Add(self.ua.GetNoReplyTime()))
         }
         if self.ua.GetNrMtime() != nil {
