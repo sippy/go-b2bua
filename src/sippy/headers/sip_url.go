@@ -230,8 +230,7 @@ func (self *SipURL) String() string {
 func (self *SipURL) LocalStr(hostport *sippy_conf.HostPort) string {
     l := "sip:"
     if self.Username != "" {
-        username := strings.Replace(self.Username, "@", "%40", -1)
-        username = strings.Replace(username, ":", "%3A", -1)
+        username := url_enc.Escape(self.Username)
         l += username
         for _, v := range self.userparams {
             l += ";" + v
