@@ -41,10 +41,15 @@ const (
     RFC3261_UNRESERVED = "-_.!~*'()"
 )
 
-var url_enc *sippy_utils.UrlEncode
+var user_enc *sippy_utils.UrlEncode
+var passw_enc *sippy_utils.UrlEncode
+var hnv_enc *sippy_utils.UrlEncode
 
 func init() {
-    url_enc = sippy_utils.NewUrlEncode([]byte(RFC3261_USER_UNRESERVED + RFC3261_UNRESERVED))
+    user_enc = sippy_utils.NewUrlEncode([]byte(RFC3261_USER_UNRESERVED + RFC3261_UNRESERVED))
+    passw_enc = sippy_utils.NewUrlEncode([]byte(RFC3261_UNRESERVED + "&=+$,"))
+    //param_enc = sippy_utils.NewUrlEncode([]byte(RFC3261_UNRESERVED + "[]/:&+$"))
+    hnv_enc = sippy_utils.NewUrlEncode([]byte(RFC3261_UNRESERVED + "[]/?:+$"))
 }
 
 type SipURL struct {
@@ -103,7 +108,7 @@ func ParseSipURL(_url string, relaxedparser bool) (*SipURL, error) {
         for _, header := range strings.Split(headers, "&") {
             arr = strings.SplitN(header, "=", 2)
             if len(arr) == 2 {
-                self.headers[strings.ToLower(arr[0])], _ = url_enc.Unescape(arr[1])
+                self.headers[strings.ToLower(arr[0])], _ = hnv_enc.Unescape(arr[1])
             }
         }
     }
@@ -112,13 +117,13 @@ func ParseSipURL(_url string, relaxedparser bool) (*SipURL, error) {
         hostport = userdomain[ear:]
         upparts := strings.SplitN(userpass, ":", 2)
         if len(upparts) > 1 {
-            self.password = upparts[1]
+            self.password, _ = passw_enc.Unescape(upparts[1])
         }
         uparts := strings.Split(upparts[0], ";")
         if len(uparts) > 1 {
             self.userparams = uparts[1:]
         }
-        self.Username, _ = url_enc.Unescape(uparts[0])
+        self.Username, _ = user_enc.Unescape(uparts[0])
     } else {
         hostport = userdomain
     }
@@ -182,7 +187,7 @@ func ParseSipURL(_url string, relaxedparser bool) (*SipURL, error) {
             headers := arr[1]
             for _, header := range strings.Split(headers, "&") {
                 if arr := strings.SplitN(header, "=", 2); len(arr) == 2 {
-                    self.headers[strings.ToLower(arr[0])], _ = url_enc.Unescape(arr[1])
+                    self.headers[strings.ToLower(arr[0])], _ = hnv_enc.Unescape(arr[1])
                 }
             }
         }
@@ -230,13 +235,13 @@ func (self *SipURL) String() string {
 func (self *SipURL) LocalStr(hostport *sippy_conf.HostPort) string {
     l := "sip:"
     if self.Username != "" {
-        username := url_enc.Escape(self.Username)
+        username := user_enc.Escape(self.Username)
         l += username
         for _, v := range self.userparams {
             l += ";" + v
         }
         if self.password != "" {
-            l += ":" + self.password
+            l += ":" + passw_enc.Escape(self.password)
         }
         l += "@"
     }
@@ -270,7 +275,7 @@ func (self *SipURL) LocalStr(hostport *sippy_conf.HostPort) string {
         l += "?"
         arr := []string{}
         for k, v := range self.headers {
-            arr = append(arr, strings.Title(k) + "=" + url_enc.Escape(v))
+            arr = append(arr, strings.Title(k) + "=" + hnv_enc.Escape(v))
         }
         l += strings.Join(arr, "&")
     }
