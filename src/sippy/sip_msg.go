@@ -38,10 +38,6 @@ import (
     "sippy/headers"
 )
 
-type SipMsgDescendant interface {
-    GetSL() string
-}
-
 type sipMsg struct {
     headers             []sippy_header.SipHeader
     __mbody             *string
