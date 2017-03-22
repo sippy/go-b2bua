@@ -375,3 +375,7 @@ type RtpProxyClient interface {
     GoOffline()
     GetOpts() RtpProxyClientOpts
 }
+
+type RtpProxyUpdateResult interface {
+    Address() string
+}

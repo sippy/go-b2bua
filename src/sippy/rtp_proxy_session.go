@@ -55,11 +55,15 @@ type Rtp_proxy_session struct {
     config                  sippy_conf.Config
 }
 
-type rtp_command_result struct {
+type rtpproxy_update_result struct {
     rtpproxy_address    string
     rtpproxy_port       string
     family              string
     sendonly            bool
+}
+
+func (self *rtpproxy_update_result) Address() string {
+    return self.rtpproxy_address
 }
 
 func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker) (*Rtp_proxy_session, error) {
@@ -137,7 +141,7 @@ func (self *Rtp_proxy_session) StopPlayCaller(result_callback func(string)/*= ni
 
 func (self *Rtp_proxy_session) StartRecording(rname/*= nil*/ string, result_callback func(string)/*= nil*/, index int/*= 0*/) {
     if ! self.caller.session_exists {
-        self.caller.update("0.0.0.0", "0", func(*rtp_command_result) { self._start_recording(rname, result_callback, index) }, "", index, "IP4")
+        self.caller.update("0.0.0.0", "0", func(*rtpproxy_update_result) { self._start_recording(rname, result_callback, index) }, "", index, "IP4")
         return
     }
     self._start_recording(rname, result_callback, index)
@@ -209,4 +213,8 @@ func (self *Rtp_proxy_session) SetCalleeRaddress(addr *sippy_conf.HostPort) {
 
 func (self *Rtp_proxy_session) SetInsertNortpp(v bool) {
     self.insert_nortpp = v
+}
+
+func (self *Rtp_proxy_session) SetAfterCallerSdpChange(cb func(sippy_types.RtpProxyUpdateResult)) {
+    self.caller.after_sdp_change = cb
 }

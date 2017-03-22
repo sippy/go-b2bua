@@ -49,6 +49,7 @@ type _rtpps_side struct {
     repacketize     int
     origin_lock     sync.Mutex
     oh_remote       *sippy_sdp.SdpOrigin
+    after_sdp_change func(sippy_types.RtpProxyUpdateResult)
 }
 
 func (self *_rtpps_side) _play(prompt_name string, times int, result_callback func(string), index int) {
@@ -56,7 +57,7 @@ func (self *_rtpps_side) _play(prompt_name string, times int, result_callback fu
         return
     }
     if ! self.otherside.session_exists {
-        self.otherside.update("0.0.0.0", "0", func(*rtp_command_result) { self.__play(prompt_name, times, result_callback, index) }, "", index, "IP4")
+        self.otherside.update("0.0.0.0", "0", func(*rtpproxy_update_result) { self.__play(prompt_name, times, result_callback, index) }, "", index, "IP4")
         return
     }
     self.__play(prompt_name, times, result_callback, index)
@@ -67,7 +68,7 @@ func (self *_rtpps_side) __play(prompt_name string, times int, result_callback f
     self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.owner.command_result(r, result_callback) }, self.owner.session_lock)
 }
 
-func (self *_rtpps_side) update(remote_ip string, remote_port string, result_callback func(*rtp_command_result), options/*= ""*/ string, index /*= 0*/int, atype /*= "IP4"*/string) {
+func (self *_rtpps_side) update(remote_ip string, remote_port string, result_callback func(*rtpproxy_update_result), options/*= ""*/ string, index /*= 0*/int, atype /*= "IP4"*/string) {
     command := "U"
     self.owner.max_index = int(math.Max(float64(self.owner.max_index), float64(index)))
     if self.owner.rtp_proxy_client.SBindSupported() {
@@ -94,7 +95,7 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     self.owner.rtp_proxy_client.SendCommand(command, func(r string) { self.update_result(r, remote_ip, atype, result_callback) }, self.owner.session_lock)
 }
 
-func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_callback func(*rtp_command_result)) {
+func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_callback func(*rtpproxy_update_result)) {
     //print "%s.update_result(%s)" % (id(self), result)
     //result_callback, face, callback_parameters = args
     self.session_exists = true
@@ -128,7 +129,7 @@ func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_c
     } else if atype == "IP6" && remote_ip == "::" {
         sendonly = true
     }
-    result_callback(&rtp_command_result{
+    result_callback(&rtpproxy_update_result{
         rtpproxy_address    : rtpproxy_address,
         rtpproxy_port       : t1[0],
         family              : family,
@@ -166,15 +167,18 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
             sect_options = "6" + options
         }
         self.update(sect.GetCHeader().GetAddr(), sect.GetMHeader().GetPort(),
-              func (res *rtp_command_result) { self._sdp_change_finish(res, sdp_body, parsed_body, sect, sects, result_callback) },
+              func (res *rtpproxy_update_result) { self._sdp_change_finish(res, sdp_body, parsed_body, sect, sects, result_callback) },
               sect_options, i, sect.GetCHeader().GetAType())
     }
     return nil
 }
 
-func (self *_rtpps_side) _sdp_change_finish(cb_args *rtp_command_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
+func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
     sect.SetNeedsUpdate(false)
     if cb_args != nil {
+        if self.after_sdp_change != nil {
+            self.after_sdp_change(cb_args)
+        }
         sect.GetCHeader().SetAType(cb_args.family)
         sect.GetCHeader().SetAddr(cb_args.rtpproxy_address)
         if sect.GetMHeader().GetPort() != "0" {
