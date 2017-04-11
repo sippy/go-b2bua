@@ -71,6 +71,10 @@ func (self *genericMsgBody) GetCopy() sippy_types.ParsedMsgBody {
     return &genericMsgBody{ self.body }
 }
 
+func (self *genericMsgBody) GetCHeader() *sippy_sdp.SdpConnecton {
+    return nil
+}
+
 func (self *genericMsgBody) SetCHeaderAddr(string) {
     // NO OP
 }

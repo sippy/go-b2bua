@@ -132,6 +132,7 @@ type ParsedMsgBody interface {
     LocalStr(hostport *sippy_conf.HostPort) string
     GetCopy() ParsedMsgBody
     SetCHeaderAddr(string)
+    GetCHeader() *sippy_sdp.SdpConnecton
     GetSections() []*sippy_sdp.SdpMediaDescription
     SetSections([]*sippy_sdp.SdpMediaDescription)
     RemoveSection(int)

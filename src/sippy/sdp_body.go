@@ -305,6 +305,10 @@ func (self *sdpBody) GetCopy() sippy_types.ParsedMsgBody {
     }
 }
 
+func (self *sdpBody) GetCHeader() *sippy_sdp.SdpConnecton {
+    return self.c_header
+}
+
 func (self *sdpBody) SetCHeaderAddr(addr string) {
     for _, sect := range self.sections {
         sect.GetCHeader().SetAddr(addr)
