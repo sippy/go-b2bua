@@ -308,20 +308,20 @@ type ServerTransaction interface {
     TimersAreActive() bool
     SetCancelCB(func(*sippy_time.MonoTime, SipRequest))
     SetNoackCB(func(*sippy_time.MonoTime))
-    SendResponse(resp SipResponse, retrans bool, ack_cb func(SipRequest), ua UA)
-    SendResponseWithLossEmul(resp SipResponse, retrans bool, ack_cb func(SipRequest), lossemul int, ua UA)
+    SendResponse(resp SipResponse, retrans bool, ack_cb func(SipRequest))
+    SendResponseWithLossEmul(resp SipResponse, retrans bool, ack_cb func(SipRequest), lossemul int)
     Cleanup()
     UpgradeToSessionLock(sync.Locker)
     SetServer(*sippy_header.SipServer)
+    SetBeforeResponseSent(func(SipResponse))
 }
 
 type SipTransactionManager interface {
     RegConsumer(UA, string)
     UnregConsumer(UA, string)
-    NewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer, UA) (ClientTransaction, error)
-    SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest), ua UA)
-    SendResponseWithLossEmul(resp SipResponse, lock bool, ack_cb func(SipRequest), lossemul int, ua UA)
-    SetBeforeResponseSent(func(SipResponse))
+    NewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer, func(SipRequest)) (ClientTransaction, error)
+    SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))
+    SendResponseWithLossEmul(resp SipResponse, lock bool, ack_cb func(SipRequest), lossemul int)
     Run()
     Shutdown()
 }

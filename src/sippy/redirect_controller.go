@@ -43,5 +43,5 @@ func newRedirectController(ua sippy_types.UA) *redirectController {
 func (self *redirectController) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) {
     req := self.ua.GenRequest("BYE", nil, "", "", nil)
     self.ua.IncLCSeq()
-    self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua)
+    self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
 }

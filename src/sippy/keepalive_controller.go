@@ -61,7 +61,7 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
         challenge := resp.GetSipWWWAuthenticate()
         req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
         self.ua.IncLCSeq()
-        self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua)
+        self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         if err == nil {
             self.ka_tr.SetOutboundProxy(self.ua.GetOutboundProxy())
             self.triedauth = true
@@ -72,7 +72,7 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
         challenge := resp.GetSipProxyAuthenticate()
         req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         self.ua.IncLCSeq()
-        self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua)
+        self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         if err == nil {
             self.ka_tr.SetOutboundProxy(self.ua.GetOutboundProxy())
             self.triedauth = true
@@ -105,7 +105,7 @@ func (self *keepaliveController) keepAlive() {
     req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), "", "", nil)
     self.ua.IncLCSeq()
     self.triedauth = false
-    self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua)
+    self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
     if err == nil {
         self.ka_tr.SetOutboundProxy(self.ua.GetOutboundProxy())
     }

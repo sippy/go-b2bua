@@ -299,7 +299,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
 }
 
 // 1. Client transaction methods
-func (self *sipTransactionManager) NewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_conf.HostPort, userv sippy_types.UdpServer, ua sippy_types.UA) (sippy_types.ClientTransaction, error) {
+func (self *sipTransactionManager) NewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_conf.HostPort, userv sippy_types.UdpServer, req_out_cb func(sippy_types.SipRequest)) (sippy_types.ClientTransaction, error) {
     if self == nil {
         return nil, errors.New("BUG: Attempt to initiate transaction from terminated dialog!!!")
     }
@@ -325,13 +325,12 @@ func (self *sipTransactionManager) NewClientTransaction(req sippy_types.SipReque
         return nil, errors.New("BUG: Attempt to initiate transaction with the same TID as existing one!!!")
     }
     data := []byte(req.LocalStr(userv.GetLaddress(), false /* compact */))
-    t := NewClientTransaction(req, tid, userv, data, self, resp_receiver, session_lock, target, ua)
+    t := NewClientTransactionObj(req, tid, userv, data, self, resp_receiver, session_lock, target, req_out_cb)
     self.tclient[*tid] = t
     self.tclient_lock.Unlock()
     t.StartTimers()
-
-    if ua != nil {
-        ua.BeforeRequestSent(req)
+    if t.before_request_sent != nil {
+        t.before_request_sent(req)
     }
     self.transmitData(userv, data, target, /*cachesum*/ "", /*call_id =*/ tid.CallId, 0)
     return t, nil
@@ -419,7 +418,7 @@ func (self *sipTransactionManager) new_server_transaction(server *udpServer, req
         var resp sippy_types.SipResponse
         sippy_utils.SafeCall(func () { ua, req_receiver, resp = self.call_map.OnNewDialog(req, t) }, nil, self.config.ErrorLogger())
         if resp != nil {
-            t.SendResponse(resp, false, nil, ua)
+            t.SendResponse(resp, false, nil)
             return
         } else {
             if ua != nil {
@@ -444,7 +443,7 @@ func (self *sipTransactionManager) new_server_transaction(server *udpServer, req
         t.SetCancelCB(rval.CancelCB)
         t.SetNoackCB(rval.NoAckCB)
         if rval.Response != nil {
-            t.SendResponse(rval.Response, false, nil, ua)
+            t.SendResponse(rval.Response, false, nil)
         }
     }
 }
@@ -483,11 +482,11 @@ func (self *sipTransactionManager) UnregConsumer(consumer sippy_types.UA, call_i
     }
 }
 
-func (self *sipTransactionManager) SendResponse(resp sippy_types.SipResponse, lock bool, ack_cb func(sippy_types.SipRequest), ua sippy_types.UA) {
-    self.SendResponseWithLossEmul(resp, lock, ack_cb, 0, ua)
+func (self *sipTransactionManager) SendResponse(resp sippy_types.SipResponse, lock bool, ack_cb func(sippy_types.SipRequest)) {
+    self.SendResponseWithLossEmul(resp, lock, ack_cb, 0)
 }
 
-func (self *sipTransactionManager) SendResponseWithLossEmul(resp sippy_types.SipResponse, lock bool, ack_cb func(sippy_types.SipRequest), lossemul int, ua sippy_types.UA) {
+func (self *sipTransactionManager) SendResponseWithLossEmul(resp sippy_types.SipResponse, lock bool, ack_cb func(sippy_types.SipRequest), lossemul int) {
     //print self.tserver
     tid := resp.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
     self.tserver_lock.Lock()
@@ -498,7 +497,7 @@ func (self *sipTransactionManager) SendResponseWithLossEmul(resp sippy_types.Sip
             t.Lock()
             defer t.Unlock()
         }
-        t.SendResponseWithLossEmul(resp, /*retrans*/ false, ack_cb, lossemul, ua)
+        t.SendResponseWithLossEmul(resp, /*retrans*/ false, ack_cb, lossemul)
     } else {
         self.logError("Cannot get server transaction")
         return

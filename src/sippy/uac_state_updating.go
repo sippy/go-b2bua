@@ -56,11 +56,11 @@ func (self *UacStateUpdating) OnActivation() {
 
 func (self *UacStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
     if req.GetMethod() == "INVITE" {
-        t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua)
+        t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         return nil
     } else if req.GetMethod() == "BYE" {
         self.ua.GetClientTransaction().Cancel()
-        t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua)
+        t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         //print "BYE received in the Updating state, going to the Disconnected state"
         event := NewCCEventDisconnect(nil, req.GetRtime(), self.ua.GetOrigin())
         event.SetReason(req.GetReason())
@@ -126,7 +126,7 @@ func (self *UacStateUpdating) updateFailed(event sippy_types.CCEvent) sippy_type
     }
     req := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
     self.ua.IncLCSeq()
-    self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua)
+    self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
 
     self.ua.CancelCreditTimer()
     self.ua.SetDisconnectTs(event.GetRtime())
@@ -146,7 +146,7 @@ func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         self.ua.GetClientTransaction().Cancel()
         req := self.ua.GenRequest("BYE", nil, "", "", nil, event.GetExtraHeaders()...)
         self.ua.IncLCSeq()
-        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua)
+        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0, nil), nil

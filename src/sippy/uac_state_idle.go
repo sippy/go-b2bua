@@ -106,7 +106,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         req := self.ua.GenRequest("INVITE", event.GetBody(), /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
         self.ua.IncLCSeq()
         var tr sippy_types.ClientTransaction
-        tr, err = self.ua.SipTM().NewClientTransaction(req, self.ua, self.ua.GetSessionLock(), /*laddress =*/ self.ua.GetSourceAddress(), /*udp_server*/ nil, self.ua)
+        tr, err = self.ua.SipTM().NewClientTransaction(req, self.ua, self.ua.GetSessionLock(), /*laddress =*/ self.ua.GetSourceAddress(), /*udp_server*/ nil, self.ua.BeforeRequestSent)
         if err != nil {
             return nil, err
         }

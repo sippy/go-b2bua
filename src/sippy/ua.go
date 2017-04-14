@@ -162,6 +162,7 @@ func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, n
 func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) (*sippy_types.Ua_context) {
     //print "Received request %s in state %s instance %s" % (req.getMethod(), self.state, self)
     //print self.rCSeq, req.getHFBody("cseq").getCSeqNum()
+    t.SetBeforeResponseSent(self.me().BeforeResponseSent)
     if self.remote_ua == "" {
         self.update_ua(req)
     }
@@ -210,7 +211,7 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         challenge := resp.GetSipWWWAuthenticate()
         req := self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), /*SipXXXAuthorization*/ nil)
         self.lCSeq += 1
-        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me())
+        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
         if err == nil {
             self.tr.SetOutboundProxy(self.outbound_proxy)
             delete(self.reqs, cseq)
@@ -222,7 +223,7 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         challenge := resp.GetSipProxyAuthenticate()
         req := self.me().GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         self.lCSeq += 1
-        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me())
+        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
         if err == nil {
             self.tr.SetOutboundProxy(self.outbound_proxy)
         }
@@ -373,10 +374,10 @@ func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reas
         ack_cb = self.recvACK
     }
     if t != nil {
-        t.SendResponseWithLossEmul(uasResp, /*retrans*/ false, ack_cb, self.uas_lossemul, self.me())
+        t.SendResponseWithLossEmul(uasResp, /*retrans*/ false, ack_cb, self.uas_lossemul)
     } else {
         // the lock on the server transaction is already aquired so find it but do not try to lock
-        self.sip_tm.SendResponseWithLossEmul(uasResp, /*lock*/ false, ack_cb, self.uas_lossemul, self.me())
+        self.sip_tm.SendResponseWithLossEmul(uasResp, /*lock*/ false, ack_cb, self.uas_lossemul)
     }
 }
 

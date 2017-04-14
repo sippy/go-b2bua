@@ -58,5 +58,5 @@ func (self *statefulProxy) RecvRequest(req sippy_types.SipRequest, t sippy_types
 
 func (self *statefulProxy) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) {
     resp.RemoveFirstVia()
-    self.sip_tm.SendResponse(resp, /*lock*/true, nil, nil)
+    self.sip_tm.SendResponse(resp, /*lock*/true, nil)
 }
