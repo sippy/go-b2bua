@@ -79,8 +79,8 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
             //    options += fmt.Sprintf("R%s", self.raddress.Host.String())
             //}
             options += "R" + self.raddress.Host.String()
-        } else {
-            options += "R" + self.laddress
+        } else if self.laddress != "" && self.owner.rtp_proxy_client.IsLocal() {
+            options += "L" + self.laddress
         }
     }
     command += options
