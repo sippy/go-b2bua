@@ -51,9 +51,7 @@ func NewUacStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin st
 
 func (self *UacStateRinging) OnActivation() {
     if self.rtime != nil {
-        for _, listener := range self.ua.GetRingCbs() {
-            listener(self.rtime, self.origin, self.scode)
-        }
+        self.ua.RingCb(self.rtime, self.origin, self.scode)
     }
 }
 
@@ -73,9 +71,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
             self.ua.SetP1xxTs(resp.GetRtime())
         }
         event := NewCCEventRing(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
-        for _, ring_cb := range self.ua.GetRingCbs() {
-            ring_cb(resp.GetRtime(), self.ua.GetOrigin(), code)
-        }
+        self.ua.RingCb(resp.GetRtime(), self.ua.GetOrigin(), code)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, resp, func(x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })

@@ -86,11 +86,11 @@ type Ua struct {
     ltag            string
     rCSeq           int
     branch          string
-    conn_cbs        []sippy_types.OnConnectListener
-    dead_cbs        []sippy_types.OnDeadListener
-    disc_cbs        []sippy_types.OnDisconnectListener
-    fail_cbs        []sippy_types.OnFailureListener
-    ring_cbs        []sippy_types.OnRingingListener
+    conn_cb         sippy_types.OnConnectListener
+    dead_cb         sippy_types.OnDeadListener
+    disc_cb         sippy_types.OnDisconnectListener
+    fail_cb         sippy_types.OnFailureListener
+    ring_cb         sippy_types.OnRingingListener
     credit_timer    *Timeout
     uasResp         sippy_types.SipResponse
     useRefer        bool
@@ -147,11 +147,11 @@ func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, n
         rAddr           : nh_address,
         rAddr0          : nh_address,
         ltag            : sippy_utils.GenTag(),
-        fail_cbs        : make([]sippy_types.OnFailureListener, 0),
-        ring_cbs        : make([]sippy_types.OnRingingListener, 0),
-        disc_cbs        : make([]sippy_types.OnDisconnectListener, 0),
-        conn_cbs        : make([]sippy_types.OnConnectListener, 0),
-        dead_cbs        : make([]sippy_types.OnDeadListener, 0),
+        //fail_cb         : nil,
+        //ring_cb         : nil,
+        //disc_cb         : nil,
+        //conn_cb         : nil,
+        //dead_cb         : nil,
         session_lock    : session_lock,
         pass_auth       : false,
         late_media      : false,
@@ -706,28 +706,32 @@ func (self *Ua) SetDisconnectTs(ts *sippy_time.MonoTime) {
     self.disconnect_ts = ts
 }
 
-func (self *Ua) GetDiscCbs() []sippy_types.OnDisconnectListener {
-    return self.disc_cbs
+func (self *Ua) DiscCb(rtime *sippy_time.MonoTime, origin string, scode int, inreq sippy_types.SipRequest) {
+    if disc_cb := self.disc_cb; disc_cb != nil {
+        disc_cb(rtime, origin, scode, inreq)
+    }
 }
 
-func (self *Ua) SetDiscCbs(disc_cbs []sippy_types.OnDisconnectListener) {
-    self.disc_cbs = disc_cbs
+func (self *Ua) SetDiscCb(disc_cb sippy_types.OnDisconnectListener) {
+    self.disc_cb = disc_cb
 }
 
-func (self *Ua) GetFailCbs() []sippy_types.OnFailureListener {
-    return self.fail_cbs
+func (self *Ua) FailCb(rtime *sippy_time.MonoTime, origin string, scode int) {
+    if fail_cb := self.fail_cb; fail_cb != nil {
+        fail_cb(rtime, origin, scode)
+    }
 }
 
-func (self *Ua) SetFailCbs(fail_cbs []sippy_types.OnFailureListener) {
-    self.fail_cbs = fail_cbs
+func (self *Ua) SetFailCb(fail_cb sippy_types.OnFailureListener) {
+    self.fail_cb = fail_cb
 }
 
-func (self *Ua) GetDeadCbs() []sippy_types.OnDeadListener {
-    return self.dead_cbs
+func (self *Ua) GetDeadCb() sippy_types.OnDeadListener {
+    return self.dead_cb
 }
 
-func (self *Ua) SetDeadCbs(dead_cbs []sippy_types.OnDeadListener) {
-    self.dead_cbs = dead_cbs
+func (self *Ua) SetDeadCb(dead_cb sippy_types.OnDeadListener) {
+    self.dead_cb = dead_cb
 }
 
 func (self *Ua) GetRAddr() *sippy_conf.HostPort {
@@ -747,20 +751,20 @@ func (self *Ua) OnDead() {
     }
     self.tr = nil
     self.call_controller = nil
-    self.conn_cbs = make([]sippy_types.OnConnectListener, 0)
-    self.fail_cbs = make([]sippy_types.OnFailureListener, 0)
-    self.ring_cbs = make([]sippy_types.OnRingingListener, 0)
-    self.disc_cbs = make([]sippy_types.OnDisconnectListener, 0)
+    self.conn_cb = nil
+    self.fail_cb = nil
+    self.ring_cb = nil
+    self.disc_cb = nil
     self.on_local_sdp_change = nil
     self.on_remote_sdp_change = nil
     self.expire_timer = nil
     self.no_progress_timer = nil
     self.credit_timer = nil
     // Keep this at the very end of processing
-    for _, listener := range self.dead_cbs {
-        listener()
+    if self.dead_cb != nil {
+        self.dead_cb()
     }
-    self.dead_cbs = make([]sippy_types.OnDeadListener, 0)
+    self.dead_cb = nil
     self.sip_tm = nil
 }
 
@@ -907,8 +911,10 @@ func (self *Ua) SetP1xxTs(ts *sippy_time.MonoTime) {
     self.p1xx_ts = ts
 }
 
-func (self *Ua) GetRingCbs() []sippy_types.OnRingingListener {
-    return self.ring_cbs
+func (self *Ua) RingCb(rtime *sippy_time.MonoTime, origin string, scode int) {
+    if ring_cb := self.ring_cb; ring_cb != nil {
+        ring_cb(rtime, origin, scode)
+    }
 }
 
 func (self *Ua) GetConnectTs() *sippy_time.MonoTime {
@@ -923,12 +929,14 @@ func (self *Ua) SetBranch(branch string) {
     self.branch = branch
 }
 
-func (self *Ua) GetConnCbs() []sippy_types.OnConnectListener {
-    return self.conn_cbs
+func (self *Ua) ConnCb(rtime *sippy_time.MonoTime, origin string) {
+    if conn_cb := self.conn_cb; conn_cb != nil {
+        conn_cb(rtime, origin)
+    }
 }
 
-func (self *Ua) SetConnCbs(conn_cbs []sippy_types.OnConnectListener) {
-    self.conn_cbs = conn_cbs
+func (self *Ua) SetConnCb(conn_cb sippy_types.OnConnectListener) {
+    self.conn_cb = conn_cb
 }
 
 func (self *Ua) SetH323ConfId(h323_conf_id *sippy_header.SipH323ConfId) {

@@ -50,9 +50,7 @@ func NewUasStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin st
 
 func (self *UasStateRinging) OnActivation() {
     if self.rtime != nil {
-        for _, listener := range self.ua.GetRingCbs() {
-            listener(self.rtime, self.origin, self.scode)
-        }
+        self.ua.RingCb(self.rtime, self.origin, self.scode)
     }
 }
 
@@ -81,9 +79,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
             self.ua.SetP1xxTs(event.GetRtime())
         }
         self.ua.SendUasResponse(nil, code, reason, body, nil, false, eh...)
-        for _, ring_cb := range self.ua.GetRingCbs() {
-            ring_cb(event.rtime, event.origin, code)
-        }
+        self.ua.RingCb(event.rtime, event.origin, code)
         return nil, nil
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body

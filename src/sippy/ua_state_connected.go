@@ -54,9 +54,7 @@ func NewUaStateConnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin s
 
 func (self *UaStateConnected) OnActivation() {
     if self.rtime != nil {
-        for _, listener := range self.ua.GetConnCbs() {
-            listener(self.rtime, self.origin)
-        }
+        self.ua.ConnCb(self.rtime, self.origin)
     }
 }
 
@@ -235,9 +233,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         self.ua.GetPendingTr().GetACK().SetBody(body)
         self.ua.GetPendingTr().SendACK()
         self.ua.SetPendingTr(nil)
-        for _, listener := range self.ua.GetConnCbs() {
-            listener(event.GetRtime(), self.ua.GetOrigin())
-        }
+        self.ua.ConnCb(event.GetRtime(), self.ua.GetOrigin())
     }
     //print "wrong event %s in the Connected state" % event
     return nil, nil
@@ -261,9 +257,7 @@ func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
     self.ua.CancelExpireTimer()
     self.ua.StartCreditTimer(req.GetRtime())
     self.ua.SetConnectTs(req.GetRtime())
-    for _, listener := range self.ua.GetConnCbs() {
-        listener(req.GetRtime(), self.ua.GetOrigin())
-    }
+    self.ua.ConnCb(req.GetRtime(), self.ua.GetOrigin())
     if body != nil {
         if self.ua.HasOnRemoteSdpChange() {
             self.ua.OnRemoteSdpChange(body, req, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })

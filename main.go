@@ -75,7 +75,7 @@ func NewCallController(cmap *callMap) *callController {
         cmap            : cmap,
     }
     self.uaA = sippy.NewUA(cmap.sip_tm, cmap.config, cmap.config.nh_addr, self, self.lock, nil)
-    self.uaA.SetDeadCbs([]sippy_types.OnDeadListener{ self.aDead })
+    self.uaA.SetDeadCb(self.aDead)
     //self.uaA.SetCreditTime(5 * time.Second)
     return self
 }
@@ -89,7 +89,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 return
             }
             self.uaO = sippy.NewUA(self.cmap.sip_tm, self.cmap.config, self.cmap.config.nh_addr, self, self.lock, nil)
-            self.uaO.SetDeadCbs([]sippy_types.OnDeadListener{ self.oDead })
+            self.uaO.SetDeadCb(self.oDead)
             self.uaO.SetRAddr(self.cmap.config.nh_addr)
         }
         self.uaO.RecvEvent(event)

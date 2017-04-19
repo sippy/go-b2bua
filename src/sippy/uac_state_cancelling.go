@@ -57,9 +57,7 @@ func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin
 
 func (self *UacStateCancelling) OnActivation() {
     if self.rtime != nil {
-        for _, listener := range self.ua.GetDiscCbs() {
-            listener(self.rtime, self.origin, self.scode, nil)
-        }
+        self.ua.DiscCb(self.rtime, self.origin, self.scode, nil)
     }
 }
 

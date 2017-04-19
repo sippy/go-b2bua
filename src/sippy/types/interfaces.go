@@ -213,15 +213,15 @@ type UA interface {
     StartNoProgressTimer(*sippy_time.MonoTime)
     StartExpireTimer(*sippy_time.MonoTime)
     CancelExpireTimer()
-    GetDiscCbs() []OnDisconnectListener
-    SetDiscCbs([]OnDisconnectListener)
-    GetFailCbs() []OnFailureListener
-    SetFailCbs([]OnFailureListener)
-    GetConnCbs() []OnConnectListener
-    SetConnCbs([]OnConnectListener)
-    GetRingCbs() []OnRingingListener
-    GetDeadCbs() []OnDeadListener
-    SetDeadCbs([]OnDeadListener)
+    DiscCb(*sippy_time.MonoTime, string, int, SipRequest)
+    SetDiscCb(OnDisconnectListener)
+    FailCb(*sippy_time.MonoTime, string, int)
+    SetFailCb(OnFailureListener)
+    ConnCb(*sippy_time.MonoTime, string)
+    SetConnCb(OnConnectListener)
+    RingCb(*sippy_time.MonoTime, string, int)
+    GetDeadCb() OnDeadListener
+    SetDeadCb(OnDeadListener)
     IsYours(SipRequest, bool) bool
     GetLocalUA() *sippy_header.SipUserAgent
     SetLocalUA(*sippy_header.SipUserAgent)

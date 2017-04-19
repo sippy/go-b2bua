@@ -89,10 +89,10 @@ func NewCallController(id int64, remote_ip *sippy_conf.MyAddress, source *sippy_
     self.uaA = sippy.NewUA(sip_tm, global_config, nil, self, self.lock, nil)
     self.uaA.SetKaInterval(self.global_config.keepalive_ans)
     self.uaA.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
-    self.uaA.SetConnCbs([]sippy_types.OnConnectListener{ self.aConn})
-    self.uaA.SetDiscCbs([]sippy_types.OnDisconnectListener{ self.aDisc })
-    self.uaA.SetFailCbs([]sippy_types.OnFailureListener{ self.aFail })
-    self.uaA.SetDeadCbs([]sippy_types.OnDeadListener{ self.aDead })
+    self.uaA.SetConnCb(self.aConn)
+    self.uaA.SetDiscCb(self.aDisc)
+    self.uaA.SetFailCb(self.aFail)
+    self.uaA.SetDeadCb(self.aDead)
     return self
 }
 
@@ -318,7 +318,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     //  /*expire_time*/ oroute.expires, /*no_progress_time*/ oroute.no_progress_expires, /*extra_headers*/ oroute.extra_headers)
     //self.uaO.SetConnCbs([]sippy_types.OnConnectListener{ self.oConn })
     self.uaO.SetExtraHeaders(oroute.extra_headers)
-    self.uaO.SetDeadCbs([]sippy_types.OnDeadListener{ self.oDead })
+    self.uaO.SetDeadCb(self.oDead)
     self.uaO.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
     if oroute.outbound_proxy != nil && self.source.String() != oroute.outbound_proxy.String() {
         self.uaO.SetOutboundProxy(oroute.outbound_proxy)
