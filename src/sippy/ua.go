@@ -712,6 +712,10 @@ func (self *Ua) DiscCb(rtime *sippy_time.MonoTime, origin string, scode int, inr
     }
 }
 
+func (self *Ua) GetDiscCb() sippy_types.OnDisconnectListener {
+    return self.disc_cb
+}
+
 func (self *Ua) SetDiscCb(disc_cb sippy_types.OnDisconnectListener) {
     self.disc_cb = disc_cb
 }
@@ -720,6 +724,10 @@ func (self *Ua) FailCb(rtime *sippy_time.MonoTime, origin string, scode int) {
     if fail_cb := self.fail_cb; fail_cb != nil {
         fail_cb(rtime, origin, scode)
     }
+}
+
+func (self *Ua) GetFailCb() sippy_types.OnFailureListener {
+    return self.fail_cb
 }
 
 func (self *Ua) SetFailCb(fail_cb sippy_types.OnFailureListener) {
@@ -933,6 +941,10 @@ func (self *Ua) ConnCb(rtime *sippy_time.MonoTime, origin string) {
     if conn_cb := self.conn_cb; conn_cb != nil {
         conn_cb(rtime, origin)
     }
+}
+
+func (self *Ua) GetConnCb() sippy_types.OnConnectListener {
+    return self.conn_cb
 }
 
 func (self *Ua) SetConnCb(conn_cb sippy_types.OnConnectListener) {

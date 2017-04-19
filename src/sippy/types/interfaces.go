@@ -214,10 +214,13 @@ type UA interface {
     StartExpireTimer(*sippy_time.MonoTime)
     CancelExpireTimer()
     DiscCb(*sippy_time.MonoTime, string, int, SipRequest)
+    GetDiscCb() OnDisconnectListener
     SetDiscCb(OnDisconnectListener)
     FailCb(*sippy_time.MonoTime, string, int)
+    GetFailCb() OnFailureListener
     SetFailCb(OnFailureListener)
     ConnCb(*sippy_time.MonoTime, string)
+    GetConnCb() OnConnectListener
     SetConnCb(OnConnectListener)
     RingCb(*sippy_time.MonoTime, string, int)
     GetDeadCb() OnDeadListener
