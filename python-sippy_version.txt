@@ -1,3 +1,3 @@
 The current code is based on the Python sippy b2bua git commit:
 
-    21a04518f2f9efa09aac19f9fd63f0018358107b
+    480ab76b2e4d8567bda76fe8c309b08dbecdce2d

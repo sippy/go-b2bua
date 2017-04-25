@@ -59,13 +59,14 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
     if resp_receiver != nil {
         r408 = req.GenResponse(408, "Request Timeout", /*body*/ nil, /*server*/ nil)
     }
-    expires := 300 * time.Second
-    if req.GetExpires() != nil && req.GetExpires().Number > 0 {
-        expires = time.Duration(req.GetExpires().Number) * time.Second
-    }
+    expires := 32 * time.Second
     needack := false
     var ack, cancel sippy_types.SipRequest
     if req.GetMethod() == "INVITE" {
+        expires = 300 * time.Second
+        if req.GetExpires() != nil && req.GetExpires().Number > 0 {
+            expires = time.Duration(req.GetExpires().Number) * time.Second
+        }
         needack = true
         ack = req.GenACK(nil, sip_tm.config)
         cancel = req.GenCANCEL(sip_tm.config)
