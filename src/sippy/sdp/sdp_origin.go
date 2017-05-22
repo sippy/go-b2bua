@@ -27,6 +27,7 @@
 package sippy_sdp
 
 import (
+    "crypto/rand"
     "errors"
     "strings"
     "strconv"
@@ -39,6 +40,7 @@ var _sdp_session_id int64
 
 func init() {
     buf := make([]byte, 6)
+    rand.Read(buf)
     for i := 0; i < len(buf); i++ {
         _sdp_session_id |= int64(buf[i]) << (uint(i) * 8)
     }
