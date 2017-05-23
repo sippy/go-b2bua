@@ -66,7 +66,7 @@ func (self *rtpproxy_update_result) Address() string {
     return self.rtpproxy_address
 }
 
-func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker) (*Rtp_proxy_session, error) {
+func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker, callee_origin *sippy_sdp.SdpOrigin) (*Rtp_proxy_session, error) {
     self := &Rtp_proxy_session{
         notify_socket   : notify_socket,
         notify_tag      : notify_tag,
@@ -85,7 +85,14 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     self.caller.session_exists = false
     self.callee.session_exists = false
     self.caller.origin = sippy_sdp.NewSdpOrigin(config)
-    self.callee.origin = sippy_sdp.NewSdpOrigin(config)
+    if callee_origin != nil {
+        self.callee.origin = callee_origin.GetCopy()
+        // New session means new RTP port so the SDP is now different and the SDP
+        // version must be increased.
+        self.callee.origin.IncVersion()
+    } else {
+        self.callee.origin = sippy_sdp.NewSdpOrigin(config)
+    }
     online_clients := []sippy_types.RtpProxyClient{}
     for _, cl := range rtp_proxy_clients {
         if cl.IsOnline() {
@@ -217,4 +224,11 @@ func (self *Rtp_proxy_session) SetInsertNortpp(v bool) {
 
 func (self *Rtp_proxy_session) SetAfterCallerSdpChange(cb func(sippy_types.RtpProxyUpdateResult)) {
     self.caller.after_sdp_change = cb
+}
+
+func (self *Rtp_proxy_session) CalleeOrigin() *sippy_sdp.SdpOrigin {
+    if self == nil {
+        return nil
+    }
+    return self.callee.origin
 }

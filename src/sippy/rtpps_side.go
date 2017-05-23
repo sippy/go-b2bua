@@ -203,10 +203,15 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
     if num == 0 {
         self.origin_lock.Lock()
         if self.oh_remote != nil {
-            if parsed_body.GetOHeader() != nil && self.oh_remote.GetSessionId() != parsed_body.GetOHeader().GetSessionId() {
-                self.origin = sippy_sdp.NewSdpOrigin(self.owner.config)
-            } else if self.oh_remote.GetVersion() != parsed_body.GetOHeader().GetVersion() {
-                self.origin.IncVersion()
+            if parsed_body.GetOHeader() != nil {
+                if self.oh_remote.GetSessionId() != parsed_body.GetOHeader().GetSessionId() ||
+                        self.oh_remote.GetVersion() != parsed_body.GetOHeader().GetVersion() {
+                    // Please be aware that this code is not RFC-4566 compliant in case when
+                    // the session is reused for hunting through several call legs. In that
+                    // scenario the outgoing SDP should be compared with the previously sent
+                    // one.
+                    self.origin.IncVersion()
+                }
             }
         }
         self.oh_remote = parsed_body.GetOHeader().GetCopy()
