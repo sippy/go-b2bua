@@ -128,7 +128,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         self.ua.SendUasResponse(nil, 487, "Request Terminated", nil, nil, false, eh...)
         req := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
         self.ua.IncLCSeq()
-        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0, nil), nil
@@ -140,7 +140,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
 func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
     req := self.ua.GenRequest("BYE", nil, "", "", nil)
     self.ua.IncLCSeq()
-    self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
     self.ua.CancelCreditTimer()
     self.ua.SetDisconnectTs(rtime)
     self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0, inreq))

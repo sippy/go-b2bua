@@ -95,7 +95,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
             self.ua.Enqueue(event)
             req := self.ua.GenRequest("BYE", nil, "", "", nil)
             self.ua.IncLCSeq()
-            self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+            self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime())  {
                 self.ua.SetDisconnectTs(resp.GetRtime())
             } else {

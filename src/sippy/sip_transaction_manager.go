@@ -299,7 +299,8 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
 }
 
 // 1. Client transaction methods
-func (self *sipTransactionManager) NewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_conf.HostPort, userv sippy_types.UdpServer, req_out_cb func(sippy_types.SipRequest)) (sippy_types.ClientTransaction, error) {
+func (self *sipTransactionManager) CreateClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_conf.HostPort, userv sippy_types.UdpServer, req_out_cb func(sippy_types.SipRequest)) (sippy_types.ClientTransaction, error) {
+
     if self == nil {
         return nil, errors.New("BUG: Attempt to initiate transaction from terminated dialog!!!")
     }
@@ -328,12 +329,22 @@ func (self *sipTransactionManager) NewClientTransaction(req sippy_types.SipReque
     t := NewClientTransactionObj(req, tid, userv, data, self, resp_receiver, session_lock, target, req_out_cb)
     self.tclient[*tid] = t
     self.tclient_lock.Unlock()
-    t.StartTimers()
-    if t.before_request_sent != nil {
-        t.before_request_sent(req)
-    }
-    self.transmitData(userv, data, target, /*cachesum*/ "", /*call_id =*/ tid.CallId, 0)
     return t, nil
+}
+
+func (self *sipTransactionManager) BeginClientTransaction(req sippy_types.SipRequest, tr sippy_types.ClientTransaction) {
+    tr.StartTimers()
+    tr.BeforeRequestSent(req)
+    tr.TransmitData()
+}
+
+func (self *sipTransactionManager) BeginNewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_conf.HostPort, userv sippy_types.UdpServer, req_out_cb func(sippy_types.SipRequest)) (sippy_types.ClientTransaction, error) {
+    tr, err := self.CreateClientTransaction(req, resp_receiver, session_lock, laddress, userv, req_out_cb)
+    if err != nil {
+        return nil, err
+    }
+    self.BeginClientTransaction(req, tr)
+    return tr, nil
 }
 
 // 2. Server transaction methods

@@ -286,6 +286,7 @@ type UA interface {
     UasLossEmul() int
     BeforeRequestSent(SipRequest)
     BeforeResponseSent(SipResponse)
+    PrepTr(SipRequest) (ClientTransaction, error)
 }
 
 type baseTransaction interface {
@@ -303,6 +304,8 @@ type ClientTransaction interface {
     GetACK() SipRequest
     SendACK()
     SetUAck(bool)
+    BeforeRequestSent(SipRequest)
+    TransmitData()
 }
 
 type ServerTransaction interface {
@@ -322,7 +325,9 @@ type ServerTransaction interface {
 type SipTransactionManager interface {
     RegConsumer(UA, string)
     UnregConsumer(UA, string)
-    NewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer, func(SipRequest)) (ClientTransaction, error)
+    BeginNewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer, func(SipRequest)) (ClientTransaction, error)
+    CreateClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer, func(SipRequest)) (ClientTransaction, error)
+    BeginClientTransaction(SipRequest, ClientTransaction)
     SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))
     SendResponseWithLossEmul(resp SipResponse, lock bool, ack_cb func(SipRequest), lossemul int)
     Run()

@@ -211,9 +211,9 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         challenge := resp.GetSipWWWAuthenticate()
         req := self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), /*SipXXXAuthorization*/ nil)
         self.lCSeq += 1
-        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
+        self.tr, err = self.PrepTr(req)
         if err == nil {
-            self.tr.SetOutboundProxy(self.outbound_proxy)
+            self.sip_tm.BeginClientTransaction(req, self.tr)
             delete(self.reqs, cseq)
         }
         return
@@ -223,11 +223,11 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         challenge := resp.GetSipProxyAuthenticate()
         req := self.me().GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         self.lCSeq += 1
-        self.tr, err = self.sip_tm.NewClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
+        self.tr, err = self.PrepTr(req)
         if err == nil {
-            self.tr.SetOutboundProxy(self.outbound_proxy)
+            self.sip_tm.BeginClientTransaction(req, self.tr)
+            delete(self.reqs, cseq)
         }
-        delete(self.reqs, cseq)
         return
     }
     if code >= 200 && cseq_found {
@@ -238,6 +238,15 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
         self.me().ChangeState(newstate)
     }
     self.emitPendingEvents()
+}
+
+func (self *Ua) PrepTr(req sippy_types.SipRequest) (sippy_types.ClientTransaction, error) {
+    tr, err := self.SipTM().CreateClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
+    if err != nil {
+        return nil, err
+    }
+    tr.SetOutboundProxy(self.outbound_proxy)
+    return tr, nil
 }
 
 func (self *Ua) RecvEvent(event sippy_types.CCEvent) {

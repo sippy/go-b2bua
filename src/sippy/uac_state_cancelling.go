@@ -100,7 +100,7 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
         self.ua.GetRUri().SetTag(resp.GetTo().GetTag())
         req := self.ua.GenRequest("BYE", nil, "", "", nil)
         self.ua.IncLCSeq()
-        self.ua.SipTM().NewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         return NewUaStateDisconnected(self.ua, nil, "", 0, nil)
     }
     return NewUaStateDead(self.ua, nil, "")

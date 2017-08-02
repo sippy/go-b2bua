@@ -61,22 +61,22 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
         challenge := resp.GetSipWWWAuthenticate()
         req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
         self.ua.IncLCSeq()
-        self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ka_tr, err = self.ua.PrepTr(req)
         if err == nil {
-            self.ka_tr.SetOutboundProxy(self.ua.GetOutboundProxy())
             self.triedauth = true
         }
+        self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
         return
     }
     if code == 407 && resp.GetSipProxyAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
         challenge := resp.GetSipProxyAuthenticate()
         req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         self.ua.IncLCSeq()
-        self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ka_tr, err = self.ua.PrepTr(req)
         if err == nil {
-            self.ka_tr.SetOutboundProxy(self.ua.GetOutboundProxy())
             self.triedauth = true
         }
+        self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
         return
     }
     if code < 200 {
@@ -105,8 +105,8 @@ func (self *keepaliveController) keepAlive() {
     req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), "", "", nil)
     self.ua.IncLCSeq()
     self.triedauth = false
-    self.ka_tr, err = self.ua.SipTM().NewClientTransaction(req, self, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+    self.ka_tr, err = self.ua.PrepTr(req)
     if err == nil {
-        self.ka_tr.SetOutboundProxy(self.ua.GetOutboundProxy())
+        self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
     }
 }

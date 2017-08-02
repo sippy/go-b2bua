@@ -189,7 +189,7 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
     if self.state == TRYING {
         self.state = RINGING
         if self.cancelPending {
-            self.sip_tm.NewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
+            self.sip_tm.BeginNewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
             self.cancelPending = false
         }
     }
@@ -289,7 +289,7 @@ func (self *clientTransaction) Cancel(extra_headers ...sippy_header.SipHeader) {
                 self.cancel.AppendHeader(h)
             }
         }
-        self.sip_tm.NewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
+        self.sip_tm.BeginNewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
     }
 }
 
@@ -317,4 +317,16 @@ func (self *clientTransaction) GetACK() sippy_types.SipRequest {
 
 func (self *clientTransaction) SetUAck(uack bool) {
     self.uack = uack
+}
+
+func (self *clientTransaction) BeforeRequestSent(req sippy_types.SipRequest) {
+    if self.before_request_sent != nil {
+        self.before_request_sent(req)
+    }
+}
+
+func (self *clientTransaction) TransmitData() {
+    if self.sip_tm != nil {
+        self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id =*/ self.tid.CallId, 0)
+    }
 }
