@@ -29,6 +29,7 @@ package sippy_sdp
 import (
     "crypto/rand"
     "errors"
+    "net"
     "strings"
     "strconv"
     "sync/atomic"
@@ -52,7 +53,7 @@ type SdpOrigin struct {
     version         int64
     network_type    string
     address_type    string
-    address         *sippy_conf.MyAddress
+    address         string
 }
 
 func ParseSdpOrigin(body string) (*SdpOrigin, error) {
@@ -70,43 +71,39 @@ func ParseSdpOrigin(body string) (*SdpOrigin, error) {
         version         : version,
         network_type    : arr[3],
         address_type    : arr[4],
-        address         : sippy_conf.NewMyAddress(arr[5]),
+        address         : arr[5],
     }, nil
 }
 
-func NewSdpOrigin(config sippy_conf.Config) *SdpOrigin {
+func NewSdpOrigin(address string) (*SdpOrigin, error) {
+    ip := net.ParseIP(address)
+    if ip == nil {
+        return nil, errors.New("The address is not IP address: " + address)
+    }
+    address_type := "IP4"
+    if ip.To16() != nil {
+        address_type = "IP6"
+    }
     sid := atomic.AddInt64(&_sdp_session_id, 1)
     self := &SdpOrigin {
         username        : "-",
         session_id      : strconv.FormatInt(sid, 10),
         network_type    : "IN",
-        address_type    : "IP4",
-        address         : config.GetMyAddress(),
+        address_type    : address_type,
+        address         : address,
     }
     self.version = sid
-    return self
+    return self, nil
 }
 
 func (self *SdpOrigin) String() string {
     version := strconv.FormatInt(self.version, 10)
-    return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address.String() }, " ")
+    return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address }, " ")
 }
 
 func (self *SdpOrigin) LocalStr(hostport *sippy_conf.HostPort) string {
     version := strconv.FormatInt(self.version, 10)
-    if hostport != nil && self.address.IsSystemDefault() {
-        var address_type string
-        local_addr := hostport.Host.String()
-
-        if local_addr[0] == '[' {
-            address_type = "IP6"
-            local_addr = local_addr[1:len(local_addr)-1]
-        } else {
-            address_type = "IP4"
-        }
-        return strings.Join([]string{ self.username, self.session_id, version, self.network_type, address_type, local_addr }, " ")
-    }
-    return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address.String() }, " ")
+    return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address }, " ")
 }
 
 func (self *SdpOrigin) GetCopy() *SdpOrigin {
