@@ -300,6 +300,7 @@ type ClientTransaction interface {
     baseTransaction
     IncomingResponse(resp SipResponse, checksum string)
     SetOutboundProxy(*sippy_conf.HostPort)
+    SetAckRparams(*sippy_conf.HostPort, *sippy_header.SipURL, []*sippy_header.SipRoute)
     Cancel(...sippy_header.SipHeader)
     GetACK() SipRequest
     SendACK()

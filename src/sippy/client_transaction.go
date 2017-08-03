@@ -52,6 +52,9 @@ type clientTransaction struct {
     ack_rAddr       *sippy_conf.HostPort
     ack_checksum    string
     before_request_sent func(sippy_types.SipRequest)
+    ack_rparams_present bool
+    ack_rTarget     *sippy_header.SipURL
+    ack_routes      []*sippy_header.SipRoute
 }
 
 func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, req_out_cb func(sippy_types.SipRequest)) *clientTransaction {
@@ -80,6 +83,7 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         cancel          : cancel,
         uack            : false,
         before_request_sent : req_out_cb,
+        ack_rparams_present : false,
     }
     self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
     return self
@@ -218,34 +222,37 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             } else {
                 rTarget = nil
             }
-            routes := make([]*sippy_header.SipRoute, len(resp.GetRecordRoutes()))
-            for idx, r := range resp.GetRecordRoutes() {
-                r2 := r.AsSipRoute() // r.getCopy()
-                routes[len(resp.GetRecordRoutes()) - 1 + idx] = r2 // reverse order
-            }
-            if len(routes) > 0 {
-                if ! routes[0].GetUrl().Lr {
-                    if rTarget != nil {
-                        routes = append(routes, sippy_header.NewSipRoute(/*address =*/ sippy_header.NewSipAddress(/*name*/ "", /*url =*/ rTarget)))
-                    }
-                    rTarget = routes[0].GetUrl()
-                    routes = routes[1:]
-                    rAddr = rTarget.GetAddr(self.sip_tm.config)
-                } else {
-                    rAddr = routes[0].GetAddr(self.sip_tm.config)
+            var routes []*sippy_header.SipRoute
+            if ! self.ack_rparams_present {
+                routes = make([]*sippy_header.SipRoute, len(resp.GetRecordRoutes()))
+                for idx, r := range resp.GetRecordRoutes() {
+                    r2 := r.AsSipRoute() // r.getCopy()
+                    routes[len(resp.GetRecordRoutes()) - 1 + idx] = r2 // reverse order
                 }
-            } else if rTarget != nil {
-                rAddr = rTarget.GetAddr(self.sip_tm.config)
-            }
-            if rTarget != nil {
-                self.ack.SetRURI(rTarget)
-            }
-            if self.outbound_proxy != nil {
-                routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true))) }, routes...)
-                rAddr = self.outbound_proxy
-            }
-            if rAddr != nil {
-                self.ack.SetTarget(rAddr)
+                if len(routes) > 0 {
+                    if ! routes[0].GetUrl().Lr {
+                        if rTarget != nil {
+                            routes = append(routes, sippy_header.NewSipRoute(sippy_header.NewSipAddress("", rTarget)))
+                        }
+                        rTarget = routes[0].GetUrl()
+                        routes = routes[1:]
+                        rAddr = rTarget.GetAddr(self.sip_tm.config)
+                    } else {
+                        rAddr = routes[0].GetAddr(self.sip_tm.config)
+                    }
+                } else if rTarget != nil {
+
+                    rAddr = rTarget.GetAddr(self.sip_tm.config)
+                }
+                if rTarget != nil {
+                    self.ack.SetRURI(rTarget)
+                }
+                if self.outbound_proxy != nil {
+                    routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true))) }, routes...)
+                    rAddr = self.outbound_proxy
+                }
+            } else {
+                rAddr, rTarget, routes = self.ack_rAddr, self.ack_rTarget, self.ack_routes
             }
             self.ack.SetRoutes(routes)
         }
@@ -329,4 +336,11 @@ func (self *clientTransaction) TransmitData() {
     if self.sip_tm != nil {
         self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id =*/ self.tid.CallId, 0)
     }
+}
+
+func (self *clientTransaction) SetAckRparams(rAddr *sippy_conf.HostPort, rTarget *sippy_header.SipURL, routes []*sippy_header.SipRoute) {
+    self.ack_rparams_present = true
+    self.ack_rAddr = rAddr
+    self.ack_rTarget = rTarget
+    self.ack_routes = routes
 }
