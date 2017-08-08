@@ -44,8 +44,8 @@ func NewSipDiversion(addr *sipAddress) *SipDiversion {
     }
 }
 
-func ParseSipDiversion(body string) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body)
+func ParseSipDiversion(body string, config sippy_conf.Config) ([]SipHeader, error) {
+    addresses, err := ParseSipAddressHF(body, config)
     if err != nil { return nil, err }
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {

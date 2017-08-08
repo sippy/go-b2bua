@@ -41,7 +41,7 @@ type sipAddress struct {
     name        string
 }
 
-func ParseSipAddress(address string, relaxedparser bool) (*sipAddress, error) {
+func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Config) (*sipAddress, error) {
     var err error
     var arr []string
 
@@ -53,7 +53,7 @@ func ParseSipAddress(address string, relaxedparser bool) (*sipAddress, error) {
 
     if strings.HasPrefix(strings.ToLower(address), "sip:") && strings.Index(address, "<") == -1 {
         parts := strings.SplitN(address, ";", 2)
-        self.url, err = ParseSipURL(parts[0], relaxedparser)
+        self.url, err = ParseSipURL(parts[0], relaxedparser, config)
         if err != nil {
             return nil, err
         }
@@ -97,7 +97,7 @@ func ParseSipAddress(address string, relaxedparser bool) (*sipAddress, error) {
         return nil, errors.New("ParseSipAddress #2")
     }
     paramstring := arr[1]
-    self.url, err = ParseSipURL(arr[0], relaxedparser)
+    self.url, err = ParseSipURL(arr[0], relaxedparser, config)
     paramstring = strings.TrimSpace(paramstring)
     if err = self._parse_paramstring(paramstring); err != nil {
         return nil, err

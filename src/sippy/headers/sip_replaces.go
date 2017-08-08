@@ -43,7 +43,7 @@ type SipReplaces struct {
 
 var _sip_replaces_name normalName = newNormalName("Replaces")
 
-func ParseSipReplaces(body string) ([]SipHeader, error) {
+func ParseSipReplaces(body string, config sippy_conf.Config) ([]SipHeader, error) {
     self := &SipReplaces{
         normalName : _sip_replaces_name,
     }

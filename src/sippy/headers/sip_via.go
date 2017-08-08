@@ -61,7 +61,7 @@ type SipVia struct {
 
 var _sip_via_name compactName = newCompactName("Via", "v")
 
-func ParseSipVia(body string) ([]SipHeader, error) {
+func ParseSipVia(body string, config sippy_conf.Config) ([]SipHeader, error) {
     vias := make([]SipHeader, 0)
     for _, via := range strings.Split(body, ",") {
         arr := sippy_utils.FieldsN(via, 2)

@@ -46,7 +46,7 @@ func NewSipExpires() *SipExpires {
     }
 }
 
-func ParseSipExpires(body string) ([]SipHeader, error) {
+func ParseSipExpires(body string, config sippy_conf.Config) ([]SipHeader, error) {
     number, err := strconv.Atoi(body)
     if err != nil {
         return nil, err

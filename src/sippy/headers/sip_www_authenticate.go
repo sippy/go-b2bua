@@ -44,7 +44,7 @@ type SipWWWAuthenticate struct {
 
 var _sip_www_authenticate_name normalName = newNormalName("WWW-Authenticate")
 
-func ParseSipWWWAuthenticate(body string) ([]SipHeader, error) {
+func ParseSipWWWAuthenticate(body string, config sippy_conf.Config) ([]SipHeader, error) {
     self, err := newSipWWWAuthenticateFromString(body)
     if err != nil { return nil, err }
     return []SipHeader{ self }, nil

@@ -44,7 +44,7 @@ func NewSipUserAgent(name string) *SipUserAgent {
     }
 }
 
-func ParseSipUserAgent(body string) ([]SipHeader, error) {
+func ParseSipUserAgent(body string, config sippy_conf.Config) ([]SipHeader, error) {
     return []SipHeader{ &SipUserAgent{
         normalName : _sip_user_agent,
         UserAgent  : body,

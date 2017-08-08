@@ -44,8 +44,8 @@ func NewSipTo(address *sipAddress, config sippy_conf.Config) *SipTo {
     }
 }
 
-func ParseSipTo(body string) ([]SipHeader, error) {
-    addr, err := ParseSipAddressWithTag(body)
+func ParseSipTo(body string, config sippy_conf.Config) ([]SipHeader, error) {
+    addr, err := ParseSipAddressWithTag(body, config)
     if err != nil {
         return nil, err
     }

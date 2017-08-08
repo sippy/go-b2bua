@@ -35,8 +35,8 @@ type sipAddressWithTag struct {
     address *sipAddress
 }
 
-func ParseSipAddressWithTag(body string) (*sipAddressWithTag, error) {
-    addr, err := ParseSipAddress(body, true /* relaxedparser */)
+func ParseSipAddressWithTag(body string, config sippy_conf.Config) (*sipAddressWithTag, error) {
+    addr, err := ParseSipAddress(body, true /* relaxedparser */, config)
     if err != nil { return nil, err }
     return &sipAddressWithTag{ address : addr }, nil
 }

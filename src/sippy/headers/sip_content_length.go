@@ -39,7 +39,7 @@ type SipContentLength struct {
     Length  int
 }
 
-func ParseSipContentLength(body string) ([]SipHeader, error) {
+func ParseSipContentLength(body string, config sippy_conf.Config) ([]SipHeader, error) {
     number, err := strconv.Atoi(body)
     if err != nil {
         return nil, err

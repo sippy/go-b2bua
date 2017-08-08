@@ -68,7 +68,7 @@ func (self *SipContact) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
-func ParseSipContact(body string) ([]SipHeader, error) {
+func ParseSipContact(body string, config sippy_conf.Config) ([]SipHeader, error) {
     rval := []SipHeader{}
     if body == "*" {
         rval = append(rval, &SipContact{
@@ -76,7 +76,7 @@ func ParseSipContact(body string) ([]SipHeader, error) {
             compactName  : _sip_contact_name,
         })
     } else {
-        addresses, err := ParseSipAddressHF(body)
+        addresses, err := ParseSipAddressHF(body, config)
         if err != nil { return nil, err }
         for _, addr := range addresses {
             rval = append(rval, &SipContact{

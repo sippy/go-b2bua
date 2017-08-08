@@ -39,7 +39,7 @@ type SipMaxForwards struct {
 
 var _sip_max_forwards_name normalName = newNormalName("Max-Forwards")
 
-func ParseSipMaxForwards(body string) ([]SipHeader, error) {
+func ParseSipMaxForwards(body string, config sippy_conf.Config) ([]SipHeader, error) {
     number, err := strconv.Atoi(body)
     if err != nil {
         return nil, err

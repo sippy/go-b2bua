@@ -41,7 +41,7 @@ type SipCallId struct {
 
 var _sip_call_id_name compactName = newCompactName("Call-ID",  "i")
 
-func ParseSipCallId(body string) ([]SipHeader, error) {
+func ParseSipCallId(body string, config sippy_conf.Config) ([]SipHeader, error) {
     self := &SipCallId{
         compactName : _sip_call_id_name,
         CallId      : body,

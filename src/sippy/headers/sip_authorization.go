@@ -66,7 +66,7 @@ func NewSipAuthorization(realm, nonce, method, uri, username, password string) *
     }
 }
 
-func ParseSipAuthorization(body string) ([]SipHeader, error) {
+func ParseSipAuthorization(body string, config sippy_conf.Config) ([]SipHeader, error) {
     self, err := NewSipAuthorizationFromString(body)
     if err != nil { return nil, err }
     return []SipHeader{ self }, nil

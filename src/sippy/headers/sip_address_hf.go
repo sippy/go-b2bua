@@ -28,6 +28,8 @@ package sippy_header
 
 import (
     "strings"
+
+    "sippy/conf"
 )
 
 type sipAddressHF struct {
@@ -40,7 +42,7 @@ func NewSipAddressHF(addr *sipAddress) *sipAddressHF {
     }
 }
 
-func ParseSipAddressHF(body string) ([]*sipAddressHF, error) {
+func ParseSipAddressHF(body string, config sippy_conf.Config) ([]*sipAddressHF, error) {
     addresses := []string{}
     pidx := 0
     for {
@@ -68,7 +70,7 @@ func ParseSipAddressHF(body string) ([]*sipAddressHF, error) {
     }
     retval := make([]*sipAddressHF, len(addresses))
     for i, address := range addresses {
-        addr, err := ParseSipAddress(address, false /* relaxedparser */)
+        addr, err := ParseSipAddress(address, false /* relaxedparser */, config)
         if err != nil {
             return nil, err
         }

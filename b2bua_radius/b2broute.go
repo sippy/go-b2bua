@@ -197,7 +197,7 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
             var ash []sippy_header.SipHeader
             v, err = url.QueryUnescape(av[1])
             if err == nil {
-                ash, err = sippy.ParseSipHeader(v)
+                ash, err = sippy.ParseSipHeader(v, global_config)
             }
             if err != nil {
                 return nil, errors.New("Error parsing the ash '" + av[1] + "': " + err.Error())

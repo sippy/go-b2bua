@@ -37,8 +37,8 @@ type SipReferredBy struct {
 
 var _sip_referred_by_name normalName = newNormalName("Referred-By")
 
-func ParseSipReferredBy(body string) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body)
+func ParseSipReferredBy(body string, config sippy_conf.Config) ([]SipHeader, error) {
+    addresses, err := ParseSipAddressHF(body, config)
     if err != nil { return nil, err }
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {

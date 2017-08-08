@@ -37,7 +37,7 @@ type SipServer struct {
 
 var _sip_server_name normalName = newNormalName("Server")
 
-func ParseSipServer(body string) ([]SipHeader, error) {
+func ParseSipServer(body string, config sippy_conf.Config) ([]SipHeader, error) {
     return []SipHeader{ &SipServer{
         normalName  : _sip_server_name,
         Server        : body,

@@ -67,10 +67,12 @@ type SipURL struct {
     other       []string
     userparams  []string
     headers     map[string]string
+    scheme      string
 }
 
 func NewSipURL(username string, host *sippy_conf.MyAddress, port *sippy_conf.MyPort, lr bool /* false */) *SipURL {
     self := &SipURL{
+        scheme      : "sip",
         other       : make([]string, 0),
         userparams  : make([]string, 0),
         Username    : username,
@@ -83,18 +85,60 @@ func NewSipURL(username string, host *sippy_conf.MyAddress, port *sippy_conf.MyP
     return self
 }
 
-func ParseSipURL(_url string, relaxedparser bool) (*SipURL, error) {
+func ParseSipURL(url string, relaxedparser bool, config sippy_conf.Config) (*SipURL, error) {
+
+    parts := strings.SplitN(url, ":", 2)
+    if len(parts) != 2 {
+        return nil, errors.New("scheme is not present")
+    }
+    self := NewSipURL("", nil, nil, false)
+    self.scheme = strings.ToLower(parts[0])
+    switch self.scheme {
+    case "sip": fallthrough
+    case "sips":
+        return self, self.parseSipURL(parts[1], relaxedparser)
+    case "tel":
+        if config.AutoConvertTelUrl() {
+            self.convertTelUrl(parts[1], relaxedparser, config)
+            return self, nil
+        }
+    }
+    return nil, errors.New("unsupported scheme: " + self.scheme + ":")
+}
+
+func (self *SipURL) convertTelUrl(url string, relaxedparser bool, config sippy_conf.Config) {
+    self.scheme = "sip"
+
+    if relaxedparser {
+        self.Host = sippy_conf.NewMyAddress("")
+    } else {
+        self.Host = config.GetMyAddress()
+        self.Port = config.GetMyPort()
+    }
+    parts := strings.Split(url, ";")
+    self.Username, _ = user_enc.Unescape(parts[0])
+    if len(parts) > 1 {
+        // parse userparams
+        for _, part := range parts[1:] {
+            // The RFC-3261 suggests the user parameter keys should
+            // be converted to lower case.
+            arr := strings.SplitN(part, "=", 2)
+            if len(arr) == 2 {
+                self.userparams = append(self.userparams, strings.ToLower(arr[0]) + "=" + arr[1])
+            } else {
+                self.userparams = append(self.userparams, part)
+            }
+        }
+    }
+}
+
+func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
     var params, arr []string
     var hostport string
 
-    if len(_url) < 4 || strings.ToLower(_url[:4]) != "sip:" {
-        return nil, errors.New("unsupported scheme: " + _url)
-    }
-    self := NewSipURL("", nil, nil, false)
-    _url = _url[4:]
-    ear := strings.Index(_url, "@") + 1
-    parts := strings.Split(_url[ear:], ";")
-    userdomain := _url[0:ear] + parts[0]
+    ear := strings.Index(url, "@") + 1
+    parts := strings.Split(url[ear:], ";")
+    userdomain := url[0:ear] + parts[0]
     if len(parts) > 1 {
         params = parts[1:]
     } else {
@@ -167,12 +211,12 @@ func ParseSipURL(_url string, relaxedparser bool) (*SipURL, error) {
                         //print 'WARNING: non-compliant URI detected, duplicate port number, ' \
                         //  'taking "%s": %s' % (pparts[0], str(original_uri))
                         if _, err = strconv.Atoi(pparts[0]); err != nil {
-                            return nil, err
+                            return err
                         }
                         self.Port = sippy_conf.NewMyPort(pparts[0])
                     }
                 } else {
-                    return nil, err
+                    return err
                 }
             } else {
                 self.Port = sippy_conf.NewMyPort(port)
@@ -225,7 +269,7 @@ func ParseSipURL(_url string, relaxedparser bool) (*SipURL, error) {
             self.other = append(self.other, p)
         }
     }
-    return self, nil
+    return nil
 }
 
 func (self *SipURL) String() string {
@@ -233,7 +277,7 @@ func (self *SipURL) String() string {
 }
 
 func (self *SipURL) LocalStr(hostport *sippy_conf.HostPort) string {
-    l := "sip:"
+    l := self.scheme + ":"
     if self.Username != "" {
         username := user_enc.Escape(self.Username)
         l += username

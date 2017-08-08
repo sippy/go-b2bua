@@ -44,7 +44,7 @@ type SipWarning struct {
 
 var _sip_warning_name normalName = newNormalName("Warning")
 
-func ParseSipWarning(body string) ([]SipHeader, error) {
+func ParseSipWarning(body string, config sippy_conf.Config) ([]SipHeader, error) {
     self := &SipWarning{
         normalName : _sip_warning_name,
     }

@@ -44,11 +44,11 @@ type sipResponse struct {
     sipver string
 }
 
-func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime) (*sipResponse, error) {
+func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipResponse, error) {
     var scode string
 
     self := &sipResponse{}
-    super, err := ParseSipMsg(buf, rtime)
+    super, err := ParseSipMsg(buf, rtime, config)
     if err != nil {
         return nil, err
     }

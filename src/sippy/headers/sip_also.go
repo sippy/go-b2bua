@@ -37,8 +37,8 @@ type SipAlso struct {
 
 var _sip_also_name normalName = newNormalName("Also")
 
-func ParseSipAlso(body string) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body)
+func ParseSipAlso(body string, config sippy_conf.Config) ([]SipHeader, error) {
+    addresses, err := ParseSipAddressHF(body, config)
     if err != nil { return nil, err }
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {

@@ -52,6 +52,9 @@ type Config interface {
     SetMyAddress(*MyAddress)
     GetMyPort() *MyPort
     SetMyPort(*MyPort)
+
+    AutoConvertTelUrl() bool
+    SetAutoConvertTelUrl(bool)
 }
 
 type config struct {
@@ -65,6 +68,7 @@ type config struct {
     my_port         *MyPort
     my_uaname       string
     allow_formats   []int
+    autoconvert_tel_url bool
 }
 
 func NewConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogger) Config {
@@ -82,6 +86,7 @@ func NewConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogge
         my_port     : newSystemPort("5060"),
         my_uaname   : "Sippy",
         allow_formats : make([]int, 0),
+        autoconvert_tel_url : false,
     }
 }
 
@@ -149,4 +154,12 @@ func (self *config) SetMyUAName(s string) {
 
 func (self *config) SetAllowFormats(f []int) {
     self.allow_formats = f
+}
+
+func (self *config) AutoConvertTelUrl() bool {
+    return self.autoconvert_tel_url
+}
+
+func (self *config) SetAutoConvertTelUrl(v bool) {
+    self.autoconvert_tel_url = v
 }

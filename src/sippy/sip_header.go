@@ -29,10 +29,12 @@ package sippy
 import (
     "fmt"
     "strings"
+
+    "sippy/conf"
     "sippy/headers"
 )
 
-var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader, error) {
+var sip_header_name_map = map[string]func(body string, config sippy_conf.Config) ([]sippy_header.SipHeader, error) {
     "cseq"              : sippy_header.ParseSipCSeq,
     "call-id"           : sippy_header.ParseSipCallId,
     "i"                 : sippy_header.ParseSipCallId,
@@ -71,7 +73,7 @@ var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader
     "diversion"         : sippy_header.ParseSipDiversion,
 }
 
-func ParseSipHeader(s string) ([]sippy_header.SipHeader, error) {
+func ParseSipHeader(s string, config sippy_conf.Config) ([]sippy_header.SipHeader, error) {
     res := strings.SplitN(s, ":", 2)
     if len(res) != 2 {
         return nil, fmt.Errorf("Bad header line: '%s'", s)
@@ -80,7 +82,7 @@ func ParseSipHeader(s string) ([]sippy_header.SipHeader, error) {
     body := strings.TrimSpace(res[1])
     factory, ok := sip_header_name_map[strings.ToLower(name)]
     if ok {
-        return factory(body)
+        return factory(body, config)
     }
     return []sippy_header.SipHeader{ sippy_header.ParseSipGenericHF(name, body) }, nil
 }

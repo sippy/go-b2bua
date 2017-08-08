@@ -85,7 +85,7 @@ func NewSipMsg(rtime *sippy_time.MonoTime) *sipMsg {
     return self
 }
 
-func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime) (*sipMsg, error) {
+func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipMsg, error) {
     self := NewSipMsg(rtime)
     buf := string(_buf)
     // Locate a body
@@ -122,7 +122,7 @@ func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime) (*sipMsg, error) {
 
     // Parse headers
     for _, line := range header_lines {
-        headers, err := ParseSipHeader(line)
+        headers, err := ParseSipHeader(line, config)
         if err != nil {
             return nil, err
         }

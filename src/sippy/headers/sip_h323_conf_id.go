@@ -37,7 +37,7 @@ type SipH323ConfId struct {
 
 var _sip_h323_conf_id_name normalName = newNormalName("h323-conf-id")
 
-func ParseSipH323ConfId(body string) ([]SipHeader, error) {
+func ParseSipH323ConfId(body string, config sippy_conf.Config) ([]SipHeader, error) {
     return []SipHeader{ &SipH323ConfId{
         normalName  : _sip_h323_conf_id_name,
         body        : body,

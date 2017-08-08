@@ -37,8 +37,8 @@ type SipFrom struct {
 
 var _sip_from_name compactName = newCompactName("From", "f")
 
-func ParseSipFrom(body string) ([]SipHeader, error) {
-    address, err := ParseSipAddressWithTag(body)
+func ParseSipFrom(body string, config sippy_conf.Config) ([]SipHeader, error) {
+    address, err := ParseSipAddressWithTag(body, config)
     if err != nil {
         return nil, err
     }

@@ -198,7 +198,7 @@ func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_co
 }
 
 func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, data []byte, checksum string, address *sippy_conf.HostPort, server *udpServer) {
-    resp, err := ParseSipResponse(data, rtime)
+    resp, err := ParseSipResponse(data, rtime, self.config)
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logError("can't parse SIP response from " + address.String() + ":" + err.Error())
@@ -259,7 +259,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     if self.call_map == nil {
         return
     }
-    req, err := ParseSipRequest(data, rtime)
+    req, err := ParseSipRequest(data, rtime, self.config)
     if err != nil {
         switch errt := err.(type) {
         case *ESipParseException:

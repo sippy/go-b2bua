@@ -49,7 +49,7 @@ func NewSipCSeq(cseq int, method string) *SipCSeq {
 
 var _sip_cseq_name normalName = newNormalName("CSeq")
 
-func ParseSipCSeq(body string) ([]SipHeader, error) {
+func ParseSipCSeq(body string, config sippy_conf.Config) ([]SipHeader, error) {
     arr := sippy_utils.FieldsN(body, 2)
     cseq, err := strconv.Atoi(arr[0])
     if err != nil {

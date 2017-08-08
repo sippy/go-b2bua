@@ -46,9 +46,9 @@ type sipRequest struct {
     nated   bool
 }
 
-func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime) (*sipRequest, error) {
+func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipRequest, error) {
     self := &sipRequest{ nated : false }
-    super, err := ParseSipMsg(buf, rtime)
+    super, err := ParseSipMsg(buf, rtime, config)
     if err != nil {
         return nil, err
     }
@@ -58,7 +58,7 @@ func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime) (*sipRequest, error
         return nil, errors.New("SIP bad start line in SIP request: " + self.startline)
     }
     self.method, self.sipver = arr[0], arr[2]
-    self.ruri, err = sippy_header.ParseSipURL(arr[1], false /* relaxedparser */)
+    self.ruri, err = sippy_header.ParseSipURL(arr[1], false /* relaxedparser */, config)
     if err != nil {
         return nil, errors.New("Bad SIP URL in SIP request: " + arr[1])
     }

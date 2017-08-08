@@ -37,8 +37,8 @@ type SipRecordRoute struct {
 
 var _sip_record_route_name normalName = newNormalName("Record-Route")
 
-func ParseSipRecordRoute(body string) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body)
+func ParseSipRecordRoute(body string, config sippy_conf.Config) ([]SipHeader, error) {
+    addresses, err := ParseSipAddressHF(body, config)
     if err != nil {
         return nil, err
     }

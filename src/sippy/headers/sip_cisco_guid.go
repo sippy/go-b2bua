@@ -40,7 +40,7 @@ type SipCiscoGUID struct {
 
 var _sip_cisco_guid_name normalName = newNormalName("Cisco-GUID")
 
-func ParseSipCiscoGUID(body string) ([]SipHeader, error) {
+func ParseSipCiscoGUID(body string, config sippy_conf.Config) ([]SipHeader, error) {
     return []SipHeader{ &SipCiscoGUID{
         normalName : _sip_cisco_guid_name,
         body       : body,

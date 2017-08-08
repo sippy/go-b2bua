@@ -41,7 +41,7 @@ type SipReason struct {
 
 var _sip_reason_name normalName = newNormalName("Reason")
 
-func ParseSipReason(body string) ([]SipHeader, error) {
+func ParseSipReason(body string, config sippy_conf.Config) ([]SipHeader, error) {
     arr := strings.SplitN(body, ";", 2)
     if len(arr) != 2 {
         return nil, errors.New("Error parsing Reason: (1)")

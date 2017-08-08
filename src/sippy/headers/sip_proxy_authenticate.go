@@ -36,7 +36,7 @@ type SipProxyAuthenticate struct {
 
 var _sip_proxy_authenticate_name normalName = newNormalName("Proxy-Authenticate")
 
-func ParseSipProxyAuthenticate(body string) ([]SipHeader, error) {
+func ParseSipProxyAuthenticate(body string, config sippy_conf.Config) ([]SipHeader, error) {
     super, err := newSipWWWAuthenticateFromString(body)
     super.normalName = _sip_proxy_authenticate_name
     if err != nil { return nil, err }
