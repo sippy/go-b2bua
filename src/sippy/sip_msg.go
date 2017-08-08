@@ -276,6 +276,12 @@ func (self *sipMsg) init_body() error {
 
 func (self *sipMsg) Bytes() []byte {
     s := self.startline + "\r\n"
+    for _, via := range self.vias {
+        s += via.String() + "\r\n"
+    }
+    for _, via := range self.routes {
+        s += via.String() + "\r\n"
+    }
     for _, header := range self.headers {
         s += header.String() + "\r\n"
     }
