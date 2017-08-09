@@ -29,7 +29,6 @@ package sippy
 import (
     "sippy/types"
     "sippy/time"
-    "sippy/headers"
 )
 
 type UasStateTrying struct {
@@ -85,7 +84,7 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         }
         self.ua.SetLSDP(body)
         self.ua.CancelNoProgressTimer()
-        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContact(), /*ack_wait*/ true, eh...)
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
         return NewUaStateConnected(self.ua, nil, ""), nil
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
@@ -94,23 +93,18 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
             return nil, nil
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContact(), false, eh...)
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.CancelNoProgressTimer()
         self.ua.StartCreditTimer(event.GetRtime())
         self.ua.SetConnectTs(event.GetRtime())
         return NewUaStateConnected(self.ua, event.GetRtime(), event.GetOrigin()), nil
     case *CCEventRedirect:
-        code, reason, body, redirect_url := event.scode, event.scode_reason, event.body, event.redirect_url
-        if code == 0 {
-            code, reason, body, redirect_url = 500, "Failed", nil, nil
-        }
-        contact := sippy_header.NewSipContactFromAddress(sippy_header.NewSipAddress("", redirect_url))
-        self.ua.SendUasResponse(nil, code, reason, body, contact, false, eh...)
+        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.CancelNoProgressTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), code), nil
+        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), event.scode), nil
     case *CCEventFail:
         code, reason := event.scode, event.scode_reason
         if code == 0 {

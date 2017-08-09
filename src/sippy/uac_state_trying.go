@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "sippy/headers"
     "sippy/types"
     "sippy/time"
 )
@@ -139,7 +140,15 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     }
     var event sippy_types.CCEvent
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
-        event = NewCCEventRedirect(code, reason, body, resp.GetContacts()[0].GetUrl().GetCopy(), resp.GetRtime(), self.ua.GetOrigin())
+        event = NewCCEventRedirect(code, reason, body,
+                    []*sippy_header.SipURL{ resp.GetContacts()[0].GetUrl().GetCopy() },
+                    resp.GetRtime(), self.ua.GetOrigin())
+    } else if code == 300 && len(resp.GetContacts()) > 0 {
+        urls := make([]*sippy_header.SipURL, 0)
+        for _, c := range resp.GetContacts() {
+            urls = append(urls, c.GetUrl().GetCopy())
+        }
+        event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin())
     } else {
         event_fail := NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event = event_fail

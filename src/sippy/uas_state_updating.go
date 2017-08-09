@@ -29,7 +29,6 @@ package sippy
 import (
     "sippy/types"
     "sippy/time"
-    "sippy/headers"
 )
 
 type UasStateUpdating struct {
@@ -104,15 +103,10 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
             return nil, nil
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContact(), false, eh...)
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), false, eh...)
         return NewUaStateConnected(self.ua, nil, ""), nil
     case *CCEventRedirect:
-        code, reason, body, redirect_url := event.scode, event.scode_reason, event.body, event.redirect_url
-        if code == 0 {
-            code, reason, body, redirect_url = 500, "Failed", nil, nil
-        }
-        contact := sippy_header.NewSipContactFromAddress(sippy_header.NewSipAddress("", redirect_url))
-        self.ua.SendUasResponse(nil, code, reason, body, contact, false, eh...)
+        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         return NewUaStateConnected(self.ua, nil, ""), nil
     case *CCEventFail:
         code, reason := event.scode, event.scode_reason

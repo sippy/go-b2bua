@@ -377,12 +377,14 @@ func (self *Ua) SetUasResp(resp sippy_types.SipResponse) {
     self.uasResp = resp
 }
 
-func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reason string, body sippy_types.MsgBody /*= nil*/, contact *sippy_header.SipContact /*= nil*/, ack_wait bool, extra_headers ...sippy_header.SipHeader) {
+func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reason string, body sippy_types.MsgBody /*= nil*/, contacts []*sippy_header.SipContact /*= nil*/, ack_wait bool, extra_headers ...sippy_header.SipHeader) {
     uasResp := self.uasResp.GetCopy()
     uasResp.SetSCode(scode, reason)
     uasResp.SetBody(body)
-    if contact != nil {
-        uasResp.AppendHeader(contact)
+    if contacts != nil {
+        for _, contact := range contacts {
+            uasResp.AppendHeader(contact)
+        }
     }
     for _, eh := range extra_headers {
         uasResp.AppendHeader(eh)
@@ -608,6 +610,14 @@ func (self *Ua) SetLCSeq(cseq int) {
 
 func (self *Ua) GetLContact() *sippy_header.SipContact {
     return self.lContact
+}
+
+func (self *Ua) GetLContacts() []*sippy_header.SipContact {
+    contact := self.lContact // copy the value into a local variable for thread safety
+    if contact == nil {
+        return nil
+    }
+    return []*sippy_header.SipContact{ contact }
 }
 
 func (self *Ua) SetLContact(contact *sippy_header.SipContact) {

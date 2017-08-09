@@ -187,6 +187,7 @@ type UA interface {
     SetLCSeq(int)
     SetLContact(*sippy_header.SipContact)
     GetLContact() *sippy_header.SipContact
+    GetLContacts() []*sippy_header.SipContact
     SetRoutes([]*sippy_header.SipRoute)
     GetCGUID() *sippy_header.SipCiscoGUID
     SetCGUID(*sippy_header.SipCiscoGUID)
@@ -265,7 +266,7 @@ type UA interface {
     SetAuth(sippy_header.SipHeader)
     GetNrMtime() *sippy_time.MonoTime
     SetNrMtime(*sippy_time.MonoTime)
-    SendUasResponse(t ServerTransaction, scode int, reason string, body MsgBody /*= nil*/, contact *sippy_header.SipContact /*= nil*/, ack_wait bool /*false*/, extra_headers ...sippy_header.SipHeader)
+    SendUasResponse(t ServerTransaction, scode int, reason string, body MsgBody /*= nil*/, contacts []*sippy_header.SipContact /*= nil*/, ack_wait bool /*false*/, extra_headers ...sippy_header.SipHeader)
     EmitEvent(CCEvent)
     String() string
     GetPendingTr() ClientTransaction

@@ -88,7 +88,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
             return nil, nil
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContact(), false, eh...)
+        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContacts(), false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.StartCreditTimer(event.GetRtime())
         self.ua.SetConnectTs(event.GetRtime())
@@ -100,18 +100,13 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
             return nil, nil
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContact(), /*ack_wait*/ true, eh...)
+        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
         return NewUaStateConnected(self.ua, nil, ""), nil
     case *CCEventRedirect:
-        code, reason, body, redirect_url := event.scode, event.scode_reason, event.body, event.redirect_url
-        if code == 0 {
-            code, reason, body, redirect_url = 500, "Failed", nil, nil
-        }
-        contact := sippy_header.NewSipContactFromAddress(sippy_header.NewSipAddress("", redirect_url))
-        self.ua.SendUasResponse(nil, code, reason, body, contact, false, eh...)
+        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), code), nil
+        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), event.scode), nil
     case *CCEventFail:
         code, reason := event.scode, event.scode_reason
         if code == 0 {
