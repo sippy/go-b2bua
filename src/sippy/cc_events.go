@@ -302,46 +302,6 @@ func (self *CCEventFail) SetWarning(text string) {
     self.warning = sippy_header.NewSipWarning(text)
 }
 
-type CCEventRedirect struct {
-    CCEventGeneric
-    redirect_urls   []*sippy_header.SipURL
-    scode           int
-    scode_reason    string
-    body            sippy_types.MsgBody
-}
-
-func NewCCEventRedirect(scode int, scode_reason string, body sippy_types.MsgBody, urls []*sippy_header.SipURL, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventRedirect {
-    return &CCEventRedirect{
-        CCEventGeneric  : newCCEventGeneric(rtime, origin, extra_headers...),
-        scode           : scode,
-        scode_reason    : scode_reason,
-        body            : body,
-        redirect_urls   : urls,
-    }
-}
-
-func (self *CCEventRedirect) String() string { return "CCEventRedirect" }
-
-func (self *CCEventRedirect) GetRedirectURL() *sippy_header.SipURL {
-    return self.redirect_urls[0]
-}
-
-func (self *CCEventRedirect) GetRedirectURLs() []*sippy_header.SipURL {
-    return self.redirect_urls
-}
-
-func (self *CCEventRedirect) GetContacts() []*sippy_header.SipContact {
-    urls := self.redirect_urls
-    if urls == nil || len(urls) == 0 {
-        return nil
-    }
-    ret := make([]*sippy_header.SipContact, len(urls))
-    for i, u := range urls {
-        ret[i] = sippy_header.NewSipContactFromAddress(sippy_header.NewSipAddress("", u))
-    }
-    return ret
-}
-
 type CCEventPreConnect struct {
     CCEventGeneric
     scode           int

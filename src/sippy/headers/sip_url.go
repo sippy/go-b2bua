@@ -68,6 +68,7 @@ type SipURL struct {
     userparams  []string
     headers     map[string]string
     scheme      string
+    Q           float64
 }
 
 func NewSipURL(username string, host *sippy_conf.MyAddress, port *sippy_conf.MyPort, lr bool /* false */) *SipURL {
@@ -81,6 +82,7 @@ func NewSipURL(username string, host *sippy_conf.MyAddress, port *sippy_conf.MyP
         ttl         : -1,
         Host        : host,
         Port        : port,
+        Q           : 1,
     }
     return self
 }
@@ -265,6 +267,10 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
             // RFC 3261 doesn't allow lr parameter to have a value,
             // but many stupid implementation do it anyway
             self.Lr = true
+        case "q":
+            if q, err := strconv.ParseFloat(value, 64); err == nil {
+                self.Q = q
+            }
         default:
             self.other = append(self.other, p)
         }
@@ -314,6 +320,9 @@ func (self *SipURL) LocalStr(hostport *sippy_conf.HostPort) string {
     }
     if self.Lr {
         l += ";lr"
+    }
+    if self.Q != 1 {
+        l += fmt.Sprintf(";q=%f", self.Q)
     }
     if len(self.headers) > 0 {
         l += "?"
