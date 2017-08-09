@@ -51,21 +51,13 @@ func (self *CCEventRedirect) SortURLs() {
     if len(self.redirect_urls) == 1 {
         return
     }
-    sort.Sort(sortRedirectURLs{ self.redirect_urls })
+    sort.Sort(sortRedirectURLs(self.redirect_urls))
 }
 
-type sortRedirectURLs struct {
-    urls        []*sippy_header.SipURL
-}
-
-func (self sortRedirectURLs) Len() int {
-    return len(self.urls)
-}
-
-func (self sortRedirectURLs) Swap(x, y int) {
-    self.urls[x], self.urls[y] = self.urls[y], self.urls[x]
-}
-
+type sortRedirectURLs []*sippy_header.SipURL
+func (self sortRedirectURLs) Len() int { return len(self) }
+func (self sortRedirectURLs) Swap(x, y int) { self[x], self[y] = self[y], self[x] }
 func (self sortRedirectURLs) Less(x, y int) bool {
-    return self.urls[x].Q > self.urls[y].Q // descending order
+    // descending order
+    return self[x].Q > self[y].Q
 }
