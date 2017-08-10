@@ -322,7 +322,7 @@ func (self *SipURL) LocalStr(hostport *sippy_conf.HostPort) string {
         l += ";lr"
     }
     if self.Q != 1 {
-        l += fmt.Sprintf(";q=%f", self.Q)
+        l += fmt.Sprintf(";q=%g", self.Q)
     }
     if len(self.headers) > 0 {
         l += "?"
