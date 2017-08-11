@@ -47,7 +47,7 @@ func ParseSipCiscoGUID(body string, config sippy_conf.Config) ([]SipHeader, erro
     } }, nil
 }
 
-func (self *SipCiscoGUID) Body() string {
+func (self *SipCiscoGUID) StringBody() string {
     return self.body
 }
 

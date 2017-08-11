@@ -37,11 +37,13 @@ type SipServer struct {
 
 var _sip_server_name normalName = newNormalName("Server")
 
-func ParseSipServer(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    return []SipHeader{ &SipServer{
-        normalName  : _sip_server_name,
-        Server        : body,
-    } }, nil
+func CreateSipServer(body string) []SipHeader {
+    return []SipHeader{
+        &SipServer{
+            normalName  : _sip_server_name,
+            Server        : body,
+        },
+    }
 }
 
 func NewSipServer(body string) *SipServer {
@@ -51,12 +53,12 @@ func NewSipServer(body string) *SipServer {
     }
 }
 
-func (self *SipServer) Body() string {
+func (self *SipServer) StringBody() string {
     return self.Server
 }
 
 func (self *SipServer) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.Server
 }
 
 func (self *SipServer) LocalStr(*sippy_conf.HostPort, bool) string {

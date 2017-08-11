@@ -26,32 +26,20 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package sippy_header
 
-import (
-    "sippy/conf"
-)
-
 type SipProxyAuthenticate struct {
     *SipWWWAuthenticate
 }
 
 var _sip_proxy_authenticate_name normalName = newNormalName("Proxy-Authenticate")
 
-func ParseSipProxyAuthenticate(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    super, err := newSipWWWAuthenticateFromString(body)
+func CreateSipProxyAuthenticate(body string) []SipHeader {
+    super := createSipWWWAuthenticateObj(body)
     super.normalName = _sip_proxy_authenticate_name
-    if err != nil { return nil, err }
-    return []SipHeader{ &SipProxyAuthenticate{
-                                        SipWWWAuthenticate : super,
-                                      },
-                                  }, nil
-}
-
-func (self *SipProxyAuthenticate) String() string {
-    return self.LocalStr(nil, false)
-}
-
-func (self *SipProxyAuthenticate) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
+    return []SipHeader{
+        &SipProxyAuthenticate{
+            SipWWWAuthenticate : super,
+        },
+    }
 }
 
 func (self *SipProxyAuthenticate) GetCopy() *SipProxyAuthenticate {

@@ -27,54 +27,53 @@
 package sippy_header
 
 import (
-    "sippy/conf"
-    "sippy/utils"
+    "strconv"
 )
 
-type sipAddressWithTag struct {
-    address *sipAddress
+type sipNumericHF struct {
+    string_body     string
+    number          int
+    parsed          bool
 }
 
-func ParseSipAddressWithTag(body string, config sippy_conf.Config) (*sipAddressWithTag, error) {
-    addr, err := ParseSipAddress(body, true /* relaxedparser */, config)
-    if err != nil { return nil, err }
-    return &sipAddressWithTag{ address : addr }, nil
-}
-
-func NewSipAddressWithTag(address *sipAddress, config sippy_conf.Config) *sipAddressWithTag {
-    if address == nil {
-        address = NewSipAddress("Anonymous", NewSipURL("" /* username */,
-                                    config.GetMyAddress(),
-                                    config.GetMyPort(),
-                                    false))
-    }
-    return &sipAddressWithTag{ address : address }
-}
-
-func (self *sipAddressWithTag) GenTag() {
-    self.address.SetParam("tag", sippy_utils.GenTag())
-}
-
-func (self *sipAddressWithTag) GetTag() string {
-    return self.address.GetParam("tag")
-}
-
-func (self *sipAddressWithTag) SetTag(value string) {
-    if value != "" {
-        self.address.SetParam("tag", value)
+func newSipNumericHF(num int) sipNumericHF {
+    return sipNumericHF{
+        number      : num,
+        parsed      : true,
     }
 }
 
-func (self *sipAddressWithTag) getCopy() *sipAddressWithTag {
-    return &sipAddressWithTag{
-        address : self.address.GetCopy(),
+func createSipNumericHF(body string) sipNumericHF {
+    return sipNumericHF{
+        string_body     : body,
+        parsed          : false,
     }
 }
 
-func (self *sipAddressWithTag) GetUrl() *SipURL {
-    return self.address.url
+func (self *sipNumericHF) StringBody() string {
+    if self.parsed {
+        return strconv.Itoa(self.number)
+    }
+    return self.string_body
 }
 
-func (self *sipAddressWithTag) GetUri() *sipAddress {
-    return self.address
+func (self *sipNumericHF) parse() error {
+    if ! self.parsed {
+        var err error
+        self.number, err = strconv.Atoi(self.string_body)
+        if err != nil {
+            return err
+        }
+        self.parsed = true
+    }
+    return nil
+}
+
+func (self *sipNumericHF) Number() (int, error) {
+    if ! self.parsed {
+        if err := self.parse(); err != nil {
+            return 0, err
+        }
+    }
+    return self.number, nil
 }

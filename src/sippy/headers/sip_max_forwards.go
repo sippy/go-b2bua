@@ -27,33 +27,27 @@
 package sippy_header
 
 import (
-    "strconv"
-
     "sippy/conf"
 )
 
 type SipMaxForwards struct {
     normalName
-    number  int
+    sipNumericHF
 }
 
 var _sip_max_forwards_name normalName = newNormalName("Max-Forwards")
 
-func ParseSipMaxForwards(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    number, err := strconv.Atoi(body)
-    if err != nil {
-        return nil, err
-    }
+func createSipMaxForwards(body string) []SipHeader {
     return []SipHeader{ &SipMaxForwards{
-        normalName  : _sip_max_forwards_name,
-        number      : number,
-    } }, nil
+        normalName      : _sip_max_forwards_name,
+        sipNumericHF    : createSipNumericHF(body),
+    } }
 }
 
 func NewSipMaxForwards(number int) *SipMaxForwards {
     return &SipMaxForwards{
-        normalName  : _sip_max_forwards_name,
-        number      : number,
+        normalName      : _sip_max_forwards_name,
+        sipNumericHF    : newSipNumericHF(number),
     }
 }
 
@@ -61,12 +55,8 @@ func NewSipMaxForwardsDefault() *SipMaxForwards {
     return NewSipMaxForwards(70)
 }
 
-func (self *SipMaxForwards) Body() string {
-    return strconv.Itoa(self.number)
-}
-
 func (self *SipMaxForwards) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.StringBody()
 }
 
 func (self *SipMaxForwards) LocalStr(*sippy_conf.HostPort, bool) string {

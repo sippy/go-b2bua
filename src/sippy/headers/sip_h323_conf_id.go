@@ -37,11 +37,11 @@ type SipH323ConfId struct {
 
 var _sip_h323_conf_id_name normalName = newNormalName("h323-conf-id")
 
-func ParseSipH323ConfId(body string, config sippy_conf.Config) ([]SipHeader, error) {
+func createSipH323ConfId(body string) []SipHeader {
     return []SipHeader{ &SipH323ConfId{
         normalName  : _sip_h323_conf_id_name,
         body        : body,
-    } }, nil
+    } }
 }
 
 func (self *SipH323ConfId) GetCopy() *SipH323ConfId {
@@ -49,19 +49,18 @@ func (self *SipH323ConfId) GetCopy() *SipH323ConfId {
     return &tmp
 }
 
+func (self *SipH323ConfId) StringBody() string {
+    return self.body
+}
+
 func (self *SipH323ConfId) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
-func (self *SipH323ConfId) Body() string {
-    return self.body
-}
-
 func (self *SipH323ConfId) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.body
 }
 
 func (self *SipH323ConfId) LocalStr(*sippy_conf.HostPort, bool) string {
     return self.String()
 }
-

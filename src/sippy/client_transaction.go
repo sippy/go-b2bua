@@ -67,8 +67,11 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
     var ack, cancel sippy_types.SipRequest
     if req.GetMethod() == "INVITE" {
         expires = 300 * time.Second
-        if req.GetExpires() != nil && req.GetExpires().Number > 0 {
-            expires = time.Duration(req.GetExpires().Number) * time.Second
+        if req.GetExpires() != nil {
+            num, err := req.GetExpires().Number()
+            if err == nil && num > 0 {
+                expires = time.Duration(num) * time.Second
+            }
         }
         needack = true
         ack = req.GenACK(nil, sip_tm.config)
@@ -166,7 +169,7 @@ func (self *clientTransaction) startTeB(timeout time.Duration) {
     self.teB = StartTimeout(self.timerB, self.lock, timeout, 1, self.logger)
 }
 
-func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string) {
+func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string, config sippy_conf.Config) {
     if self.sip_tm == nil {
         return
     }
@@ -183,7 +186,7 @@ func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, ch
     if resp.GetSCodeNum() < 200 {
         self.process_provisional_response(checksum, resp)
     } else {
-        self.process_final_response(checksum, resp)
+        self.process_final_response(checksum, resp, config)
     }
 }
 
@@ -204,21 +207,37 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
     }
 }
 
-func (self *clientTransaction) process_final_response(checksum string, resp sippy_types.SipResponse) {
+func (self *clientTransaction) process_final_response(checksum string, resp sippy_types.SipResponse, config sippy_conf.Config) {
     // Final response - notify upper layer and remove transaction
     if self.needack {
         // Prepare and send ACK if necessary
         fcode := resp.GetSCodeNum()
-        tag := resp.GetTo().GetTag()
+        to_body, err := resp.GetTo().GetBody(config)
+        if err != nil {
+            config.ErrorLogger().Debug(err.Error())
+            return
+        }
+        tag := to_body.GetTag()
         if tag != "" {
-            self.ack.GetTo().SetTag(tag)
+            to_body, err = self.ack.GetTo().GetBody(config)
+            if err != nil {
+                config.ErrorLogger().Debug(err.Error())
+                return
+            }
+            to_body.SetTag(tag)
         }
         var rAddr *sippy_conf.HostPort
         var rTarget *sippy_header.SipURL
         if resp.GetSCodeNum() >= 200 && resp.GetSCodeNum() < 300 {
             // Some hairy code ahead
             if len(resp.GetContacts()) > 0 {
-                rTarget = resp.GetContacts()[0].GetUrl().GetCopy()
+                var contact sippy_header.SipAddress
+                contact, err = resp.GetContacts()[0].GetBody(config)
+                if err != nil {
+                    config.ErrorLogger().Debug(err.Error())
+                    return
+                }
+                rTarget = contact.GetUrl().GetCopy()
             } else {
                 rTarget = nil
             }
@@ -230,15 +249,21 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                     routes[len(resp.GetRecordRoutes()) - 1 + idx] = r2 // reverse order
                 }
                 if len(routes) > 0 {
-                    if ! routes[0].GetUrl().Lr {
+                    var r0 sippy_header.SipAddress
+                    r0, err = routes[0].GetBody(config)
+                    if err != nil {
+                        config.ErrorLogger().Debug(err.Error())
+                        return
+                    }
+                    if ! r0.GetUrl().Lr {
                         if rTarget != nil {
                             routes = append(routes, sippy_header.NewSipRoute(sippy_header.NewSipAddress("", rTarget)))
                         }
-                        rTarget = routes[0].GetUrl()
+                        rTarget = r0.GetUrl()
                         routes = routes[1:]
                         rAddr = rTarget.GetAddr(self.sip_tm.config)
                     } else {
-                        rAddr = routes[0].GetAddr(self.sip_tm.config)
+                        rAddr = r0.GetUrl().GetAddr(self.sip_tm.config)
                     }
                 } else if rTarget != nil {
 

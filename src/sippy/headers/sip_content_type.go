@@ -44,7 +44,7 @@ func ParseSipContentType(body string, config sippy_conf.Config) ([]SipHeader, er
     } }, nil
 }
 
-func (self *SipContentType) Body() string {
+func (self *SipContentType) StringBody() string {
     return self.body
 }
 

@@ -34,7 +34,11 @@ type SipHeader interface {
     Name() string
     CompactName() string
     String() string
-    Body() string
+    StringBody() string
     LocalStr(hostport *sippy_conf.HostPort, compact bool) string
     GetCopyAsIface() SipHeader
+}
+
+type SipAddress interface {
+    GetUrl() *SipURL
 }

@@ -37,8 +37,7 @@ import (
     "sippy/conf"
 )
 
-type SipVia struct {
-    compactName
+type sipViaBody struct {
     sipver      string
     host        *sippy_conf.MyAddress
     port        *sippy_conf.MyPort
@@ -59,70 +58,90 @@ type SipVia struct {
     extension_exists   bool
 }
 
+type SipVia struct {
+    compactName
+    string_body     string
+    body            *sipViaBody
+}
+
 var _sip_via_name compactName = newCompactName("Via", "v")
 
-func ParseSipVia(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    vias := make([]SipHeader, 0)
-    for _, via := range strings.Split(body, ",") {
-        arr := sippy_utils.FieldsN(via, 2)
-        if len(arr) != 2 {
-            return nil, errors.New("Bad via: '" + via + "'")
-        }
-        via := &SipVia{
+func CreateSipVia(body string) []SipHeader {
+    vias := strings.Split(body, ",")
+    rval := make([]SipHeader, len(vias))
+    for i, via := range vias {
+        rval[i] = &SipVia{
             compactName : _sip_via_name,
-            sipver : arr[0],
+            string_body : via,
         }
-        arr = strings.Split(arr[1], ";")
-        var val *string
-        for _, param := range arr[1:] {
-            param = strings.TrimSpace(param)
-            sparam := strings.SplitN(param, "=", 2)
-            val = nil
-            if len(sparam) == 2 {
-                val = &sparam[1]
-            }
-            switch sparam[0] {
-            case "received":
-                via.received = val
-                via.received_exists = true
-            case "rport":
-                via.rport = val
-                via.rport_exists = true
-            case "ttl":
-                via.ttl = val
-                via.ttl_exists = true
-            case "maddr":
-                via.maddr = val
-                via.maddr_exists = true
-            case "branch":
-                via.branch = val
-                via.branch_exists = true
-            case "extension":
-                via.extension = val
-                via.extension_exists = true
-            default:
-                via.extra_headers += ";" + sparam[1]
-                if val != nil {
-                    via.extra_headers += "=" + *val
-                }
-            }
-        }
-        host, port, err := net.SplitHostPort(arr[0])
-        if err != nil {
-            via.host = sippy_conf.NewMyAddress(arr[0])
-            via.port = nil
-        } else {
-            via.host = sippy_conf.NewMyAddress(host)
-            via.port = sippy_conf.NewMyPort(port)
-        }
-        vias = append(vias, via)
     }
-    return vias, nil
+    return rval
+}
+
+func (self *SipVia) parse() error {
+    arr := sippy_utils.FieldsN(self.string_body, 2)
+    if len(arr) != 2 {
+        return errors.New("Bad via: '" + self.string_body + "'")
+    }
+    via := &sipViaBody{
+        sipver : arr[0],
+    }
+    arr = strings.Split(arr[1], ";")
+    var val *string
+    for _, param := range arr[1:] {
+        param = strings.TrimSpace(param)
+        sparam := strings.SplitN(param, "=", 2)
+        val = nil
+        if len(sparam) == 2 {
+            val = &sparam[1]
+        }
+        switch sparam[0] {
+        case "received":
+            via.received = val
+            via.received_exists = true
+        case "rport":
+            via.rport = val
+            via.rport_exists = true
+        case "ttl":
+            via.ttl = val
+            via.ttl_exists = true
+        case "maddr":
+            via.maddr = val
+            via.maddr_exists = true
+        case "branch":
+            via.branch = val
+            via.branch_exists = true
+        case "extension":
+            via.extension = val
+            via.extension_exists = true
+        default:
+            via.extra_headers += ";" + sparam[1]
+            if val != nil {
+                via.extra_headers += "=" + *val
+            }
+        }
+    }
+    host, port, err := net.SplitHostPort(arr[0])
+    if err != nil {
+        via.host = sippy_conf.NewMyAddress(arr[0])
+        via.port = nil
+    } else {
+        via.host = sippy_conf.NewMyAddress(host)
+        via.port = sippy_conf.NewMyPort(port)
+    }
+    self.body = via
+    return nil
 }
 
 func NewSipVia(config sippy_conf.Config) *SipVia {
-    self := &SipVia{
+    return &SipVia{
         compactName : _sip_via_name,
+        body        : newSipViaBody(config),
+    }
+}
+
+func newSipViaBody(config sippy_conf.Config) *sipViaBody {
+    return &sipViaBody{
         rport_exists : true,
         sipver      : "SIP/2.0/UDP",
         host        : config.GetMyAddress(),
@@ -134,15 +153,10 @@ func NewSipVia(config sippy_conf.Config) *SipVia {
         branch_exists   : false,
         extension_exists: false,
     }
-    return self
 }
 
-func (self *SipVia) Body() string {
-    return self.LocalBody(nil)
-}
-
-func (self *SipVia) LocalBody(hostport *sippy_conf.HostPort) string {
-    return self._local_str(hostport)
+func (self *SipVia) StringBody() string {
+    return self.LocalStringBody(nil)
 }
 
 func (self *SipVia) String() string {
@@ -151,12 +165,19 @@ func (self *SipVia) String() string {
 
 func (self *SipVia) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return self.CompactName() + ":" + self.LocalBody(hostport)
+        return self.CompactName() + ":" + self.LocalStringBody(hostport)
     }
-    return self.Name() + ":" + self.LocalBody(hostport)
+    return self.Name() + ":" + self.LocalStringBody(hostport)
 }
 
-func (self *SipVia) _local_str(hostport *sippy_conf.HostPort) string {
+func (self *SipVia) LocalStringBody(hostport *sippy_conf.HostPort) string {
+    if self.body != nil {
+        return self.body.localString(hostport)
+    }
+    return self.string_body
+}
+
+func (self *sipViaBody) localString(hostport *sippy_conf.HostPort) string {
     s := ""
     if hostport != nil && self.host.IsSystemDefault() {
         s = self.sipver + " " + hostport.Host.String()
@@ -190,6 +211,14 @@ func (self *SipVia) _local_str(hostport *sippy_conf.HostPort) string {
 
 func (self *SipVia) GetCopy() *SipVia {
     tmp := *self
+    if self.body != nil {
+        tmp.body = self.body.getCopy()
+    }
+    return &tmp
+}
+
+func (self *sipViaBody) getCopy() *sipViaBody {
+    tmp := *self
     if self.received != nil { tmp_s := *self.received; tmp.received = &tmp_s }
     if self.rport != nil { tmp_s := *self.rport; tmp.rport = &tmp_s }
     if self.ttl != nil { tmp_s := *self.ttl; tmp.ttl = &tmp_s }
@@ -203,7 +232,17 @@ func (self *SipVia) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
-func (self *SipVia) GenBranch() {
+func (self *SipVia) GenBranch() error {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return err
+        }
+    }
+    self.body.genBranch()
+    return nil
+}
+
+func (self *sipViaBody) genBranch() {
     buf := make([]byte, 16)
     rand.Read(buf)
     tmp := "z9hG4bK" + fmt.Sprintf("%x", buf)
@@ -211,14 +250,33 @@ func (self *SipVia) GenBranch() {
     self.branch_exists = true
 }
 
-func (self *SipVia) GetBranch() string {
+func (self *SipVia) GetBranch() (string, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return "", err
+        }
+    }
+    return self.body.getBranch(), nil
+}
+
+func (self *sipViaBody) getBranch() string {
     if self.branch_exists && self.branch != nil {
         return *self.branch
     }
     return ""
 }
 
-func (self *SipVia) GetAddr(config sippy_conf.Config) (string, string) {
+func (self *SipVia) GetAddr(config sippy_conf.Config) (string, string, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return "", "", err
+        }
+    }
+    host, port := self.body.getAddr(config)
+    return host, port, nil
+}
+
+func (self *sipViaBody) getAddr(config sippy_conf.Config) (string, string) {
     if self.port == nil {
         return self.host.String(), config.SipPort().String()
     } else {
@@ -226,32 +284,70 @@ func (self *SipVia) GetAddr(config sippy_conf.Config) (string, string) {
     }
 }
 
-func (self *SipVia) GetTAddr(config sippy_conf.Config) *sippy_conf.HostPort {
+func (self *SipVia) GetTAddr(config sippy_conf.Config) (*sippy_conf.HostPort, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return nil, err
+        }
+    }
+    return self.body.getTAddr(config), nil
+}
+
+func (self *sipViaBody) getTAddr(config sippy_conf.Config) *sippy_conf.HostPort {
     var host, rport string
 
     if self.rport_exists && self.rport != nil {
         rport = *self.rport
     } else {
-        _, rport = self.GetAddr(config)
+        _, rport = self.getAddr(config)
     }
     if self.received_exists && self.received != nil {
         host = *self.received
     } else {
-        host, _ = self.GetAddr(config)
+        host, _ = self.getAddr(config)
     }
     return sippy_conf.NewHostPort(host, rport)
 }
 
-func (self *SipVia) SetRport(v *string) {
+func (self *SipVia) SetRport(v *string) error {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return err
+        }
+    }
+    self.body.setRport(v)
+    return nil
+}
+
+func (self *sipViaBody) setRport(v *string) {
     self.rport_exists = true
     self.rport = v
 }
 
-func (self *SipVia) SetReceived(v string) {
+func (self *SipVia) SetReceived(v string) error {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return err
+        }
+    }
+    self.body.setReceived(v)
+    return nil
+}
+
+func (self *sipViaBody) setReceived(v string) {
     self.received_exists = true
     self.received = &v
 }
 
-func (self *SipVia) HasRport() bool {
+func (self *SipVia) HasRport() (bool, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return false, err
+        }
+    }
+    return self.body.hasRport(), nil
+}
+
+func (self *sipViaBody) hasRport() bool {
     return self.rport_exists
 }

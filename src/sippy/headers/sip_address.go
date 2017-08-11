@@ -212,3 +212,11 @@ func (self *sipAddress) GetName() string {
 func (self *sipAddress) GetUrl() *SipURL {
     return self.url
 }
+
+func (self *sipAddress) GetTag() string {
+    return self.GetParam("tag")
+}
+
+func (self *sipAddress) SetTag(tag string) {
+    self.SetParam("tag", tag)
+}

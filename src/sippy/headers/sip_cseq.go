@@ -33,15 +33,26 @@ import (
     "sippy/utils"
 )
 
-type SipCSeq struct {
-    normalName
+type sipCSeqBody struct {
     CSeq    int
     Method  string
+}
+
+type SipCSeq struct {
+    normalName
+    string_body string
+    body        *sipCSeqBody
 }
 
 func NewSipCSeq(cseq int, method string) *SipCSeq {
     return &SipCSeq{
         normalName  : _sip_cseq_name,
+        body        : newSipCSeqBody(cseq, method),
+    }
+}
+
+func newSipCSeqBody(cseq int, method string) *sipCSeqBody {
+    return &sipCSeqBody{
         CSeq        : cseq,
         Method      : method,
     }
@@ -49,20 +60,29 @@ func NewSipCSeq(cseq int, method string) *SipCSeq {
 
 var _sip_cseq_name normalName = newNormalName("CSeq")
 
-func ParseSipCSeq(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    arr := sippy_utils.FieldsN(body, 2)
+func CreateSipCSeq(body string) []SipHeader {
+    return []SipHeader{
+        &SipCSeq{
+            normalName  : _sip_cseq_name,
+            string_body : body,
+        },
+    }
+}
+
+func (self *SipCSeq) parse() error {
+    arr := sippy_utils.FieldsN(self.string_body, 2)
     cseq, err := strconv.Atoi(arr[0])
     if err != nil {
-        return nil, err
+        return err
     }
-    self := &SipCSeq{
-        normalName  : _sip_cseq_name,
+    body := &sipCSeqBody{
         CSeq        : cseq,
     }
     if len(arr) == 2 {
-        self.Method = arr[1]
+        body.Method = arr[1]
     }
-    return []SipHeader{ self }, nil
+    self.body = body
+    return nil
 }
 
 func (self *SipCSeq) GetCopyAsIface() SipHeader {
@@ -78,10 +98,17 @@ func (self *SipCSeq) LocalStr(*sippy_conf.HostPort, bool) string {
     return self.String()
 }
 
-func (self *SipCSeq) Body() string {
+func (self *SipCSeq) StringBody() string {
+    if self.body != nil {
+        return self.body.String()
+    }
+    return self.string_body
+}
+
+func (self *sipCSeqBody) String() string {
     return strconv.Itoa(self.CSeq) + " " + self.Method
 }
 
 func (self *SipCSeq) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.StringBody()
 }

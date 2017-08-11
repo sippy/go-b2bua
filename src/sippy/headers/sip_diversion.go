@@ -40,13 +40,12 @@ var _sip_diversion_name normalName = newNormalName("Diversion")
 func NewSipDiversion(addr *sipAddress) *SipDiversion {
     return &SipDiversion{
         normalName   : _sip_diversion_name,
-        sipAddressHF : NewSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr),
     }
 }
 
-func ParseSipDiversion(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body, config)
-    if err != nil { return nil, err }
+func CreateSipDiversion(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipDiversion{
@@ -54,15 +53,7 @@ func ParseSipDiversion(body string, config sippy_conf.Config) ([]SipHeader, erro
             sipAddressHF : addr,
         }
     }
-    return rval, nil
-}
-
-func (self *SipDiversion) Body() string {
-    return self.LocalBody(nil)
-}
-
-func (self *SipDiversion) LocalBody(hostport *sippy_conf.HostPort) string {
-    return self.Address.LocalStr(hostport)
+    return rval
 }
 
 func (self *SipDiversion) String() string {
@@ -70,11 +61,7 @@ func (self *SipDiversion) String() string {
 }
 
 func (self *SipDiversion) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
-}
-
-func (self *SipDiversion) GetAddr(config sippy_conf.Config) *sippy_conf.HostPort {
-    return self.Address.url.GetAddr(config)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipDiversion) GetCopy() *SipDiversion {

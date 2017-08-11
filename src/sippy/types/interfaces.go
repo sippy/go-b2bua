@@ -299,7 +299,7 @@ type baseTransaction interface {
 
 type ClientTransaction interface {
     baseTransaction
-    IncomingResponse(resp SipResponse, checksum string)
+    IncomingResponse(resp SipResponse, checksum string, config sippy_conf.Config)
     SetOutboundProxy(*sippy_conf.HostPort)
     SetAckRparams(*sippy_conf.HostPort, *sippy_header.SipURL, []*sippy_header.SipRoute)
     Cancel(...sippy_header.SipHeader)

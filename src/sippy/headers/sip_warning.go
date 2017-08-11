@@ -35,32 +35,52 @@ import (
     "sippy/utils"
 )
 
-type SipWarning struct {
-    normalName
+type sipWarningBody struct {
     code        string
     agent       string
     text        string
 }
 
+type SipWarning struct {
+    normalName
+    string_body     string
+    body            *sipWarningBody
+}
+
 var _sip_warning_name normalName = newNormalName("Warning")
 
-func ParseSipWarning(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    self := &SipWarning{
-        normalName : _sip_warning_name,
+func CreateSipWarning(body string) []SipHeader {
+    return []SipHeader{
+        &SipWarning{
+            normalName : _sip_warning_name,
+            string_body : body,
+        },
     }
-    arr := sippy_utils.FieldsN(body, 3)
+}
+
+func (self *SipWarning) parse() error {
+    arr := sippy_utils.FieldsN(self.string_body, 3)
     if len(arr) != 3 {
-        return nil, fmt.Errorf("Malformed Warning field")
+        return fmt.Errorf("Malformed Warning field")
     }
-    self.code, self.agent, self.text = arr[0], arr[1], arr[2]
-    self.text = strings.Trim(self.text, "\"")
-    //self.parsed = true
-    return []SipHeader{ self }, nil
+    self.body = &sipWarningBody{
+        code    : arr[0],
+        agent   : arr[1],
+        text    : strings.Trim(arr[2], "\""),
+    }
+    return nil
 }
 
 func NewSipWarning(text string) *SipWarning {
+    return &SipWarning{
+        normalName  : _sip_warning_name,
+        body        : newSipWarningBody(text),
+    }
+}
+
+func newSipWarningBody(text string) *sipWarningBody {
     text = strings.Replace(text, "\"", "'", -1)
-    self := &SipWarning{
+    self := &sipWarningBody{
         code    : "399",
         agent   : "unknown",
         text    : text,
@@ -77,10 +97,17 @@ func (self *SipWarning) LocalStr(hostport *sippy_conf.HostPort, compact bool) st
 }
 
 func (self *SipWarning) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.StringBody()
 }
 
-func (self *SipWarning) Body() string {
+func (self *SipWarning) StringBody() string {
+    if self.body != nil {
+        return self.body.String()
+    }
+    return self.string_body
+}
+
+func (self *sipWarningBody) String() string {
     return fmt.Sprintf("%s %s \"%s\"", self.code, self.agent, self.text)
 }
 

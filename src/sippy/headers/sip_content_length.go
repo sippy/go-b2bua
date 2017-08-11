@@ -27,8 +27,6 @@
 package sippy_header
 
 import (
-    "strconv"
-
     "sippy/conf"
 )
 
@@ -36,31 +34,23 @@ var _sip_content_length_name compactName = newCompactName("Content-Length", "l")
 
 type SipContentLength struct {
     compactName
-    Length  int
+    sipNumericHF
 }
 
-func ParseSipContentLength(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    number, err := strconv.Atoi(body)
-    if err != nil {
-        return nil, err
-    }
+func CreateSipContentLength(body string) []SipHeader {
     return []SipHeader{ &SipContentLength{
         compactName : _sip_content_length_name,
-        Length      : number,
-    } }, nil
-}
-
-func (self *SipContentLength) Body() string {
-    return strconv.Itoa(self.Length)
+        sipNumericHF : createSipNumericHF(body),
+    } }
 }
 
 func (self *SipContentLength) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.StringBody()
 }
 
 func (self *SipContentLength) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return self.CompactName() + ": " + self.Body()
+        return self.CompactName() + ": " + self.StringBody()
     }
     return self.String()
 }

@@ -37,11 +37,8 @@ type SipRecordRoute struct {
 
 var _sip_record_route_name normalName = newNormalName("Record-Route")
 
-func ParseSipRecordRoute(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body, config)
-    if err != nil {
-        return nil, err
-    }
+func CreateSipRecordRoute(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, address := range addresses {
         rval[i] = &SipRecordRoute{
@@ -49,7 +46,7 @@ func ParseSipRecordRoute(body string, config sippy_conf.Config) ([]SipHeader, er
             sipAddressHF : address,
         }
     }
-    return rval, nil
+    return rval
 }
 
 func (self *SipRecordRoute) GetCopy() *SipRecordRoute {
@@ -63,20 +60,12 @@ func (self *SipRecordRoute) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
-func (self *SipRecordRoute) Body() string {
-    return self.LocalBody(nil)
-}
-
-func (self *SipRecordRoute) LocalBody(hostport *sippy_conf.HostPort) string {
-    return self.Address.LocalStr(hostport)
-}
-
 func (self *SipRecordRoute) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.LocalStringBody(nil)
 }
 
 func (self *SipRecordRoute) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipRecordRoute) AsSipRoute() *SipRoute {

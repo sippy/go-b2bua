@@ -58,7 +58,7 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
     }
     code, _ := resp.GetSCode()
     if code == 401 && resp.GetSipWWWAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
-        challenge := resp.GetSipWWWAuthenticate()
+        challenge := resp.GetSipWWWAuthenticate().GetBody()
         req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
         self.ua.IncLCSeq()
         self.ka_tr, err = self.ua.PrepTr(req)
