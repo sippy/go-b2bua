@@ -198,13 +198,22 @@ func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_co
 }
 
 func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, data []byte, checksum string, address *sippy_conf.HostPort, server *udpServer) {
-    resp, err := ParseSipResponse(data, rtime, self.config)
+    var resp *sipResponse
+    var err error
+    var tid *sippy_header.TID
+
+    resp, err = ParseSipResponse(data, rtime, self.config)
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logError("can't parse SIP response from " + address.String() + ":" + err.Error())
         return
     }
-    tid := resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
+    tid, err = resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/, self.config)
+    if err != nil {
+        self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
+        self.logError("can't parse SIP response from " + address.String() + ":" + err.Error())
+        return
+    }
     self.config.SipLogger().Write(rtime, tid.CallId, "RECEIVED message from " + address.String() + ":\n" + string(data))
 
     if resp.scode < 100 || resp.scode > 999 {

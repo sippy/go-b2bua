@@ -75,7 +75,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         from *sippy_header.SipFrom, via *sippy_header.SipVia, cseq int, callid *sippy_header.SipCallId,
         maxforwards *sippy_header.SipMaxForwards, body sippy_types.MsgBody, contact *sippy_header.SipContact,
         routes []*sippy_header.SipRoute, target *sippy_conf.HostPort, cguid *sippy_header.SipCiscoGUID,
-        user_agent *sippy_header.SipUserAgent, expires *sippy_header.SipExpires, config sippy_conf.Config) *sipRequest {
+        user_agent *sippy_header.SipUserAgent, expires *sippy_header.SipExpires, config sippy_conf.Config) (*sipRequest, error) {
     if routes == nil {
         routes = make([]*sippy_header.SipRoute, 0)
     }
@@ -87,7 +87,12 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         if len(routes) == 0 {
             self.SetTarget(self.ruri.GetAddr(config))
         } else {
-            self.SetTarget(routes[0].GetAddr(config))
+            var r0 *sippy_header.SipAddress
+            var err error
+            if r0, err = routes[0].GetBody(config); err != nil {
+                return nil, err
+            }
+            self.SetTarget(r0.GetUrl().GetAddr(config))
         }
     } else {
         self.SetTarget(target)
@@ -98,8 +103,13 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         self.sipver = sipver
     }
     if via == nil {
+        var via0 *sippy_header.SipViaBody
+        var err error
         self.AppendHeader(sippy_header.NewSipVia(config))
-        self.vias[0].GenBranch()
+        if via0, err = self.vias[0].GetBody(); err != nil {
+            return nil, err
+        }
+        via0.GenBranch()
     } else {
         self.AppendHeader(via)
     }
@@ -134,7 +144,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         self.AppendHeader(cguid.AsH323ConfId())
     }
     self.setBody(body)
-    return self
+    return self, nil
 }
 
 func (self *sipRequest) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
@@ -179,7 +189,7 @@ func (self *sipRequest) GenResponse(scode int, reason string, body sippy_types.M
                        self.cseq.GetCopy(), rrs, body, server)
 }
 
-func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config) sippy_types.SipRequest {
+func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config) (sippy_types.SipRequest, error) {
     if to == nil {
         to = self.to.GetCopy()
     }
@@ -188,15 +198,19 @@ func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config)
     if self.maxforwards != nil {
         maxforwards = self.maxforwards.GetCopy()
     }
+    cseq, err := self.cseq.GetBody()
+    if err != nil {
+        return nil, err
+    }
     return NewSipRequest("ACK", self.ruri.GetCopy(), self.sipver,
                       to, self.from.GetCopy(), self.vias[0].GetCopy(),
-                      self.cseq.CSeq, self.call_id.GetCopy(),
+                      cseq.CSeq, self.call_id.GetCopy(),
                       maxforwards, /*body*/ nil, /*contact*/ nil,
                       /*routes*/ nil, /*target*/ nil, /*cguid*/ nil, self.user_agent,
                       /*expires*/ nil, config)
 }
 
-func (self *sipRequest) GenCANCEL(config sippy_conf.Config) sippy_types.SipRequest {
+func (self *sipRequest) GenCANCEL(config sippy_conf.Config) (sippy_types.SipRequest, error) {
     var maxforwards *sippy_header.SipMaxForwards = nil
 
     if self.maxforwards != nil {
@@ -206,9 +220,13 @@ func (self *sipRequest) GenCANCEL(config sippy_conf.Config) sippy_types.SipReque
     for i, r := range self.routes {
         routes[i] = r.GetCopy()
     }
+    cseq, err := self.cseq.GetBody()
+    if err != nil {
+        return nil, err
+    }
     return NewSipRequest("CANCEL", self.ruri.GetCopy(), self.sipver,
                       self.to.GetCopy(), self.from.GetCopy(), self.vias[0].GetCopy(),
-                      self.cseq.CSeq, self.call_id.GetCopy(),
+                      cseq.CSeq, self.call_id.GetCopy(),
                       maxforwards, /*body*/ nil, /*contact*/ nil,
                       routes, self.GetTarget(), /*cguid*/ nil,
                       self.user_agent, /*expires*/ nil, config)

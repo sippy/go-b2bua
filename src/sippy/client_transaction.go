@@ -57,8 +57,10 @@ type clientTransaction struct {
     ack_routes      []*sippy_header.SipRoute
 }
 
-func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, req_out_cb func(sippy_types.SipRequest)) *clientTransaction {
+func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
     var r408 sippy_types.SipResponse = nil
+    var err error
+
     if resp_receiver != nil {
         r408 = req.GenResponse(408, "Request Timeout", /*body*/ nil, /*server*/ nil)
     }
@@ -74,8 +76,12 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
             }
         }
         needack = true
-        ack = req.GenACK(nil, sip_tm.config)
-        cancel = req.GenCANCEL(sip_tm.config)
+        if ack, err = req.GenACK(nil, sip_tm.config); err != nil {
+            return nil, err
+        }
+        if cancel, err = req.GenCANCEL(sip_tm.config); err != nil {
+            return nil, err
+        }
     }
     self := &clientTransaction{
         resp_receiver   : resp_receiver,
@@ -89,7 +95,7 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         ack_rparams_present : false,
     }
     self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
-    return self
+    return self, nil
 }
 
 func (self *clientTransaction) StartTimers() {
