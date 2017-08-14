@@ -32,22 +32,24 @@ import (
 
 type SipMaxForwards struct {
     normalName
-    sipNumericHF
+    SipNumericHF
 }
 
 var _sip_max_forwards_name normalName = newNormalName("Max-Forwards")
 
-func createSipMaxForwards(body string) []SipHeader {
-    return []SipHeader{ &SipMaxForwards{
-        normalName      : _sip_max_forwards_name,
-        sipNumericHF    : createSipNumericHF(body),
-    } }
+func CreateSipMaxForwards(body string) []SipHeader {
+    return []SipHeader{
+        &SipMaxForwards{
+            normalName      : _sip_max_forwards_name,
+            SipNumericHF    : createSipNumericHF(body),
+        },
+    }
 }
 
 func NewSipMaxForwards(number int) *SipMaxForwards {
     return &SipMaxForwards{
         normalName      : _sip_max_forwards_name,
-        sipNumericHF    : newSipNumericHF(number),
+        SipNumericHF    : newSipNumericHF(number),
     }
 }
 
@@ -70,8 +72,4 @@ func (self *SipMaxForwards) GetCopy() *SipMaxForwards {
 
 func (self *SipMaxForwards) GetCopyAsIface() SipHeader {
     return self.GetCopy()
-}
-
-func (self *SipMaxForwards) GetNum() int {
-    return self.number
 }

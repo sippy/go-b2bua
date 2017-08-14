@@ -37,7 +37,7 @@ type SipFrom struct {
 
 var _sip_from_name compactName = newCompactName("From", "f")
 
-func ParseSipFrom(body string) []SipHeader {
+func CreateSipFrom(body string) []SipHeader {
     addresses := createSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, address := range addresses {
@@ -49,7 +49,7 @@ func ParseSipFrom(body string) []SipHeader {
     return rval
 }
 
-func NewSipFrom(address *sipAddress, config sippy_conf.Config) *SipFrom {
+func NewSipFrom(address *SipAddress, config sippy_conf.Config) *SipFrom {
     if address == nil {
         address = NewSipAddress("Anonymous", NewSipURL("" /* username */,
                                     config.GetMyAddress(),

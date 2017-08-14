@@ -34,13 +34,13 @@ var _sip_content_length_name compactName = newCompactName("Content-Length", "l")
 
 type SipContentLength struct {
     compactName
-    sipNumericHF
+    SipNumericHF
 }
 
 func CreateSipContentLength(body string) []SipHeader {
     return []SipHeader{ &SipContentLength{
         compactName : _sip_content_length_name,
-        sipNumericHF : createSipNumericHF(body),
+        SipNumericHF : createSipNumericHF(body),
     } }
 }
 

@@ -27,8 +27,6 @@
 package sippy_header
 
 import (
-    "strings"
-
     "sippy/conf"
 )
 
@@ -42,10 +40,6 @@ func NewSipGenericHF(name, body string) *sipGenericHF {
         name : name,
         body : body,
     }
-}
-
-func ParseSipGenericHF(name, body string) *sipGenericHF {
-    return NewSipGenericHF(strings.Title(name), body)
 }
 
 func (self *sipGenericHF) StringBody() string {

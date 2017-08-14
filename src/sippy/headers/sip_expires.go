@@ -32,7 +32,7 @@ import (
 
 type SipExpires struct {
     normalName
-    sipNumericHF
+    SipNumericHF
 }
 
 var _sip_expires_name normalName = newNormalName("Expires")
@@ -40,14 +40,14 @@ var _sip_expires_name normalName = newNormalName("Expires")
 func NewSipExpires() *SipExpires {
     return &SipExpires{
         normalName  : _sip_expires_name,
-        sipNumericHF : newSipNumericHF(300),
+        SipNumericHF : newSipNumericHF(300),
     }
 }
 
 func CreateSipExpires(body string) []SipHeader {
     return []SipHeader{ &SipExpires{
         normalName      : _sip_expires_name,
-        sipNumericHF    : createSipNumericHF(body),
+        SipNumericHF    : createSipNumericHF(body),
     } }
 }
 

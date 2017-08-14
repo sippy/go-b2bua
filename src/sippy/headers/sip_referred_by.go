@@ -49,7 +49,7 @@ func CreateSipReferredBy(body string) []SipHeader {
     return rval
 }
 
-func NewSipReferredBy(addr *sipAddress) *SipReferredBy {
+func NewSipReferredBy(addr *SipAddress) *SipReferredBy {
     return &SipReferredBy{
         normalName   : _sip_referred_by_name,
         sipAddressHF : newSipAddressHF(addr),

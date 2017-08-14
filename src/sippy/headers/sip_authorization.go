@@ -170,7 +170,7 @@ func (self *SipAuthorization) parse() error {
     self.body = body
     return nil
 }
-
+/*
 func (self *SipAuthorization) GetUsername() (string, error) {
     if self.body == nil {
         if err := self.parse(); err != nil {
@@ -179,7 +179,7 @@ func (self *SipAuthorization) GetUsername() (string, error) {
     }
     return self.body.username, nil
 }
-
+*/
 func (self *SipAuthorization) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
@@ -211,7 +211,7 @@ func DigestCalcResponse(HA1, pszNonce string, pszNonceCount, pszCNonce, pszQop, 
     s += HA2
     return fmt.Sprintf("%x", md5.Sum([]byte(s)))
 }
-
+/*
 func (self *SipAuthorization) VerifyHA1(HA1, method string) (bool, error) {
     if self.body == nil {
         if err := self.parse(); err != nil {
@@ -221,3 +221,4 @@ func (self *SipAuthorization) VerifyHA1(HA1, method string) (bool, error) {
     response := DigestCalcResponse(HA1, self.body.nonce, self.body.nc, self.body.cnonce, self.body.qop, method, self.body.uri, "")
     return response == self.body.response, nil
 }
+*/

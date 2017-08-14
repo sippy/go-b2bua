@@ -68,9 +68,9 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
     if req.GetMethod() == "INVITE" {
         expires = 300 * time.Second
         if req.GetExpires() != nil {
-            num, err := req.GetExpires().Number()
-            if err == nil && num > 0 {
-                expires = time.Duration(num) * time.Second
+            exp, err := req.GetExpires().GetBody()
+            if err == nil && exp.Number > 0 {
+                expires = time.Duration(exp.Number) * time.Second
             }
         }
         needack = true
@@ -231,7 +231,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
         if resp.GetSCodeNum() >= 200 && resp.GetSCodeNum() < 300 {
             // Some hairy code ahead
             if len(resp.GetContacts()) > 0 {
-                var contact sippy_header.SipAddress
+                var contact *sippy_header.SipAddress
                 contact, err = resp.GetContacts()[0].GetBody(config)
                 if err != nil {
                     config.ErrorLogger().Debug(err.Error())
@@ -249,7 +249,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                     routes[len(resp.GetRecordRoutes()) - 1 + idx] = r2 // reverse order
                 }
                 if len(routes) > 0 {
-                    var r0 sippy_header.SipAddress
+                    var r0 *sippy_header.SipAddress
                     r0, err = routes[0].GetBody(config)
                     if err != nil {
                         config.ErrorLogger().Debug(err.Error())
@@ -282,7 +282,12 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             self.ack.SetRoutes(routes)
         }
         if fcode >= 200 && fcode < 300 {
-            self.ack.GetVias()[0].GenBranch()
+            var via0 *sippy_header.SipViaBody
+            if via0, err = self.ack.GetVias()[0].GetBody(); err != nil {
+                config.ErrorLogger().Debug("error parsing via: " + err.Error())
+                return
+            }
+            via0.GenBranch()
         }
         if rAddr == nil {
             rAddr = self.address

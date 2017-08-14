@@ -37,7 +37,7 @@ type SipDiversion struct {
 
 var _sip_diversion_name normalName = newNormalName("Diversion")
 
-func NewSipDiversion(addr *sipAddress) *SipDiversion {
+func NewSipDiversion(addr *SipAddress) *SipDiversion {
     return &SipDiversion{
         normalName   : _sip_diversion_name,
         sipAddressHF : newSipAddressHF(addr),

@@ -37,11 +37,13 @@ type SipH323ConfId struct {
 
 var _sip_h323_conf_id_name normalName = newNormalName("h323-conf-id")
 
-func createSipH323ConfId(body string) []SipHeader {
-    return []SipHeader{ &SipH323ConfId{
-        normalName  : _sip_h323_conf_id_name,
-        body        : body,
-    } }
+func CreateSipH323ConfId(body string) []SipHeader {
+    return []SipHeader{
+        &SipH323ConfId{
+            normalName  : _sip_h323_conf_id_name,
+            body        : body,
+        },
+    }
 }
 
 func (self *SipH323ConfId) GetCopy() *SipH323ConfId {

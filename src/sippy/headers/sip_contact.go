@@ -48,7 +48,7 @@ func NewSipContact(config sippy_conf.Config) *SipContact {
     }
 }
 
-func NewSipContactFromAddress(addr *sipAddress) *SipContact {
+func NewSipContactFromAddress(addr *SipAddress) *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
         Asterisk : false,

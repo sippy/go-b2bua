@@ -33,7 +33,7 @@ import (
 )
 
 type sipAddressHFBody struct {
-    Address *sipAddress
+    Address *SipAddress
 }
 
 func (self *sipAddressHFBody) getCopy() *sipAddressHFBody {
@@ -47,7 +47,7 @@ type sipAddressHF struct {
     body            *sipAddressHFBody
 }
 
-func newSipAddressHF(addr *sipAddress) *sipAddressHF {
+func newSipAddressHF(addr *SipAddress) *sipAddressHF {
     return &sipAddressHF{
         body    : &sipAddressHFBody{ Address : addr },
     }
@@ -105,7 +105,7 @@ func (self *sipAddressHF) getCopy() *sipAddressHF {
     return &cself
 }
 
-func (self *sipAddressHF) GetBody(config sippy_conf.Config) (*sipAddress, error) {
+func (self *sipAddressHF) GetBody(config sippy_conf.Config) (*SipAddress, error) {
     if self.body == nil {
         if err := self.parse(config); err != nil {
             return nil, err

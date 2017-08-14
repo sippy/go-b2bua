@@ -54,16 +54,20 @@ type serverTransaction struct {
     before_response_sent func(sippy_types.SipResponse)
 }
 
-func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager) sippy_types.ServerTransaction {
+func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager) (sippy_types.ServerTransaction, error) {
     needack := false
     var r487 sippy_types.SipResponse
     var branch string
     var expires time.Duration = 0
     method := req.GetMethod()
     if method == "INVITE" {
+        via0, err := req.GetVias()[0].GetBody()
+        if err != nil {
+            return nil, err
+        }
         needack = true
         r487 = req.GenResponse(487, "Request Terminated", /*body*/ nil, /*server*/ nil)
-        branch = req.GetVias()[0].GetBranch()
+        branch = via0.GetBranch()
         expires = 300 * time.Second
         if req.GetExpires() != nil && req.GetExpires().Number > 0 {
             expires = time.Duration(req.GetExpires().Number) * time.Second
@@ -77,7 +81,7 @@ func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sipp
         expires         : expires,
     }
     self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, nil, nil, needack, sip_tm.config.ErrorLogger())
-    return self
+    return self, nil
 }
 
 func (self *serverTransaction) StartTimers() {
@@ -216,7 +220,12 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         // RFC3261 says that we have to reply 200 OK in all cases if
         // there is such transaction
         resp := req.GenResponse(200, "OK", /*body*/ nil, self.server)
-        self.sip_tm.transmitMsg(self.userv, resp, resp.GetVias()[0].GetTAddr(self.sip_tm.config), checksum, self.tid.CallId)
+        via0, err := resp.GetVias()[0].GetBody()
+        if err != nil {
+            self.sip_tm.config.ErrorLogger().Debug("error parsing Via: " + err.Error())
+            return
+        }
+        self.sip_tm.transmitMsg(self.userv, resp, via0.GetTAddr(self.sip_tm.config), checksum, self.tid.CallId)
         if self.state == TRYING || self.state == RINGING {
             self.doCancel(req.GetRtime(), req)
         }
@@ -239,18 +248,33 @@ func (self *serverTransaction) SendResponse(resp sippy_types.SipResponse, retran
 }
 
 func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResponse, retrans bool, ack_cb func(sippy_types.SipRequest), lossemul int) {
+    var via0 *sippy_header.SipViaBody
+    var err error
+
     if self.sip_tm == nil {
         return
     }
     if self.state != TRYING && self.state != RINGING && ! retrans {
         self.sip_tm.logError("BUG: attempt to send reply on already finished transaction!!!")
     }
-    if resp.GetSCodeNum() > 100 && resp.GetTo().GetTag() == "" {
-        resp.GetTo().GenTag()
+    if resp.GetSCodeNum() > 100 {
+        to, err := resp.GetTo().GetBody(self.sip_tm.config)
+        if err != nil {
+            self.sip_tm.config.ErrorLogger().Debug("error parsing To: " + err.Error())
+            return
+        }
+        if to.GetTag() == "" {
+            to.GenTag()
+        }
     }
     self.sip_tm.beforeResponseSent(resp)
     self.data = []byte(resp.LocalStr(self.userv.GetLaddress(), /*compact*/ false))
-    self.address = resp.GetVias()[0].GetTAddr(self.sip_tm.config)
+    via0, err = resp.GetVias()[0].GetBody()
+    if err != nil {
+        self.sip_tm.config.ErrorLogger().Debug("error parsing Via: " + err.Error())
+        return
+    }
+    self.address = via0.GetTAddr(self.sip_tm.config)
     need_cleanup := false
     if resp.GetSCodeNum() < 200 {
         self.state = RINGING
@@ -272,9 +296,14 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
                 // could differ as well.
                 tid := self.tid
                 if tid != nil {
+                    to, err := resp.GetTo().GetBody(self.sip_tm.config)
+                    if err != nil {
+                        self.sip_tm.config.ErrorLogger().Debug("error parsing To: " + err.Error())
+                        return
+                    }
                     old_tid := *tid // copy
                     tid.Branch = ""
-                    tid.ToTag = resp.GetTo().GetTag()
+                    tid.ToTag = to.GetTag()
                     self.sip_tm.tserver_replace(&old_tid, tid, self)
                 }
             }

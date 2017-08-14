@@ -37,7 +37,7 @@ type SipTo struct {
 
 var _sip_to_name compactName = newCompactName("To", "t")
 
-func NewSipTo(address *sipAddress, config sippy_conf.Config) *SipTo {
+func NewSipTo(address *SipAddress, config sippy_conf.Config) *SipTo {
     if address == nil {
         address = NewSipAddress("Anonymous", NewSipURL("" /* username */,
                                     config.GetMyAddress(),

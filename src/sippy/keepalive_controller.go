@@ -52,13 +52,16 @@ func newKeepaliveController(ua sippy_types.UA) *keepaliveController {
 }
 
 func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
-    var err error
     if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
         return
     }
     code, _ := resp.GetSCode()
     if code == 401 && resp.GetSipWWWAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
-        challenge := resp.GetSipWWWAuthenticate().GetBody()
+        challenge, err := resp.GetSipWWWAuthenticate().GetBody()
+        if err != nil {
+            self.ua.Config().ErrorLogger().Debug("error parsing 401 auth: " + err.Error())
+            return
+        }
         req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
         self.ua.IncLCSeq()
         self.ka_tr, err = self.ua.PrepTr(req)
@@ -69,7 +72,11 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
         return
     }
     if code == 407 && resp.GetSipProxyAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
-        challenge := resp.GetSipProxyAuthenticate()
+        challenge, err := resp.GetSipProxyAuthenticate().GetBody()
+        if err != nil {
+            self.ua.Config().ErrorLogger().Debug("error parsing 407 auth: " + err.Error())
+            return
+        }
         req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         self.ua.IncLCSeq()
         self.ka_tr, err = self.ua.PrepTr(req)

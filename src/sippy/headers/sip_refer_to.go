@@ -49,7 +49,7 @@ func CreateSipReferTo(body string) []SipHeader {
     return rval
 }
 
-func NewSipReferTo(addr *sipAddress) *SipReferTo {
+func NewSipReferTo(addr *SipAddress) *SipReferTo {
     return &SipReferTo{
         compactName  : _sip_refer_to_name,
         sipAddressHF : newSipAddressHF(addr),

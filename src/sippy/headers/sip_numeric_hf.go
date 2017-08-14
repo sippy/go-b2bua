@@ -30,37 +30,37 @@ import (
     "strconv"
 )
 
-type sipNumericHF struct {
+type SipNumericHF struct {
     string_body     string
-    number          int
+    Number          int
     parsed          bool
 }
 
-func newSipNumericHF(num int) sipNumericHF {
-    return sipNumericHF{
-        number      : num,
+func newSipNumericHF(num int) SipNumericHF {
+    return SipNumericHF{
+        Number      : num,
         parsed      : true,
     }
 }
 
-func createSipNumericHF(body string) sipNumericHF {
-    return sipNumericHF{
+func createSipNumericHF(body string) SipNumericHF {
+    return SipNumericHF{
         string_body     : body,
         parsed          : false,
     }
 }
 
-func (self *sipNumericHF) StringBody() string {
+func (self *SipNumericHF) StringBody() string {
     if self.parsed {
-        return strconv.Itoa(self.number)
+        return strconv.Itoa(self.Number)
     }
     return self.string_body
 }
 
-func (self *sipNumericHF) parse() error {
+func (self *SipNumericHF) parse() error {
     if ! self.parsed {
         var err error
-        self.number, err = strconv.Atoi(self.string_body)
+        self.Number, err = strconv.Atoi(self.string_body)
         if err != nil {
             return err
         }
@@ -69,11 +69,11 @@ func (self *sipNumericHF) parse() error {
     return nil
 }
 
-func (self *sipNumericHF) Number() (int, error) {
+func (self *SipNumericHF) GetBody() (*SipNumericHF, error) {
     if ! self.parsed {
         if err := self.parse(); err != nil {
-            return 0, err
+            return nil, err
         }
     }
-    return self.number, nil
+    return self, nil
 }

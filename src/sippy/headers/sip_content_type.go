@@ -37,11 +37,13 @@ type SipContentType struct {
 
 var _sip_content_type_name compactName = newCompactName("Content-Type", "c")
 
-func ParseSipContentType(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    return []SipHeader{ &SipContentType{
-        compactName : _sip_content_type_name,
-        body        : body,
-    } }, nil
+func CreateSipContentType(body string) []SipHeader {
+    return []SipHeader{
+        &SipContentType{
+            compactName : _sip_content_type_name,
+            body        : body,
+        },
+    }
 }
 
 func (self *SipContentType) StringBody() string {

@@ -82,7 +82,7 @@ func ParseSipHeader(s string, config sippy_conf.Config) ([]sippy_header.SipHeade
     body := strings.TrimSpace(res[1])
     factory, ok := sip_header_name_map[strings.ToLower(name)]
     if ok {
-        return factory(body, config)
+        return factory(body), nil
     }
-    return []sippy_header.SipHeader{ sippy_header.ParseSipGenericHF(name, body) }, nil
+    return []sippy_header.SipHeader{ sippy_header.NewSipGenericHF(strings.Title(name), body) }, nil
 }
