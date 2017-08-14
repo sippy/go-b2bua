@@ -201,6 +201,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     var resp *sipResponse
     var err error
     var tid *sippy_header.TID
+    var contact *sippy_header.SipAddress
 
     resp, err = ParseSipResponse(data, rtime, self.config)
     if err != nil {
@@ -227,17 +228,31 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     if !ok {
         //print 'no transaction with tid of %s in progress' % str(tid)
         if len(resp.vias) > 1 {
-            taddr := resp.vias[0].GetTAddr(self.config)
+            var via0 *sippy_header.SipViaBody
+
+            via0, err = resp.vias[0].GetBody()
+            if err != nil {
+                self.logError(err.Error())
+                return
+            }
+            taddr := via0.GetTAddr(self.config)
             if taddr.Port.String() != self.config.SipPort().String() {
                 if len(resp.contacts) == 0 {
                     self.logError("OnUdpPacket: no Contact: in SIP response")
                     return
                 }
-                curl := resp.contacts[0].GetUrl()
-                //print 'curl.host = %s, curl.port = %d,  address[1] = %d' % (curl.host, curl.port, address[1])
-                if check1918(curl.Host.String()) || curl.Port.String() != address.Port.String() {
-                    curl.Host = sippy_conf.NewMyAddress(taddr.Host.String())
-                    curl.Port = sippy_conf.NewMyPort(taddr.Port.String())
+                if ! resp.contacts[0].Asterisk {
+                    contact, err = resp.contacts[0].GetBody(self.config)
+                    if err != nil {
+                        self.logError(err.Error())
+                        return
+                    }
+                    curl := contact.GetUrl()
+                    //print 'curl.host = %s, curl.port = %d,  address[1] = %d' % (curl.host, curl.port, address[1])
+                    if check1918(curl.Host.String()) || curl.Port.String() != address.Port.String() {
+                        curl.Host = sippy_conf.NewMyAddress(taddr.Host.String())
+                        curl.Port = sippy_conf.NewMyPort(taddr.Port.String())
+                    }
                 }
                 data = resp.Bytes()
                 call_id := ""
@@ -253,7 +268,12 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     t.Lock()
     defer t.Unlock()
     if self.nat_traversal && len(resp.contacts) > 0 && !resp.contacts[0].Asterisk && ! check1918(t.GetHost()) {
-        curl := resp.contacts[0].GetUrl()
+        contact, err = resp.contacts[0].GetBody(self.config)
+        if err != nil {
+            self.logError(err.Error())
+            return
+        }
+        curl := contact.GetUrl()
         if check1918(curl.Host.String()) {
             host, port := address.Host.String(), address.Port.String()
             curl.Host, curl.Port = sippy_conf.NewMyAddress(host), sippy_conf.NewMyPort(port)
@@ -261,14 +281,19 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     }
     host, port := address.Host.String(), address.Port.String()
     resp.source = sippy_conf.NewHostPort(host, port)
-    sippy_utils.SafeCall(func() { t.IncomingResponse(resp, checksum) }, nil, self.config.ErrorLogger())
+    sippy_utils.SafeCall(func() { t.IncomingResponse(resp, checksum, self.config) }, nil, self.config.ErrorLogger())
 }
 
 func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, data []byte, checksum string, address *sippy_conf.HostPort, server *udpServer) {
+    var req *sipRequest
+    var err error
+    var tids []*sippy_header.TID
+    var via0 *sippy_header.SipViaBody
+
     if self.call_map == nil {
         return
     }
-    req, err := ParseSipRequest(data, rtime, self.config)
+    req, err = ParseSipRequest(data, rtime, self.config)
     if err != nil {
         switch errt := err.(type) {
         case *ESipParseException:
@@ -280,18 +305,28 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
         self.logError("can't parse SIP request from " + address.String() + ": " + err.Error())
         return
     }
-    tids := req.getTIds()
+    tids, err = req.getTIds(self.config)
+    if err != nil {
+        self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
+        self.logError(err)
+        return
+    }
     self.config.SipLogger().Write(rtime, tids[0].CallId, "RECEIVED message from " + address.String() + ":\n" + string(data))
-    ahost, aport := req.vias[0].GetAddr(self.config)
+    via0, err = req.vias[0].GetBody()
+    if err != nil {
+        self.logError(err)
+        return
+    }
+    ahost, aport := via0.GetAddr(self.config)
     rhost, rport := address.Host.String(), address.Port.String()
     if self.nat_traversal && rport != aport && check1918(ahost) {
         req.nated = true
     }
     if ahost != rhost {
-        req.vias[0].SetReceived(rhost)
+        via0.SetReceived(rhost)
     }
-    if req.vias[0].HasRport() || req.nated {
-        req.vias[0].SetRport(&rport)
+    if via0.HasRport() || req.nated {
+        via0.SetRport(&rport)
     }
     if self.nat_traversal && len(req.contacts) > 0 && !req.contacts[0].Asterisk && len(req.vias) == 1 {
         curl := req.contacts[0].GetUrl()

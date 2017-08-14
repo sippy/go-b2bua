@@ -113,16 +113,7 @@ func (self *sipAddressHF) GetBody(config sippy_conf.Config) (*SipAddress, error)
     }
     return self.body.Address, nil
 }
-/*
-func (self *sipAddressHF) GetUrl(config sippy_conf.Config) (*SipURL, error) {
-    if self.body == nil {
-        if err := self.parse(config); err != nil {
-            return nil, err
-        }
-    }
-    return self.body.Address.url, nil
-}
-*/
+
 func (self *sipAddressHF) StringBody() string {
     return self.LocalStringBody(nil)
 }
