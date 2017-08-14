@@ -33,7 +33,7 @@ import (
     "sippy/utils"
 )
 
-type sipCSeqBody struct {
+type SipCSeqBody struct {
     CSeq    int
     Method  string
 }
@@ -41,7 +41,7 @@ type sipCSeqBody struct {
 type SipCSeq struct {
     normalName
     string_body string
-    body        *sipCSeqBody
+    body        *SipCSeqBody
 }
 
 func NewSipCSeq(cseq int, method string) *SipCSeq {
@@ -51,8 +51,8 @@ func NewSipCSeq(cseq int, method string) *SipCSeq {
     }
 }
 
-func newSipCSeqBody(cseq int, method string) *sipCSeqBody {
-    return &sipCSeqBody{
+func newSipCSeqBody(cseq int, method string) *SipCSeqBody {
+    return &SipCSeqBody{
         CSeq        : cseq,
         Method      : method,
     }
@@ -75,7 +75,7 @@ func (self *SipCSeq) parse() error {
     if err != nil {
         return err
     }
-    body := &sipCSeqBody{
+    body := &SipCSeqBody{
         CSeq        : cseq,
     }
     if len(arr) == 2 {
@@ -89,6 +89,15 @@ func (self *SipCSeq) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
+func (self *SipCSeq) GetBody() (*SipCSeqBody, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return nil, err
+        }
+    }
+    return self.body, nil
+}
+
 func (self *SipCSeq) GetCopy() *SipCSeq {
     tmp := *self
     return &tmp
@@ -98,6 +107,10 @@ func (self *SipCSeq) LocalStr(*sippy_conf.HostPort, bool) string {
     return self.String()
 }
 
+func (self *SipCSeq) String() string {
+    return self.Name() + ": " + self.StringBody()
+}
+
 func (self *SipCSeq) StringBody() string {
     if self.body != nil {
         return self.body.String()
@@ -105,10 +118,6 @@ func (self *SipCSeq) StringBody() string {
     return self.string_body
 }
 
-func (self *sipCSeqBody) String() string {
+func (self *SipCSeqBody) String() string {
     return strconv.Itoa(self.CSeq) + " " + self.Method
-}
-
-func (self *SipCSeq) String() string {
-    return self.Name() + ": " + self.StringBody()
 }

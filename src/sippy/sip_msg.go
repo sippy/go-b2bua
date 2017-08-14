@@ -128,7 +128,7 @@ func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Conf
         }
         for _, header := range headers {
             if contact, ok := header.(*sippy_header.SipContact); ok {
-                if contact.Address.String() == "*" {
+                if contact.Asterisk {
                     continue
                 }
             }
@@ -220,8 +220,12 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
 }
 
 func (self *sipMsg) init_body() error {
+    var blen_hf *sippy_header.SipNumericHF
     if self.content_length != nil {
-        blen := self.content_length.Length
+        blen_hf, _ = self.content_length.GetBody()
+    }
+    if blen_hf != nil {
+        blen := blen_hf.Number
         mblen := 0
         if self.__mbody != nil {
             mblen = len([]byte(*self.__mbody)) // length in bytes, not runes
@@ -266,7 +270,7 @@ func (self *sipMsg) init_body() error {
     }
     if self.__mbody != nil {
         if self.content_type != nil {
-            self.body = NewMsgBody(*self.__mbody, strings.ToLower(self.content_type.Body()))
+            self.body = NewMsgBody(*self.__mbody, strings.ToLower(self.content_type.StringBody()))
         } else {
             self.body = NewMsgBody(*self.__mbody, "application/sdp")
         }
@@ -366,44 +370,83 @@ func new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch string) *s
     return self
 }
 
-func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) *sippy_header.TID {
+func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool, config sippy_conf.Config) (*sippy_header.TID, error) {
     var call_id, cseq, cseq_method, from_tag, to_tag, via_branch string
+    var cseq_hf *sippy_header.SipCSeqBody
+    var from_hf *sippy_header.SipAddress
+    var err error
 
     if self.call_id != nil {
         call_id = self.call_id.CallId
     }
-    if self.cseq != nil {
-        cseq = strconv.Itoa(self.cseq.CSeq)
+    if self.cseq == nil {
+        return nil, errors.New("no CSeq: field")
     }
+    if cseq_hf, err = self.cseq.GetBody(); err != nil {
+        return nil, err
+    }
+    cseq = strconv.Itoa(cseq_hf.CSeq)
     if self.from != nil {
-        from_tag = self.from.GetTag()
+        if from_hf, err = self.from.GetBody(config); err != nil {
+            return nil, err
+        }
+        from_tag = from_hf.GetTag()
     }
     if wCSM {
-        cseq_method = self.cseq.Method
+        cseq_method = cseq_hf.Method
     }
     if wBRN {
         if len(self.vias) > 0 {
-            via_branch = self.vias[0].GetBranch()
+            var via0 *sippy_header.SipViaBody
+            via0, err = self.vias[0].GetBody()
+            if err != nil {
+                return nil, err
+            }
+            via_branch = via0.GetBranch()
         }
     }
     if wTTG {
-        to_tag = self.to.GetTag()
+        var to_hf *sippy_header.SipAddress
+        to_hf, err = self.to.GetBody(config)
+        if err != nil {
+            return nil, err
+        }
+        to_tag = to_hf.GetTag()
     }
-    return new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch)
+    return new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch), nil
 }
 
-func (self *sipMsg) getTIds() []*sippy_header.TID {
+func (self *sipMsg) getTIds(config sippy_conf.Config) ([]*sippy_header.TID, error) {
     var call_id, cseq, method, ftag string
+    var from_hf *sippy_header.SipAddress
+    var cseq_hf *sippy_header.SipCSeqBody
+    var err error
+
     call_id = self.call_id.CallId
-    ftag = self.from.GetTag()
-    if self.cseq != nil {
-        cseq, method = strconv.Itoa(self.cseq.CSeq), self.cseq.Method
+    from_hf, err = self.from.GetBody(config)
+    if err != nil {
+        return nil, err
+    }
+    ftag = from_hf.GetTag()
+    if self.cseq == nil {
+        return nil, errors.New("no CSeq: field")
+    }
+    if cseq_hf, err = self.cseq.GetBody(); err != nil {
+        return nil, err
+    }
+    if cseq_hf != nil {
+        cseq, method = strconv.Itoa(cseq_hf.CSeq), cseq_hf.Method
     }
     ret := []*sippy_header.TID{}
     for _, via := range self.vias {
-        ret = append(ret, new_tid(call_id, cseq, method, ftag, via.GetBranch(), ""))
+        var via_hf *sippy_header.SipViaBody
+
+        if via_hf, err = via.GetBody(); err != nil {
+            return nil, err
+        }
+        ret = append(ret, new_tid(call_id, cseq, method, ftag, via_hf.GetBranch(), ""))
     }
-    return ret
+    return ret, nil
 }
 
 func (self *sipMsg) getCopy() *sipMsg {
