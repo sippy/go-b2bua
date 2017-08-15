@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "sippy/headers"
     "sippy/time"
     "sippy/types"
 )
@@ -96,9 +97,24 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
     // caller already has declared his wilingless to end the session,
     // so that he is probably isn"t interested in redirects anymore.
     if code >= 200 && code < 300 {
+        var err error
+        var rUri *sippy_header.SipAddress
+        var to_body *sippy_header.SipAddress
+        var req sippy_types.SipRequest
+
         self.ua.UpdateRouting(resp, true, true)
-        self.ua.GetRUri().SetTag(resp.GetTo().GetTag())
-        req := self.ua.GenRequest("BYE", nil, "", "", nil)
+        rUri, err = self.ua.GetRUri().GetBody(self.ua.Config())
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("UacStateCancelling::RecvResponse: #1: " + err.Error())
+            return nil
+        }
+        to_body, err = resp.GetTo().GetBody(self.ua.Config())
+        rUri.SetTag(to_body.GetTag())
+        req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("UacStateCancelling::RecvResponse: #2: " + err.Error())
+            return nil
+        }
         self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         return NewUaStateDisconnected(self.ua, nil, "", 0, nil)
