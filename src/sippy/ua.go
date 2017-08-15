@@ -159,21 +159,22 @@ func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, n
     }
 }
 
-func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) (*sippy_types.Ua_context) {
+func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) *sippy_types.Ua_context {
     //print "Received request %s in state %s instance %s" % (req.getMethod(), self.state, self)
     //print self.rCSeq, req.getHFBody("cseq").getCSeqNum()
     t.SetBeforeResponseSent(self.me().BeforeResponseSent)
     if self.remote_ua == "" {
         self.update_ua(req)
     }
-    if self.rCSeq != -1 && self.rCSeq >= req.GetCSeq().CSeq {
+    cseq_body, err := req.GetCSeq().GetBody()
+    if err != nil || (self.rCSeq != -1 && self.rCSeq >= cseq_body.CSeq) {
         return &sippy_types.Ua_context{
             Response : req.GenResponse(500, "Server Internal Error", /*body*/ nil, /*server*/ self.local_ua.AsSipServer()),
             CancelCB : nil,
             NoAckCB  : nil,
         }
     }
-    self.rCSeq = req.GetCSeq().CSeq
+    self.rCSeq = cseq_body.CSeq
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
             self.ChangeState(NewUasStateIdle(self.me(), self.config))
@@ -199,39 +200,64 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
 
 func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
     var err error
+    var challenge *sippy_header.SipWWWAuthenticateBody
+    var req sippy_types.SipRequest
+    var cseq_body *sippy_header.SipCSeqBody
+
     if self.state == nil {
+        return
+    }
+    cseq_body, err = resp.GetCSeq().GetBody()
+    if err != nil {
+        self.logError("UA::RecvResponse: cannot parse CSeq: " + err.Error())
         return
     }
     self.update_ua(resp)
     code, _ := resp.GetSCode()
-    cseq, method := resp.GetCSeq().CSeq, resp.GetCSeq().Method
-    orig_req, cseq_found := self.reqs[cseq]
-    if method == "INVITE" && !self.pass_auth && cseq_found && code == 401 && resp.GetSipWWWAuthenticate() != nil &&
+    //cseq, method := resp.GetCSeq().CSeq, resp.GetCSeq().Method
+    orig_req, cseq_found := self.reqs[cseq_body.CSeq]
+    if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found && code == 401 && resp.GetSipWWWAuthenticate() != nil &&
       self.username != "" && self.password != "" && orig_req.sip_authorization == nil {
-        challenge := resp.GetSipWWWAuthenticate()
-        req := self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), /*SipXXXAuthorization*/ nil)
+        challenge, err = resp.GetSipWWWAuthenticate().GetBody()
+        if err != nil {
+            self.logError("UA::RecvResponse: cannot parse WWW-Authenticate: " + err.Error())
+            return
+        }
+        req, err = self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), /*SipXXXAuthorization*/ nil)
+        if err != nil {
+            self.logError("UA::RecvResponse: cannot create INVITE(1): " + err.Error())
+            return
+        }
         self.lCSeq += 1
         self.tr, err = self.PrepTr(req)
         if err == nil {
             self.sip_tm.BeginClientTransaction(req, self.tr)
-            delete(self.reqs, cseq)
+            delete(self.reqs, cseq_body.CSeq)
         }
         return
     }
-    if method == "INVITE" && !self.pass_auth && cseq_found && code == 407 && resp.GetSipProxyAuthenticate() != nil &&
+    if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found && code == 407 && resp.GetSipProxyAuthenticate() != nil &&
       self.username != "" && self.password != "" && orig_req.GetSipProxyAuthorization() == nil {
-        challenge := resp.GetSipProxyAuthenticate()
-        req := self.me().GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
+        challenge, err = resp.GetSipProxyAuthenticate().GetBody()
+        if err != nil {
+            self.logError("UA::RecvResponse: cannot parse Proxy-Authenticate: " + err.Error())
+            return
+        }
+        req, err = self.me().GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
+        if err != nil {
+            self.logError("UA::RecvResponse: cannot create INVITE(2): " + err.Error())
+            return
+        }
         self.lCSeq += 1
         self.tr, err = self.PrepTr(req)
         if err == nil {
             self.sip_tm.BeginClientTransaction(req, self.tr)
-            delete(self.reqs, cseq)
+            delete(self.reqs, cseq_body.CSeq)
         }
         return
     }
     if code >= 200 && cseq_found {
-        delete(self.reqs, cseq)
+        delete(self.reqs, cseq_body.CSeq)
     }
     newstate := self.state.RecvResponse(resp, tr)
     if newstate != nil {
@@ -272,7 +298,7 @@ func (self *Ua) RecvEvent(event sippy_types.CCEvent) {
     }
     newstate, err := self.state.RecvEvent(event)
     if err != nil {
-        self.logError("UA::RecvEvent error #1:", err)
+        self.logError("UA::RecvEvent error #1: " + err.Error())
         return
     }
     if newstate != nil {
@@ -343,17 +369,20 @@ func (self *Ua) emitPendingEvents() {
     }
 }
 
-func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) sippy_types.SipRequest {
+func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (sippy_types.SipRequest, error) {
     var target *sippy_conf.HostPort
+
     if self.outbound_proxy != nil {
         target = self.outbound_proxy
     } else {
         target = self.rAddr
     }
-    req := NewSipRequest(/*method*/ method, /*ruri*/ self.rTarget, /*sipver*/ "", /*to*/ self.rUri, /*fr0m*/ self.lUri,
-                    /*via*/ nil, /*cseq*/ self.lCSeq, /*callid*/ self.cId, /*maxforwars*/ nil, /*body*/ body,
-                    /*contact*/ self.lContact, /*routes*/ self.routes, /*target*/ target, /*cguid*/ self.cGUID,
-                     /*user_agent*/ self.local_ua, /*expires*/ nil, self.config)
+    req, err := NewSipRequest(method, /*ruri*/ self.rTarget, /*sipver*/ "", /*to*/ self.rUri, /*fr0m*/ self.lUri,
+                    /*via*/ nil, self.lCSeq, self.cId, /*maxforwars*/ nil, body, self.lContact, self.routes,
+                    target, self.cGUID, /*user_agent*/ self.local_ua, /*expires*/ nil, self.config)
+    if err != nil {
+        return nil, err
+    }
     if nonce != "" && realm != "" && self.username != "" && self.password != "" {
         auth := SipXXXAuthorization(/*realm*/ realm, /*nonce*/ nonce, /*method*/ method, /*uri*/ self.rTarget.String(),
           /*username*/ self.username, /*password*/ self.password)
@@ -366,7 +395,7 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string
         req.appendHeaders(extra_headers)
     }
     self.reqs[self.lCSeq] = req
-    return req
+    return req, nil
 }
 
 func (self *Ua) GetUasResp() sippy_types.SipResponse {
@@ -411,24 +440,60 @@ func (self *Ua) recvACK(req sippy_types.SipRequest) {
 }
 
 func (self *Ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) bool {
+    var via0 *sippy_header.SipViaBody
+    var err error
+
+    via0, err = req.GetVias()[0].GetBody()
+    if err != nil {
+        self.logError("UA::IsYours error #1: " + err.Error())
+        return false
+    }
     //print self.branch, req.getHFBody("via").getBranch()
-    if req.GetMethod() != "BYE" && self.branch != "" && self.branch != req.GetVias()[0].GetBranch() {
+    if req.GetMethod() != "BYE" && self.branch != "" && self.branch != via0.GetBranch() {
         return false
     }
     call_id := req.GetCallId().CallId
-    from_tag := req.GetFrom().GetTag()
-    to_tag := req.GetTo().GetTag()
     //print str(self.cId), call_id
     if call_id != self.cId.CallId {
         return false
     }
     //print self.rUri.getTag(), from_tag
-    if self.rUri != nil && self.rUri.GetTag() != from_tag {
-        return false
+    if self.rUri != nil {
+        var rUri *sippy_header.SipAddress
+        var from_body *sippy_header.SipAddress
+
+        from_body, err = req.GetFrom().GetBody(self.config)
+        if err != nil {
+            self.logError("UA::IsYours error #2: " + err.Error())
+            return false
+        }
+        rUri, err = self.rUri.GetBody(self.config)
+        if err != nil {
+            self.logError("UA::IsYours error #4: " + err.Error())
+            return false
+        }
+        if rUri.GetTag() != from_body.GetTag() {
+            return false
+        }
     }
     //print self.lUri.getTag(), to_tag
-    if self.lUri != nil && self.lUri.GetTag() != to_tag && ! br0k3n_to {
-        return false
+    if self.lUri != nil && ! br0k3n_to {
+        var lUri *sippy_header.SipAddress
+        var to_body *sippy_header.SipAddress
+
+        to_body, err = req.GetTo().GetBody(self.config)
+        if err != nil {
+            self.logError("UA::IsYours error #3: " + err.Error())
+            return false
+        }
+        lUri, err = self.rUri.GetBody(self.config)
+        if err != nil {
+            self.logError("UA::IsYours error #5: " + err.Error())
+            return false
+        }
+        if lUri.GetTag() != to_body.GetTag() {
+            return false
+        }
     }
     return true
 }
@@ -478,7 +543,12 @@ func (self *Ua) StartCreditTimer(rtime *sippy_time.MonoTime) {
 
 func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool /*true*/, reverse_routes bool /*true*/) {
     if update_rtarget && len(resp.GetContacts()) > 0 {
-        self.rTarget = resp.GetContacts()[0].GetUrl().GetCopy()
+        contact, err := resp.GetContacts()[0].GetBody(self.config)
+        if err != nil {
+            self.logError("UA::UpdateRouting: error #1: " + err.Error())
+            return
+        }
+        self.rTarget = contact.GetUrl().GetCopy()
     }
     self.routes = make([]*sippy_header.SipRoute, len(resp.GetRecordRoutes()))
     for i, r := range resp.GetRecordRoutes() {
@@ -489,13 +559,18 @@ func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool 
         }
     }
     if len(self.routes) > 0 {
-        if ! self.routes[0].GetUrl().Lr {
+        r0, err := self.routes[0].GetBody(self.config)
+        if err != nil {
+            self.logError("UA::UpdateRouting: error #2: " + err.Error())
+            return
+        }
+        if ! r0.GetUrl().Lr {
             self.routes = append(self.routes, sippy_header.NewSipRoute(/*address*/ sippy_header.NewSipAddress("", /*url*/ self.rTarget)))
-            self.rTarget = self.routes[0].GetUrl()
+            self.rTarget = r0.GetUrl()
             self.routes = self.routes[1:]
             self.rAddr = self.rTarget.GetAddr(self.config)
         } else {
-            self.rAddr = self.routes[0].GetAddr(self.config)
+            self.rAddr = r0.GetUrl().GetAddr(self.config)
         }
     } else {
         self.rAddr = self.rTarget.GetAddr(self.config)
@@ -1089,14 +1164,24 @@ func (self *Ua) GetCLD() string {
     if self.rUri == nil {
         return ""
     }
-    return self.rUri.GetUrl().Username
+    rUri, err := self.rUri.GetBody(self.config)
+    if err != nil {
+        self.logError("UA::GetCLD: " + err.Error())
+        return ""
+    }
+    return rUri.GetUrl().Username
 }
 
 func (self *Ua) GetCLI() string {
     if self.lUri == nil {
         return ""
     }
-    return self.lUri.GetUrl().Username
+    lUri, err := self.lUri.GetBody(self.config)
+    if err != nil {
+        self.logError("UA::GetCLI: " + err.Error())
+        return ""
+    }
+    return lUri.GetUrl().Username
 }
 
 func (self *Ua) GetUasLossEmul() int {

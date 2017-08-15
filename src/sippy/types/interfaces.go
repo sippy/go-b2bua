@@ -196,7 +196,7 @@ type UA interface {
     SetLSDP(MsgBody)
     GetRSDP() MsgBody
     SetRSDP(MsgBody)
-    GenRequest(method string, body MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) SipRequest
+    GenRequest(method string, body MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (SipRequest, error)
     IncLCSeq()
     GetSourceAddress() *sippy_conf.HostPort
     SetSourceAddress(*sippy_conf.HostPort)

@@ -36,7 +36,7 @@ import (
     "sippy/utils"
 )
 
-type sipWWWAuthenticateBody struct {
+type SipWWWAuthenticateBody struct {
     realm *sippy_conf.MyAddress
     nonce string
 }
@@ -44,7 +44,7 @@ type sipWWWAuthenticateBody struct {
 type SipWWWAuthenticate struct {
     normalName
     string_body     string
-    body            *sipWWWAuthenticateBody
+    body            *SipWWWAuthenticateBody
 }
 
 var _sip_www_authenticate_name normalName = newNormalName("WWW-Authenticate")
@@ -60,10 +60,10 @@ func NewSipWWWAuthenticateWithRealm(realm string) *SipWWWAuthenticate {
     }
 }
 
-func newSipWWWAutenticateBody(realm string) *sipWWWAuthenticateBody {
+func newSipWWWAutenticateBody(realm string) *SipWWWAuthenticateBody {
     buf := make([]byte, 20)
     rand.Read(buf)
-    return &sipWWWAuthenticateBody{
+    return &SipWWWAuthenticateBody{
         realm : sippy_conf.NewMyAddress(realm),
         nonce : fmt.Sprintf("%x", buf),
     }
@@ -80,7 +80,7 @@ func (self *SipWWWAuthenticate) parse() error {
     if len(tmp) != 2 {
         return errors.New("Error parsing authentication (1)")
     }
-    body := &sipWWWAuthenticateBody{}
+    body := &SipWWWAuthenticateBody{}
     for _, part := range strings.Split(tmp[1], ",") {
         arr := strings.SplitN(strings.TrimSpace(part), "=", 2)
         if len(arr) != 2 { continue }
@@ -95,7 +95,7 @@ func (self *SipWWWAuthenticate) parse() error {
     return nil
 }
 
-func (self SipWWWAuthenticate) GetBody() (*sipWWWAuthenticateBody, error) {
+func (self SipWWWAuthenticate) GetBody() (*SipWWWAuthenticateBody, error) {
     if self.body == nil {
         if err := self.parse(); err != nil {
             return nil, err
@@ -123,18 +123,18 @@ func (self *SipWWWAuthenticate) LocalStringBody(hostport *sippy_conf.HostPort) s
     return self.string_body
 }
 
-func (self *sipWWWAuthenticateBody) localString(hostport *sippy_conf.HostPort) string {
+func (self *SipWWWAuthenticateBody) localString(hostport *sippy_conf.HostPort) string {
     if hostport != nil && self.realm.IsSystemDefault() {
         return "Digest realm=\"" + hostport.Host.String() + "\",nonce=\"" + self.nonce + "\""
     }
     return "Digest realm=\"" + self.realm.String() + "\",nonce=\"" + self.nonce + "\""
 }
 
-func (self *sipWWWAuthenticateBody) GetRealm() string {
+func (self *SipWWWAuthenticateBody) GetRealm() string {
     return self.realm.String()
 }
 
-func (self *sipWWWAuthenticateBody) GetNonce() string {
+func (self *SipWWWAuthenticateBody) GetNonce() string {
     return self.nonce
 }
 
@@ -146,7 +146,7 @@ func (self *SipWWWAuthenticate) GetCopy() *SipWWWAuthenticate {
     return &tmp
 }
 
-func (self *sipWWWAuthenticateBody) getCopy() *sipWWWAuthenticateBody {
+func (self *SipWWWAuthenticateBody) getCopy() *SipWWWAuthenticateBody {
     tmp := *self
     return &tmp
 }
