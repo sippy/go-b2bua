@@ -104,7 +104,11 @@ func NewCallMap(global_config *myConfigParser) *callMap {
 }
 
 func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
-    to_tag := req.GetTo().GetTag()
+    to_body, err := req.GetTo().GetBody(self.global_config)
+    if err != nil {
+        self.global_config.ErrorLogger().Error("CallMap::OnNewDialog: #1: " + err.Error())
+        return nil, nil, req.GenResponse(500, "Internal Server Error", nil, nil)
+    }
     //except Exception as exception:
         //println(datetime.now(), "can\"t parse SIP request: %s:\n" % str(exception))
         //println( "-" * 70)
@@ -114,18 +118,22 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
         //println("-" * 70)
         //sys.stdout.flush()
         //return (nil, nil, nil)
-    if to_tag != "" {
+    if to_body.GetTag() != "" {
         // Request within dialog, but no such dialog
         return nil, nil, req.GenResponse(481, "Call Leg/Transaction Does Not Exist", nil, nil)
     }
     if req.GetMethod() == "INVITE" {
         // New dialog
-        var via *sippy_header.SipVia
+        var via *sippy_header.SipViaBody
         vias := req.GetVias()
         if len(vias) > 1 {
-            via = vias[1]
+            via, err = vias[1].GetBody()
         } else {
-            via = vias[0]
+            via, err = vias[0].GetBody()
+        }
+        if err != nil {
+            self.global_config.ErrorLogger().Error("CallMap::OnNewDialog: #2: " + err.Error())
+            return nil, nil, req.GenResponse(500, "Internal Server Error", nil, nil)
         }
         remote_ip := via.GetTAddr(self.global_config).Host
         source := req.GetSource()
