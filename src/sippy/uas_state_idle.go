@@ -52,6 +52,12 @@ func (self *UasStateIdle) String() string {
 }
 
 func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+    var err error
+    var contact *sippy_header.SipAddress
+    var to_body *sippy_header.SipAddress
+    var from_body *sippy_header.SipAddress
+    var via0 *sippy_header.SipViaBody
+
     if req.GetMethod() != "INVITE" {
         //print "wrong request %s in the Trying state" % req.getMethod()
         return nil
@@ -70,19 +76,39 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     if self.ua.GetLContact() == nil {
         self.ua.SetLContact(sippy_header.NewSipContact(self.config))
     }
-    self.ua.SetRTarget(req.GetContacts()[0].GetUrl().GetCopy())
+    contact, err = req.GetContacts()[0].GetBody(self.config)
+    if err != nil {
+        self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #1: " + err.Error())
+        return nil
+    }
+    self.ua.SetRTarget(contact.GetUrl().GetCopy())
     self.ua.UpdateRouting(self.ua.GetUasResp(), /*update_rtarget*/ false, /*reverse_routes*/ false)
     self.ua.SetRAddr0(self.ua.GetRAddr())
     t.SendResponseWithLossEmul(self.ua.GetUasResp(), false, nil, self.ua.GetUasLossEmul())
-    self.ua.GetUasResp().GetTo().SetTag(self.ua.GetLTag())
-    self.ua.SetLUri(sippy_header.NewSipFrom(self.ua.GetUasResp().GetTo().GetUri(), self.config))
-    self.ua.SetRUri(sippy_header.NewSipTo(self.ua.GetUasResp().GetFrom().GetUri(), self.config))
+    to_body, err = self.ua.GetUasResp().GetTo().GetBody(self.config)
+    if err != nil {
+        self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #2: " + err.Error())
+        return nil
+    }
+    to_body.SetTag(self.ua.GetLTag())
+    from_body, err = self.ua.GetUasResp().GetFrom().GetBody(self.config)
+    if err != nil {
+        self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #3: " + err.Error())
+        return nil
+    }
+    self.ua.SetLUri(sippy_header.NewSipFrom(to_body, self.config))
+    self.ua.SetRUri(sippy_header.NewSipTo(from_body, self.config))
     self.ua.SetCallId(self.ua.GetUasResp().GetCallId())
     auth := req.GetSipAuthorization().GetCopy()
     body := req.GetBody()
-    self.ua.SetBranch(req.GetVias()[0].GetBranch())
-    event := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), self.ua.GetRUri().GetUrl().Username,
-        req.GetRURI().Username, body, auth, self.ua.GetRUri().GetUri().GetName(), req.GetRtime(), self.ua.GetOrigin())
+    via0, err = req.GetVias()[0].GetBody()
+    if err != nil {
+        self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #4: " + err.Error())
+        return nil
+    }
+    self.ua.SetBranch(via0.GetBranch())
+    event := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), from_body.GetUrl().Username,
+        req.GetRURI().Username, body, auth, from_body.GetName(), req.GetRtime(), self.ua.GetOrigin())
     event.SetReason(req.GetReason())
     event.SetMaxForwards(req.GetMaxForwards())
     if self.ua.GetExpireTime() > 0 {

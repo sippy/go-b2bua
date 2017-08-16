@@ -71,7 +71,12 @@ func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         }
         self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
         t.SendResponseWithLossEmul(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
-        also := req.GetReferTo().GetUrl().GetCopy()
+        refer_to, err := req.GetReferTo().GetBody(self.ua.Config())
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("UasStateUpdating::RecvRequest: #1: " + err.Error())
+            return nil
+        }
+        also := refer_to.GetUrl().GetCopy()
         self.ua.Enqueue(NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin()))
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
@@ -120,7 +125,10 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         return NewUaStateConnected(self.ua, nil, ""), nil
     case *CCEventDisconnect:
         self.ua.SendUasResponse(nil, 487, "Request Terminated", nil, nil, false, eh...)
-        req := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+        req, err := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+        if err != nil {
+            return nil, err
+        }
         self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         self.ua.CancelCreditTimer()
@@ -132,7 +140,11 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
 }
 
 func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
-    req := self.ua.GenRequest("BYE", nil, "", "", nil)
+    req, err := self.ua.GenRequest("BYE", nil, "", "", nil)
+    if err != nil {
+        self.ua.Config().ErrorLogger().Error("UasStateUpdating::Cancel: #1: " + err.Error())
+        return
+    }
     self.ua.IncLCSeq()
     self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
     self.ua.CancelCreditTimer()

@@ -60,6 +60,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
     var lUri *sippy_header.SipAddress
     var contact *sippy_header.SipAddress
     var req sippy_types.SipRequest
+    var tr sippy_types.ClientTransaction
 
     switch event := _event.(type) {
     case *CCEventTry:
@@ -125,7 +126,6 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             return nil, err
         }
         self.ua.IncLCSeq()
-        var tr sippy_types.ClientTransaction
         tr, err = self.ua.PrepTr(req)
         if err != nil {
             return nil, err

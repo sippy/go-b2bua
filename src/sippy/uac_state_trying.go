@@ -50,6 +50,9 @@ func (self *UacStateTrying) String() string {
 }
 
 func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
+    var err error
+    var event sippy_types.CCEvent
+
     body := resp.GetBody()
     code, reason := resp.GetSCode()
     self.ua.SetLastScode(code)
@@ -92,13 +95,28 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     }
     self.ua.CancelExpireTimer()
     if code >= 200 && code < 300 {
+        var to_body *sippy_header.SipAddress
+        var rUri *sippy_header.SipAddress
+        var rval sippy_types.UaState
+
         self.ua.UpdateRouting(resp, true, true)
-        tag := resp.GetTo().GetTag()
+        to_body, err = resp.GetTo().GetBody(self.ua.Config())
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #1: " + err.Error())
+            return nil
+        }
+        tag := to_body.GetTag()
         if tag == "" {
+            var req sippy_types.SipRequest
+
             //logger.Debug("tag-less 200 OK, disconnecting")
             self.ua.Enqueue(NewCCEventFail(502, "Bad Gateway", resp.GetRtime(), self.ua.GetOrigin()))
             // Generate and send BYE
-            req := self.ua.GenRequest("BYE", nil, "", "", nil)
+            req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
+            if err != nil {
+                self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #2: " + err.Error())
+                return nil
+            }
             self.ua.IncLCSeq()
             self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime()) {
@@ -109,9 +127,12 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             }
             return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code)
         }
-        self.ua.GetRUri().SetTag(tag)
-        var rval sippy_types.UaState
-        var event sippy_types.CCEvent
+        rUri, err = self.ua.GetRUri().GetBody(self.ua.Config())
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #3: " + err.Error())
+            return nil
+        }
+        rUri.SetTag(tag)
         if !self.ua.GetLateMedia() || body == nil {
             self.ua.SetLateMedia(false)
             event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
@@ -138,15 +159,28 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         self.ua.Enqueue(event)
         return rval
     }
-    var event sippy_types.CCEvent
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
+        var contact *sippy_header.SipAddress
+
+        contact, err = resp.GetContacts()[0].GetBody(self.ua.Config())
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #4: " + err.Error())
+            return nil
+        }
         event = NewCCEventRedirect(code, reason, body,
-                    []*sippy_header.SipURL{ resp.GetContacts()[0].GetUrl().GetCopy() },
+                    []*sippy_header.SipURL{ contact.GetUrl().GetCopy() },
                     resp.GetRtime(), self.ua.GetOrigin())
     } else if code == 300 && len(resp.GetContacts()) > 0 {
         urls := make([]*sippy_header.SipURL, 0)
-        for _, c := range resp.GetContacts() {
-            urls = append(urls, c.GetUrl().GetCopy())
+        for _, contact := range resp.GetContacts() {
+            var cbody *sippy_header.SipAddress
+
+            cbody, err = contact.GetBody(self.ua.Config())
+            if err != nil {
+                self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #5: " + err.Error())
+                return nil
+            }
+            urls = append(urls, cbody.GetUrl().GetCopy())
         }
         event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin())
     } else {
