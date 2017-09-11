@@ -272,7 +272,7 @@ func (self *Ua) PrepTr(req sippy_types.SipRequest) (sippy_types.ClientTransactio
         return nil, err
     }
     tr.SetOutboundProxy(self.outbound_proxy)
-    if self.routes != nil {
+    if self.isConnected() {
         routes := make([]*sippy_header.SipRoute, len(self.routes))
         copy(routes, self.routes)
         if self.outbound_proxy == nil {
