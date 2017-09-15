@@ -115,11 +115,11 @@ func (self *sipAddress) _parse_paramstring(s string) error {
         }
         arr := strings.SplitN(l, "=", 2)
         if len(arr) == 2 {
-            k = strings.ToLower(arr[0])
-            tmp := strings.ToLower(arr[1])
+            k = arr[0]
+            tmp := arr[1]
             v = &tmp
         } else {
-            k = strings.ToLower(arr[0])
+            k = arr[0]
             v = nil
         }
         _, ok := self.params[k]
