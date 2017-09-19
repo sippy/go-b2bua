@@ -486,7 +486,7 @@ func (self *Ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) 
             self.logError("UA::IsYours error #3: " + err.Error())
             return false
         }
-        lUri, err = self.rUri.GetBody(self.config)
+        lUri, err = self.lUri.GetBody(self.config)
         if err != nil {
             self.logError("UA::IsYours error #5: " + err.Error())
             return false
