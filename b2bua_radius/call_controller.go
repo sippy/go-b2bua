@@ -397,7 +397,10 @@ func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, res
 }
 
 func (self *callController) aDead() {
-    _, is_dead := self.uaO.GetState().(*sippy.UaStateDead)
+    is_dead := false
+    if self.uaO != nil {
+        _, is_dead = self.uaO.GetState().(*sippy.UaStateDead)
+    }
     if self.uaO == nil || is_dead {
         if global_cmap.debug_mode {
             println("garbadge collecting", self)
