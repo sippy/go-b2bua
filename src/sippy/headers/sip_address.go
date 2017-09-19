@@ -108,23 +108,18 @@ func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Confi
 
 func (self *SipAddress) _parse_paramstring(s string) error {
     for _, l := range strings.Split(s, ";") {
-        var k string
         var v *string
 
         if l == "" {
             continue
         }
         arr := strings.SplitN(l, "=", 2)
+        k := arr[0]
         if len(arr) == 2 {
-            k = strings.ToLower(arr[0])
-            tmp := strings.ToLower(arr[1])
+            tmp := arr[1]
             v = &tmp
-        } else {
-            k = strings.ToLower(arr[0])
-            v = nil
         }
-        _, ok := self.params[k]
-        if ok {
+        if _, ok := self.params[k]; ok {
             return errors.New("Duplicate parameter in SIP address: " + k)
         }
         self.params[k] = v
