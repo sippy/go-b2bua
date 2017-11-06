@@ -118,11 +118,11 @@ type CCEventTry struct {
     call_id     *sippy_header.SipCallId
     cisco_guid  *sippy_header.SipCiscoGUID
     cli, cld, caller_name string
-    auth        *sippy_header.SipAuthorization
+    auth        *sippy_header.SipAuthorizationBody
     body        sippy_types.MsgBody
 }
 
-func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.SipCiscoGUID, cli string, cld string, body sippy_types.MsgBody, auth *sippy_header.SipAuthorization, caller_name string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventTry {
+func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.SipCiscoGUID, cli string, cld string, body sippy_types.MsgBody, auth *sippy_header.SipAuthorizationBody, caller_name string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventTry {
     return &CCEventTry{
         CCEventGeneric : newCCEventGeneric(rtime, origin, extra_headers...),
         call_id     : call_id,
@@ -138,7 +138,7 @@ func (self *CCEventTry) GetBody() sippy_types.MsgBody {
     return self.body
 }
 
-func (self *CCEventTry) GetSipAuthorization() *sippy_header.SipAuthorization {
+func (self *CCEventTry) GetSipAuthorization() *sippy_header.SipAuthorizationBody {
     return self.auth
 }
 
