@@ -27,14 +27,12 @@
 package sippy_header
 
 import (
-    "strconv"
-
     "sippy/conf"
 )
 
 type SipExpires struct {
     normalName
-    Number int
+    SipNumericHF
 }
 
 var _sip_expires_name normalName = newNormalName("Expires")
@@ -42,27 +40,19 @@ var _sip_expires_name normalName = newNormalName("Expires")
 func NewSipExpires() *SipExpires {
     return &SipExpires{
         normalName  : _sip_expires_name,
-        Number      : 300,
+        SipNumericHF : newSipNumericHF(300),
     }
 }
 
-func ParseSipExpires(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    number, err := strconv.Atoi(body)
-    if err != nil {
-        return nil, err
-    }
+func CreateSipExpires(body string) []SipHeader {
     return []SipHeader{ &SipExpires{
-        normalName  : _sip_expires_name,
-        Number      : number,
-    } }, nil
-}
-
-func (self *SipExpires) Body() string {
-    return strconv.Itoa(self.Number)
+        normalName      : _sip_expires_name,
+        SipNumericHF    : createSipNumericHF(body),
+    } }
 }
 
 func (self *SipExpires) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.StringBody()
 }
 
 func (self *SipExpires) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {

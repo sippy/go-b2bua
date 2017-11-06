@@ -36,53 +36,76 @@ import (
     "sippy/utils"
 )
 
-type SipWWWAuthenticate struct {
-    normalName
+type SipWWWAuthenticateBody struct {
     realm *sippy_conf.MyAddress
     nonce string
 }
 
+type SipWWWAuthenticate struct {
+    normalName
+    string_body     string
+    body            *SipWWWAuthenticateBody
+}
+
 var _sip_www_authenticate_name normalName = newNormalName("WWW-Authenticate")
 
-func ParseSipWWWAuthenticate(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    self, err := newSipWWWAuthenticateFromString(body)
-    if err != nil { return nil, err }
-    return []SipHeader{ self }, nil
+func CreateSipWWWAuthenticate(body string) []SipHeader {
+    return []SipHeader{ createSipWWWAuthenticateObj(body) }
 }
 
 func NewSipWWWAuthenticateWithRealm(realm string) *SipWWWAuthenticate {
+    return &SipWWWAuthenticate{
+        normalName  : _sip_www_authenticate_name,
+        body        : newSipWWWAutenticateBody(realm),
+    }
+}
+
+func newSipWWWAutenticateBody(realm string) *SipWWWAuthenticateBody {
     buf := make([]byte, 20)
     rand.Read(buf)
-    return &SipWWWAuthenticate{
-        normalName : _sip_www_authenticate_name,
+    return &SipWWWAuthenticateBody{
         realm : sippy_conf.NewMyAddress(realm),
         nonce : fmt.Sprintf("%x", buf),
     }
 }
 
-func newSipWWWAuthenticateFromString(body string) (*SipWWWAuthenticate, error) {
-    tmp := sippy_utils.FieldsN(body, 2)
+func createSipWWWAuthenticateObj(body string) *SipWWWAuthenticate {
+    return &SipWWWAuthenticate{
+        string_body     : body,
+    }
+}
+
+func (self *SipWWWAuthenticate) parse() error {
+    tmp := sippy_utils.FieldsN(self.string_body, 2)
     if len(tmp) != 2 {
-        return nil, errors.New("Error parsing authentication (1)")
+        return errors.New("Error parsing authentication (1)")
     }
-    self := &SipWWWAuthenticate{
-        normalName : _sip_www_authenticate_name,
-    }
+    body := &SipWWWAuthenticateBody{}
     for _, part := range strings.Split(tmp[1], ",") {
         arr := strings.SplitN(strings.TrimSpace(part), "=", 2)
         if len(arr) != 2 { continue }
         switch arr[0] {
         case "realm":
-            self.realm = sippy_conf.NewMyAddress(strings.Trim(arr[1], "\""))
+            body.realm = sippy_conf.NewMyAddress(strings.Trim(arr[1], "\""))
         case "nonce":
-            self.nonce = strings.Trim(arr[1], "\"")
+            body.nonce = strings.Trim(arr[1], "\"")
         }
     }
-    return self, nil
+    self.body = body
+    return nil
 }
 
-func (self *SipWWWAuthenticate) Body() string {
-    return self.LocalBody(nil)
+func (self SipWWWAuthenticate) GetBody() (*SipWWWAuthenticateBody, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return nil, err
+        }
+    }
+    return self.body, nil
+}
+
+func (self *SipWWWAuthenticate) StringBody() string {
+    return self.LocalStringBody(nil)
 }
 
 func (self *SipWWWAuthenticate) String() string {
@@ -90,25 +113,40 @@ func (self *SipWWWAuthenticate) String() string {
 }
 
 func (self *SipWWWAuthenticate) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
-func (self *SipWWWAuthenticate) LocalBody(hostport *sippy_conf.HostPort) string {
+func (self *SipWWWAuthenticate) LocalStringBody(hostport *sippy_conf.HostPort) string {
+    if self.body != nil {
+        return self.body.localString(hostport)
+    }
+    return self.string_body
+}
+
+func (self *SipWWWAuthenticateBody) localString(hostport *sippy_conf.HostPort) string {
     if hostport != nil && self.realm.IsSystemDefault() {
         return "Digest realm=\"" + hostport.Host.String() + "\",nonce=\"" + self.nonce + "\""
     }
     return "Digest realm=\"" + self.realm.String() + "\",nonce=\"" + self.nonce + "\""
 }
 
-func (self *SipWWWAuthenticate) GetRealm() string {
+func (self *SipWWWAuthenticateBody) GetRealm() string {
     return self.realm.String()
 }
 
-func (self *SipWWWAuthenticate) GetNonce() string {
+func (self *SipWWWAuthenticateBody) GetNonce() string {
     return self.nonce
 }
 
 func (self *SipWWWAuthenticate) GetCopy() *SipWWWAuthenticate {
+    tmp := *self
+    if self.body != nil {
+        self.body = self.body.getCopy()
+    }
+    return &tmp
+}
+
+func (self *SipWWWAuthenticateBody) getCopy() *SipWWWAuthenticateBody {
     tmp := *self
     return &tmp
 }

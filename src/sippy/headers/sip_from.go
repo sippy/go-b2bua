@@ -32,32 +32,34 @@ import (
 
 type SipFrom struct {
     compactName
-    *sipAddressWithTag
+    *sipAddressHF
 }
 
 var _sip_from_name compactName = newCompactName("From", "f")
 
-func ParseSipFrom(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    address, err := ParseSipAddressWithTag(body, config)
-    if err != nil {
-        return nil, err
+func CreateSipFrom(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
+    rval := make([]SipHeader, len(addresses))
+    for i, address := range addresses {
+        rval[i] = &SipFrom{
+            compactName     : _sip_from_name,
+            sipAddressHF    : address,
+        }
     }
-    self := &SipFrom{
-        compactName       : _sip_from_name,
-        sipAddressWithTag : address,
-    }
-    return []SipHeader{ self }, nil
+    return rval
 }
 
-func NewSipFrom(address *sipAddress, config sippy_conf.Config) *SipFrom {
+func NewSipFrom(address *SipAddress, config sippy_conf.Config) *SipFrom {
+    if address == nil {
+        address = NewSipAddress("Anonymous", NewSipURL("" /* username */,
+                                    config.GetMyAddress(),
+                                    config.GetMyPort(),
+                                    false))
+    }
     return &SipFrom{
-        compactName       : _sip_from_name,
-        sipAddressWithTag : NewSipAddressWithTag(address, config),
+        compactName     : _sip_from_name,
+        sipAddressHF    : newSipAddressHF(address),
     }
-}
-
-func (self *SipFrom) Body() string {
-    return self.address.String()
 }
 
 func (self *SipFrom) String() string {
@@ -66,15 +68,15 @@ func (self *SipFrom) String() string {
 
 func (self *SipFrom) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return "f: " + self.Body()
+        return self.CompactName() + ": " + self.LocalStringBody(hostport)
     }
-    return "From: " + self.Body()
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipFrom) GetCopy() *SipFrom {
     return &SipFrom{
-        compactName       : _sip_from_name,
-        sipAddressWithTag : self.sipAddressWithTag.getCopy(),
+        compactName     : _sip_from_name,
+        sipAddressHF    : self.sipAddressHF.getCopy(),
     }
 }
 

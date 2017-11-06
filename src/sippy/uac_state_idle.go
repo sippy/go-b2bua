@@ -56,6 +56,12 @@ func (self *UacStateIdle) String() string {
 
 func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
     var err error
+    var rUri *sippy_header.SipAddress
+    var lUri *sippy_header.SipAddress
+    var contact *sippy_header.SipAddress
+    var req sippy_types.SipRequest
+    var tr sippy_types.ClientTransaction
+
     switch event := _event.(type) {
     case *CCEventTry:
         if self.ua.GetSetupTs() == nil {
@@ -80,22 +86,34 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if self.ua.GetRuriUserparams() != nil {
             self.ua.GetRTarget().SetUserparams(self.ua.GetRuriUserparams())
         }
-        self.ua.GetRUri().GetUrl().Port = nil
+        rUri, err = self.ua.GetRUri().GetBody(self.ua.Config())
+        if err != nil {
+            return nil, err
+        }
+        rUri.GetUrl().Port = nil
         if self.ua.GetToUsername() != "" {
-            self.ua.GetRUri().GetUrl().Username = self.ua.GetToUsername()
+            rUri.GetUrl().Username = self.ua.GetToUsername()
         }
         self.ua.SetLUri(sippy_header.NewSipFrom(sippy_header.NewSipAddress(event.GetCallerName(), sippy_header.NewSipURL(event.GetCLI(), self.config.GetMyAddress(), self.config.GetMyPort(), false)), self.config))
         self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
-        self.ua.GetLUri().GetUrl().Port = nil
-        if self.ua.GetFromDomain() != "" {
-            self.ua.GetLUri().GetUrl().Host = sippy_conf.NewMyAddress(self.ua.GetFromDomain())
+        lUri, err = self.ua.GetLUri().GetBody(self.ua.Config())
+        if err != nil {
+            return nil, err
         }
-        self.ua.GetLUri().SetTag(self.ua.GetLTag())
+        lUri.GetUrl().Port = nil
+        if self.ua.GetFromDomain() != "" {
+            lUri.GetUrl().Host = sippy_conf.NewMyAddress(self.ua.GetFromDomain())
+        }
+        lUri.SetTag(self.ua.GetLTag())
         self.ua.SetLCSeq(200)
         if self.ua.GetLContact() == nil {
             self.ua.SetLContact(sippy_header.NewSipContact(self.config))
         }
-        self.ua.GetLContact().GetUrl().Username = event.GetCLI()
+        contact, err = self.ua.GetLContact().GetBody(self.ua.Config())
+        if err != nil {
+            return nil, err
+        }
+        contact.GetUrl().Username = event.GetCLI()
         self.ua.SetRoutes(make([]*sippy_header.SipRoute, 0))
         self.ua.SetCGUID(event.GetSipCiscoGUID())
         self.ua.SetLSDP(event.GetBody())
@@ -103,9 +121,11 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if event.GetMaxForwards() != nil {
             eh = append(eh, event.GetMaxForwards())
         }
-        req := self.ua.GenRequest("INVITE", event.GetBody(), /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
+        req, err = self.ua.GenRequest("INVITE", event.GetBody(), /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
+        if err != nil {
+            return nil, err
+        }
         self.ua.IncLCSeq()
-        var tr sippy_types.ClientTransaction
         tr, err = self.ua.PrepTr(req)
         if err != nil {
             return nil, err

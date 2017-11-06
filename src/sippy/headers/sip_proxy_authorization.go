@@ -26,38 +26,25 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package sippy_header
 
-import (
-    "sippy/conf"
-)
-
 type SipProxyAuthorization struct {
-    normalName
     *SipAuthorization
 }
 
 var _sip_proxy_authorization_name normalName = newNormalName("Proxy-Authorization")
 
 func NewSipProxyAuthorization(realm, nonce, method, uri, username, password string) SipHeader {
+    super := NewSipAuthorization(realm, nonce, method, uri, username, password)
+    super.normalName = _sip_proxy_authorization_name
     return &SipProxyAuthorization{
-        normalName       : _sip_proxy_authorization_name,
-        SipAuthorization : NewSipAuthorization(realm, nonce, method, uri, username, password),
+        SipAuthorization : super,
     }
 }
 
-func ParseSipProxyAuthorization(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    super, err := NewSipAuthorizationFromString(body)
-    if err != nil { return nil, err }
+func CreateSipProxyAuthorization(body string) []SipHeader {
+    super := createSipAuthorizationObj(body)
+    super.normalName = _sip_proxy_authorization_name
     return []SipHeader{ &SipProxyAuthorization{
-                                        normalName       : _sip_proxy_authorization_name,
-                                        SipAuthorization : super,
-                                      },
-                                  }, nil
-}
-
-func (self *SipProxyAuthorization) String() string {
-    return self.Name() + ": " + self.Body()
-}
-
-func (self *SipProxyAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {
-    return self.String()
+            SipAuthorization : super,
+        },
+    }
 }

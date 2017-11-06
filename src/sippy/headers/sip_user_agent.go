@@ -44,19 +44,21 @@ func NewSipUserAgent(name string) *SipUserAgent {
     }
 }
 
-func ParseSipUserAgent(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    return []SipHeader{ &SipUserAgent{
-        normalName : _sip_user_agent,
-        UserAgent  : body,
-    } }, nil
+func CreateSipUserAgent(body string) []SipHeader {
+    return []SipHeader{
+        &SipUserAgent{
+            normalName : _sip_user_agent,
+            UserAgent  : body,
+        },
+    }
 }
 
-func (self *SipUserAgent) Body() string {
+func (self *SipUserAgent) StringBody() string {
     return self.UserAgent
 }
 
 func (self *SipUserAgent) String() string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.UserAgent
 }
 
 func (self *SipUserAgent) LocalStr(*sippy_conf.HostPort, bool) string {

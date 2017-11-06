@@ -37,9 +37,8 @@ type SipCCDiversion struct {
 
 var _sip_cc_diversion_name normalName = newNormalName("CC-Diversion")
 
-func ParseSipCCDiversion(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body, config)
-    if err != nil { return nil, err }
+func CreateSipCCDiversion(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipCCDiversion{
@@ -47,15 +46,7 @@ func ParseSipCCDiversion(body string, config sippy_conf.Config) ([]SipHeader, er
             sipAddressHF : addr,
         }
     }
-    return rval, nil
-}
-
-func (self *SipCCDiversion) Body() string {
-    return self.LocalBody(nil)
-}
-
-func (self *SipCCDiversion) LocalBody(hostport *sippy_conf.HostPort) string {
-    return self.Address.LocalStr(hostport)
+    return rval
 }
 
 func (self *SipCCDiversion) String() string {
@@ -63,7 +54,7 @@ func (self *SipCCDiversion) String() string {
 }
 
 func (self *SipCCDiversion) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipCCDiversion) GetCopy() *SipCCDiversion {

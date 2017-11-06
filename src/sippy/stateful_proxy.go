@@ -48,7 +48,8 @@ func NewStatefulProxy(sip_tm sippy_types.SipTransactionManager, destination *sip
 
 func (self *statefulProxy) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) *sippy_types.Ua_context {
     via0 := sippy_header.NewSipVia(self.config)
-    via0.GenBranch()
+    via0_body, _ := via0.GetBody()
+    via0_body.GenBranch()
     req.InsertFirstVia(via0)
     req.SetTarget(self.destination)
     //print req

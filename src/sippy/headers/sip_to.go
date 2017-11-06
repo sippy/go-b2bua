@@ -32,44 +32,45 @@ import (
 
 type SipTo struct {
     compactName
-    *sipAddressWithTag
+    *sipAddressHF
 }
 
 var _sip_to_name compactName = newCompactName("To", "t")
 
-func NewSipTo(address *sipAddress, config sippy_conf.Config) *SipTo {
+func NewSipTo(address *SipAddress, config sippy_conf.Config) *SipTo {
+    if address == nil {
+        address = NewSipAddress("Anonymous", NewSipURL("" /* username */,
+                                    config.GetMyAddress(),
+                                    config.GetMyPort(),
+                                    false))
+    }
     return &SipTo{
-        compactName : _sip_to_name,
-        sipAddressWithTag : NewSipAddressWithTag(address, config),
+        compactName     : _sip_to_name,
+        sipAddressHF    : newSipAddressHF(address),
     }
 }
 
-func ParseSipTo(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    addr, err := ParseSipAddressWithTag(body, config)
-    if err != nil {
-        return nil, err
-    }
-    return []SipHeader{
-        &SipTo{
+func CreateSipTo(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
+    rval := make([]SipHeader, len(addresses))
+    for i, addr := range addresses {
+        rval[i] = &SipTo{
             compactName : _sip_to_name,
-            sipAddressWithTag : addr,
-        },
-    }, nil
+            sipAddressHF : addr,
+        }
+    }
+    return rval
 }
 
 func (self *SipTo) GetCopy() *SipTo {
     return &SipTo{
         compactName : _sip_to_name,
-        sipAddressWithTag : self.sipAddressWithTag.getCopy(),
+        sipAddressHF : self.sipAddressHF.getCopy(),
     }
 }
 
 func (self *SipTo) GetCopyAsIface() SipHeader {
     return self.GetCopy()
-}
-
-func (self *SipTo) Body() string {
-    return self.address.String()
 }
 
 func (self *SipTo) String() string {
@@ -78,8 +79,7 @@ func (self *SipTo) String() string {
 
 func (self *SipTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
     if compact {
-        return self.CompactName() + ": " + self.Body()
+        return self.CompactName() + ": " + self.LocalStringBody(hostport)
     }
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
-

@@ -32,17 +32,28 @@ import (
     "sippy/conf"
 )
 
-type sipAddressHF struct {
-    Address *sipAddress
+type sipAddressHFBody struct {
+    Address *SipAddress
 }
 
-func NewSipAddressHF(addr *sipAddress) *sipAddressHF {
-    return &sipAddressHF{
-        Address : addr,
+func (self *sipAddressHFBody) getCopy() *sipAddressHFBody {
+    return &sipAddressHFBody{
+        Address : self.Address.GetCopy(),
     }
 }
 
-func ParseSipAddressHF(body string, config sippy_conf.Config) ([]*sipAddressHF, error) {
+type sipAddressHF struct {
+    string_body     string
+    body            *sipAddressHFBody
+}
+
+func newSipAddressHF(addr *SipAddress) *sipAddressHF {
+    return &sipAddressHF{
+        body    : &sipAddressHFBody{ Address : addr },
+    }
+}
+
+func createSipAddressHFs(body string) []*sipAddressHF {
     addresses := []string{}
     pidx := 0
     for {
@@ -70,21 +81,46 @@ func ParseSipAddressHF(body string, config sippy_conf.Config) ([]*sipAddressHF, 
     }
     retval := make([]*sipAddressHF, len(addresses))
     for i, address := range addresses {
-        addr, err := ParseSipAddress(address, false /* relaxedparser */, config)
-        if err != nil {
-            return nil, err
-        }
-        retval[i] = &sipAddressHF{ Address : addr }
+        retval[i] = &sipAddressHF{ string_body : address }
     }
-    return retval, nil
+    return retval
+}
+
+func (self *sipAddressHF) parse(config sippy_conf.Config) error {
+    addr, err := ParseSipAddress(self.string_body, false /* relaxedparser */, config)
+    if err != nil {
+        return err
+    }
+    self.body = &sipAddressHFBody{
+        Address     : addr,
+    }
+    return nil
 }
 
 func (self *sipAddressHF) getCopy() *sipAddressHF {
-    return &sipAddressHF{
-        Address : self.Address.GetCopy(),
+    cself := *self
+    if self.body != nil {
+        cself.body = self.body.getCopy()
     }
+    return &cself
 }
 
-func (self *sipAddressHF) GetUrl() *SipURL {
-    return self.Address.url
+func (self *sipAddressHF) GetBody(config sippy_conf.Config) (*SipAddress, error) {
+    if self.body == nil {
+        if err := self.parse(config); err != nil {
+            return nil, err
+        }
+    }
+    return self.body.Address, nil
+}
+
+func (self *sipAddressHF) StringBody() string {
+    return self.LocalStringBody(nil)
+}
+
+func (self *sipAddressHF) LocalStringBody(hostport *sippy_conf.HostPort) string {
+    if self.body != nil {
+        return self.body.Address.LocalStr(hostport)
+    }
+    return self.string_body
 }

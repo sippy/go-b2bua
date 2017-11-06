@@ -57,8 +57,10 @@ type clientTransaction struct {
     ack_routes      []*sippy_header.SipRoute
 }
 
-func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, req_out_cb func(sippy_types.SipRequest)) *clientTransaction {
+func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
     var r408 sippy_types.SipResponse = nil
+    var err error
+
     if resp_receiver != nil {
         r408 = req.GenResponse(408, "Request Timeout", /*body*/ nil, /*server*/ nil)
     }
@@ -67,12 +69,19 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
     var ack, cancel sippy_types.SipRequest
     if req.GetMethod() == "INVITE" {
         expires = 300 * time.Second
-        if req.GetExpires() != nil && req.GetExpires().Number > 0 {
-            expires = time.Duration(req.GetExpires().Number) * time.Second
+        if req.GetExpires() != nil {
+            exp, err := req.GetExpires().GetBody()
+            if err == nil && exp.Number > 0 {
+                expires = time.Duration(exp.Number) * time.Second
+            }
         }
         needack = true
-        ack = req.GenACK(nil, sip_tm.config)
-        cancel = req.GenCANCEL(sip_tm.config)
+        if ack, err = req.GenACK(nil, sip_tm.config); err != nil {
+            return nil, err
+        }
+        if cancel, err = req.GenCANCEL(sip_tm.config); err != nil {
+            return nil, err
+        }
     }
     self := &clientTransaction{
         resp_receiver   : resp_receiver,
@@ -86,7 +95,7 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         ack_rparams_present : false,
     }
     self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
-    return self
+    return self, nil
 }
 
 func (self *clientTransaction) StartTimers() {
@@ -166,7 +175,7 @@ func (self *clientTransaction) startTeB(timeout time.Duration) {
     self.teB = StartTimeout(self.timerB, self.lock, timeout, 1, self.logger)
 }
 
-func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string) {
+func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string, config sippy_conf.Config) {
     if self.sip_tm == nil {
         return
     }
@@ -183,7 +192,7 @@ func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, ch
     if resp.GetSCodeNum() < 200 {
         self.process_provisional_response(checksum, resp)
     } else {
-        self.process_final_response(checksum, resp)
+        self.process_final_response(checksum, resp, config)
     }
 }
 
@@ -204,21 +213,37 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
     }
 }
 
-func (self *clientTransaction) process_final_response(checksum string, resp sippy_types.SipResponse) {
+func (self *clientTransaction) process_final_response(checksum string, resp sippy_types.SipResponse, config sippy_conf.Config) {
     // Final response - notify upper layer and remove transaction
     if self.needack {
         // Prepare and send ACK if necessary
         fcode := resp.GetSCodeNum()
-        tag := resp.GetTo().GetTag()
+        to_body, err := resp.GetTo().GetBody(config)
+        if err != nil {
+            config.ErrorLogger().Debug(err.Error())
+            return
+        }
+        tag := to_body.GetTag()
         if tag != "" {
-            self.ack.GetTo().SetTag(tag)
+            to_body, err = self.ack.GetTo().GetBody(config)
+            if err != nil {
+                config.ErrorLogger().Debug(err.Error())
+                return
+            }
+            to_body.SetTag(tag)
         }
         var rAddr *sippy_conf.HostPort
         var rTarget *sippy_header.SipURL
         if resp.GetSCodeNum() >= 200 && resp.GetSCodeNum() < 300 {
             // Some hairy code ahead
             if len(resp.GetContacts()) > 0 {
-                rTarget = resp.GetContacts()[0].GetUrl().GetCopy()
+                var contact *sippy_header.SipAddress
+                contact, err = resp.GetContacts()[0].GetBody(config)
+                if err != nil {
+                    config.ErrorLogger().Debug(err.Error())
+                    return
+                }
+                rTarget = contact.GetUrl().GetCopy()
             } else {
                 rTarget = nil
             }
@@ -230,15 +255,21 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                     routes[len(resp.GetRecordRoutes()) - 1 + idx] = r2 // reverse order
                 }
                 if len(routes) > 0 {
-                    if ! routes[0].GetUrl().Lr {
+                    var r0 *sippy_header.SipAddress
+                    r0, err = routes[0].GetBody(config)
+                    if err != nil {
+                        config.ErrorLogger().Debug(err.Error())
+                        return
+                    }
+                    if ! r0.GetUrl().Lr {
                         if rTarget != nil {
                             routes = append(routes, sippy_header.NewSipRoute(sippy_header.NewSipAddress("", rTarget)))
                         }
-                        rTarget = routes[0].GetUrl()
+                        rTarget = r0.GetUrl()
                         routes = routes[1:]
                         rAddr = rTarget.GetAddr(self.sip_tm.config)
                     } else {
-                        rAddr = routes[0].GetAddr(self.sip_tm.config)
+                        rAddr = r0.GetUrl().GetAddr(self.sip_tm.config)
                     }
                 } else if rTarget != nil {
 
@@ -257,7 +288,12 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             self.ack.SetRoutes(routes)
         }
         if fcode >= 200 && fcode < 300 {
-            self.ack.GetVias()[0].GenBranch()
+            var via0 *sippy_header.SipViaBody
+            if via0, err = self.ack.GetVias()[0].GetBody(); err != nil {
+                config.ErrorLogger().Debug("error parsing via: " + err.Error())
+                return
+            }
+            via0.GenBranch()
         }
         if rAddr == nil {
             rAddr = self.address

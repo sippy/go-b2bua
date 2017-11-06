@@ -37,16 +37,15 @@ type SipRoute struct {
 
 var _sip_route_name normalName = newNormalName("Route")
 
-func NewSipRoute(addr *sipAddress) *SipRoute {
+func NewSipRoute(addr *SipAddress) *SipRoute {
     return &SipRoute{
         normalName   : _sip_route_name,
-        sipAddressHF : NewSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr),
     }
 }
 
-func ParseSipRoute(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body, config)
-    if err != nil { return nil, err }
+func CreateSipRoute(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipRoute{
@@ -54,15 +53,7 @@ func ParseSipRoute(body string, config sippy_conf.Config) ([]SipHeader, error) {
             sipAddressHF : addr,
         }
     }
-    return rval, nil
-}
-
-func (self *SipRoute) Body() string {
-    return self.LocalBody(nil)
-}
-
-func (self *SipRoute) LocalBody(hostport *sippy_conf.HostPort) string {
-    return self.Address.LocalStr(hostport)
+    return rval
 }
 
 func (self *SipRoute) String() string {
@@ -70,11 +61,7 @@ func (self *SipRoute) String() string {
 }
 
 func (self *SipRoute) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
-}
-
-func (self *SipRoute) GetAddr(config sippy_conf.Config) *sippy_conf.HostPort {
-    return self.Address.url.GetAddr(config)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipRoute) GetCopy() *SipRoute {

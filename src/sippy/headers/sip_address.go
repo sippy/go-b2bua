@@ -32,21 +32,22 @@ import (
     "unicode"
 
     "sippy/conf"
+    "sippy/utils"
 )
 
-type sipAddress struct {
+type SipAddress struct {
     params      map[string]*string
     url         *SipURL
     hadbrace    bool
     name        string
 }
 
-func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Config) (*sipAddress, error) {
+func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Config) (*SipAddress, error) {
     var err error
     var arr []string
 
     // simple 'sip:foo' case
-    self := &sipAddress{
+    self := &SipAddress{
         params : make(map[string]*string),
         hadbrace : true,
     }
@@ -105,7 +106,7 @@ func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Confi
     return self, nil
 }
 
-func (self *sipAddress) _parse_paramstring(s string) error {
+func (self *SipAddress) _parse_paramstring(s string) error {
     for _, l := range strings.Split(s, ";") {
         var v *string
 
@@ -126,11 +127,11 @@ func (self *sipAddress) _parse_paramstring(s string) error {
     return nil
 }
 
-func (self *sipAddress) String() string {
+func (self *SipAddress) String() string {
     return self.LocalStr(nil)
 }
 
-func (self *sipAddress) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *SipAddress) LocalStr(hostport *sippy_conf.HostPort) string {
     var od, cd, s string
     if self.hadbrace {
         od = "<"
@@ -164,8 +165,8 @@ func (self *sipAddress) LocalStr(hostport *sippy_conf.HostPort) string {
     return s
 }
 
-func NewSipAddress(name string, url *SipURL) *sipAddress {
-    return &sipAddress{
+func NewSipAddress(name string, url *SipURL) *SipAddress {
+    return &SipAddress{
         name : name,
         url : url,
         hadbrace : true,
@@ -173,7 +174,7 @@ func NewSipAddress(name string, url *SipURL) *sipAddress {
     }
 }
 
-func (self *sipAddress) GetCopy() *sipAddress {
+func (self *SipAddress) GetCopy() *SipAddress {
     ret := *self
     ret.params = make(map[string]*string)
     for k, v := range self.params {
@@ -188,7 +189,7 @@ func (self *sipAddress) GetCopy() *sipAddress {
     return &ret
 }
 
-func (self *sipAddress) GetParam(name string) string {
+func (self *SipAddress) GetParam(name string) string {
     ret, ok := self.params[name]
     if !ok || ret == nil {
         return ""
@@ -196,14 +197,26 @@ func (self *sipAddress) GetParam(name string) string {
     return *ret
 }
 
-func (self *sipAddress) SetParam(name, value string) {
+func (self *SipAddress) SetParam(name, value string) {
     self.params[name] = &value
 }
 
-func (self *sipAddress) GetName() string {
+func (self *SipAddress) GetName() string {
     return self.name
 }
 
-func (self *sipAddress) GetUrl() *SipURL {
+func (self *SipAddress) GetUrl() *SipURL {
     return self.url
+}
+
+func (self *SipAddress) GetTag() string {
+    return self.GetParam("tag")
+}
+
+func (self *SipAddress) SetTag(tag string) {
+    self.SetParam("tag", tag)
+}
+
+func (self *SipAddress) GenTag() {
+    self.SetParam("tag", sippy_utils.GenTag())
 }

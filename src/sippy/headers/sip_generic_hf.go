@@ -27,8 +27,6 @@
 package sippy_header
 
 import (
-    "strings"
-
     "sippy/conf"
 )
 
@@ -44,11 +42,7 @@ func NewSipGenericHF(name, body string) *sipGenericHF {
     }
 }
 
-func ParseSipGenericHF(name, body string) *sipGenericHF {
-    return NewSipGenericHF(strings.Title(name), body)
-}
-
-func (self *sipGenericHF) Body() string {
+func (self *sipGenericHF) StringBody() string {
     return self.body
 }
 
@@ -57,7 +51,7 @@ func (self *sipGenericHF) LocalStr(hostport *sippy_conf.HostPort, compact bool) 
 }
 
 func (self *sipGenericHF) String() string {
-    return self.name + ": " + self.Body()
+    return self.name + ": " + self.StringBody()
 }
 
 func (self *sipGenericHF) GetCopy() *sipGenericHF {

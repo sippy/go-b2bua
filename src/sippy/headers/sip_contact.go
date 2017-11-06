@@ -42,17 +42,17 @@ func NewSipContact(config sippy_conf.Config) *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
         Asterisk     : false,
-        sipAddressHF : NewSipAddressHF(
+        sipAddressHF : newSipAddressHF(
                             NewSipAddress("Anonymous",
                                 NewSipURL("", config.GetMyAddress(), config.GetMyPort(), false))),
     }
 }
 
-func NewSipContactFromAddress(addr *sipAddress) *SipContact {
+func NewSipContactFromAddress(addr *SipAddress) *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
         Asterisk : false,
-        sipAddressHF : NewSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr),
     }
 }
 
@@ -68,7 +68,7 @@ func (self *SipContact) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
-func ParseSipContact(body string, config sippy_conf.Config) ([]SipHeader, error) {
+func CreateSipContact(body string) []SipHeader {
     rval := []SipHeader{}
     if body == "*" {
         rval = append(rval, &SipContact{
@@ -76,8 +76,7 @@ func ParseSipContact(body string, config sippy_conf.Config) ([]SipHeader, error)
             compactName  : _sip_contact_name,
         })
     } else {
-        addresses, err := ParseSipAddressHF(body, config)
-        if err != nil { return nil, err }
+        addresses := createSipAddressHFs(body)
         for _, addr := range addresses {
             rval = append(rval, &SipContact{
                             sipAddressHF : addr,
@@ -86,18 +85,18 @@ func ParseSipContact(body string, config sippy_conf.Config) ([]SipHeader, error)
                         })
         }
     }
-    return rval, nil
+    return rval
 }
 
-func (self *SipContact) Body() string {
-    return self.LocalBody(nil)
+func (self *SipContact) StringBody() string {
+    return self.LocalStringBody(nil)
 }
 
-func (self *SipContact) LocalBody(hostport *sippy_conf.HostPort) string {
+func (self *SipContact) LocalStringBody(hostport *sippy_conf.HostPort) string {
     if self.Asterisk {
         return "*"
     }
-    return self.Address.LocalStr(hostport)
+    return self.sipAddressHF.LocalStringBody(hostport)
 }
 
 func (self *SipContact) String() string {
@@ -109,5 +108,5 @@ func (self *SipContact) LocalStr(hostport *sippy_conf.HostPort, compact bool) st
     if compact {
         hname = self.CompactName()
     }
-    return hname + ": " + self.LocalBody(hostport)
+    return hname + ": " + self.LocalStringBody(hostport)
 }

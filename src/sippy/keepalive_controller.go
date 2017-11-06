@@ -53,13 +53,24 @@ func newKeepaliveController(ua sippy_types.UA) *keepaliveController {
 
 func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
     var err error
+    var challenge *sippy_header.SipWWWAuthenticateBody
+    var req sippy_types.SipRequest
+
     if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
         return
     }
     code, _ := resp.GetSCode()
     if code == 401 && resp.GetSipWWWAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
-        challenge := resp.GetSipWWWAuthenticate()
-        req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
+        challenge, err = resp.GetSipWWWAuthenticate().GetBody()
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("error parsing 401 auth: " + err.Error())
+            return
+        }
+        req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("Cannot create INVITE: " + err.Error())
+            return
+        }
         self.ua.IncLCSeq()
         self.ka_tr, err = self.ua.PrepTr(req)
         if err == nil {
@@ -69,8 +80,16 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
         return
     }
     if code == 407 && resp.GetSipProxyAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
-        challenge := resp.GetSipProxyAuthenticate()
-        req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
+        challenge, err = resp.GetSipProxyAuthenticate().GetBody()
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("error parsing 407 auth: " + err.Error())
+            return
+        }
+        req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("Cannot create INVITE: " + err.Error())
+            return
+        }
         self.ua.IncLCSeq()
         self.ka_tr, err = self.ua.PrepTr(req)
         if err == nil {
@@ -99,10 +118,16 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
 
 func (self *keepaliveController) keepAlive() {
     var err error
+    var req sippy_types.SipRequest
+
     if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
         return
     }
-    req := self.ua.GenRequest("INVITE", self.ua.GetLSDP(), "", "", nil)
+    req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), "", "", nil)
+    if err != nil {
+        self.ua.Config().ErrorLogger().Error("Cannot create INVITE: " + err.Error())
+        return
+    }
     self.ua.IncLCSeq()
     self.triedauth = false
     self.ka_tr, err = self.ua.PrepTr(req)

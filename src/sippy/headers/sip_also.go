@@ -37,9 +37,8 @@ type SipAlso struct {
 
 var _sip_also_name normalName = newNormalName("Also")
 
-func ParseSipAlso(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body, config)
-    if err != nil { return nil, err }
+func CreateSipAlso(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipAlso{
@@ -47,22 +46,14 @@ func ParseSipAlso(body string, config sippy_conf.Config) ([]SipHeader, error) {
             sipAddressHF : addr,
         }
     }
-    return rval, nil
+    return rval
 }
 
-func NewSipAlso(addr *sipAddress) *SipAlso {
+func NewSipAlso(addr *SipAddress) *SipAlso {
     return &SipAlso{
         normalName   : _sip_also_name,
-        sipAddressHF : NewSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr),
     }
-}
-
-func (self *SipAlso) Body() string {
-    return self.LocalBody(nil)
-}
-
-func (self *SipAlso) LocalBody(hostport *sippy_conf.HostPort) string {
-    return self.Address.LocalStr(hostport)
 }
 
 func (self *SipAlso) String() string {
@@ -70,7 +61,7 @@ func (self *SipAlso) String() string {
 }
 
 func (self *SipAlso) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipAlso) GetCopy() *SipAlso {

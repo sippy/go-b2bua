@@ -37,9 +37,8 @@ type SipReferredBy struct {
 
 var _sip_referred_by_name normalName = newNormalName("Referred-By")
 
-func ParseSipReferredBy(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    addresses, err := ParseSipAddressHF(body, config)
-    if err != nil { return nil, err }
+func CreateSipReferredBy(body string) []SipHeader {
+    addresses := createSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipReferredBy{
@@ -47,22 +46,14 @@ func ParseSipReferredBy(body string, config sippy_conf.Config) ([]SipHeader, err
             sipAddressHF : addr,
         }
     }
-    return rval, nil
+    return rval
 }
 
-func NewSipReferredBy(addr *sipAddress) *SipReferredBy {
+func NewSipReferredBy(addr *SipAddress) *SipReferredBy {
     return &SipReferredBy{
         normalName   : _sip_referred_by_name,
-        sipAddressHF : NewSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr),
     }
-}
-
-func (self *SipReferredBy) Body() string {
-    return self.LocalBody(nil)
-}
-
-func (self *SipReferredBy) LocalBody(hostport *sippy_conf.HostPort) string {
-    return self.Address.LocalStr(hostport)
 }
 
 func (self *SipReferredBy) String() string {
@@ -70,7 +61,7 @@ func (self *SipReferredBy) String() string {
 }
 
 func (self *SipReferredBy) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.LocalBody(hostport)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipReferredBy) GetCopy() *SipReferredBy {

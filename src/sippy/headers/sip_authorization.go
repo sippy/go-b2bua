@@ -38,8 +38,7 @@ import (
 
 type NewSipXXXAuthorizationFunc func(realm, nonce, method, uri, username, password string) SipHeader
 
-type SipAuthorization struct {
-    normalName
+type sipAuthorizationBody struct {
     username    string
     realm       string
     nonce       string
@@ -51,6 +50,12 @@ type SipAuthorization struct {
     otherparams string
 }
 
+type SipAuthorization struct {
+    normalName
+    body        *sipAuthorizationBody
+    string_body string
+}
+
 var _sip_authorization_name normalName = newNormalName("Authorization")
 
 func NewSipAuthorization(realm, nonce, method, uri, username, password string) *SipAuthorization {
@@ -58,23 +63,30 @@ func NewSipAuthorization(realm, nonce, method, uri, username, password string) *
     response := DigestCalcResponse(HA1, nonce, "", "", "", method, uri, "")
     return &SipAuthorization{
         normalName : _sip_authorization_name,
-        realm   : realm,
-        nonce   : nonce,
-        uri     : uri,
-        username : username,
-        response : response,
+        body    : &sipAuthorizationBody{
+            realm   : realm,
+            nonce   : nonce,
+            uri     : uri,
+            username : username,
+            response : response,
+        },
     }
 }
 
-func ParseSipAuthorization(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    self, err := NewSipAuthorizationFromString(body)
-    if err != nil { return nil, err }
-    return []SipHeader{ self }, nil
+func CreateSipAuthorization(body string) []SipHeader {
+    self := createSipAuthorizationObj(body)
+    return []SipHeader{ self }
 }
 
-func NewSipAuthorizationFromString(body string) (*SipAuthorization, error) {
-    self := &SipAuthorization{
-        normalName : _sip_authorization_name,
+func createSipAuthorizationObj(body string) *SipAuthorization {
+    return &SipAuthorization{
+        normalName  : _sip_authorization_name,
+        string_body : body,
+    }
+}
+
+func newSipAuthorizationBody(body string) (*sipAuthorizationBody, error) {
+    self := &sipAuthorizationBody{
     }
     arr := sippy_utils.FieldsN(body, 2)
     if len(arr) != 2 {
@@ -110,15 +122,7 @@ func NewSipAuthorizationFromString(body string) (*SipAuthorization, error) {
     return self, nil
 }
 
-func (self *SipAuthorization) String() string {
-    return self.Name() + ": " + self.Body()
-}
-
-func (self *SipAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {
-    return self.String()
-}
-
-func (self *SipAuthorization) Body() string {
+func (self *sipAuthorizationBody) String() string {
     rval := "Digest username=\"" + self.username + "\",realm=\"" + self.realm + "\",nonce=\"" + self.nonce +
         "\",uri=\"" + self.uri + "\",response=\"" + self.response + "\""
     if self.qop != "" {
@@ -127,18 +131,55 @@ func (self *SipAuthorization) Body() string {
     return rval + self.otherparams
 }
 
+func (self *sipAuthorizationBody) getCopy() *sipAuthorizationBody {
+    rval := *self
+    return &rval
+}
+
+func (self *SipAuthorization) String() string {
+    return self.Name() + ": " + self.StringBody()
+}
+
+func (self *SipAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {
+    return self.String()
+}
+
+func (self *SipAuthorization) StringBody() string {
+    if self.body != nil {
+        return self.body.String()
+    }
+    return self.string_body
+}
+
 func (self *SipAuthorization) GetCopy() *SipAuthorization {
     if self == nil {
         return nil
     }
     var rval SipAuthorization = *self
+    if self.body != nil {
+        rval.body = self.body.getCopy()
+    }
     return &rval
 }
 
-func (self *SipAuthorization) GetUsername() string {
-    return self.username
+func (self *SipAuthorization) parse() error {
+    body, err := newSipAuthorizationBody(self.string_body)
+    if err != nil {
+        return err
+    }
+    self.body = body
+    return nil
 }
-
+/*
+func (self *SipAuthorization) GetUsername() (string, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return "", err
+        }
+    }
+    return self.body.username, nil
+}
+*/
 func (self *SipAuthorization) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
@@ -170,8 +211,14 @@ func DigestCalcResponse(HA1, pszNonce string, pszNonceCount, pszCNonce, pszQop, 
     s += HA2
     return fmt.Sprintf("%x", md5.Sum([]byte(s)))
 }
-
-func (self *SipAuthorization) VerifyHA1(HA1, method string) bool {
-    response := DigestCalcResponse(HA1, self.nonce, self.nc, self.cnonce, self.qop, method, self.uri, "")
-    return response == self.response
+/*
+func (self *SipAuthorization) VerifyHA1(HA1, method string) (bool, error) {
+    if self.body == nil {
+        if err := self.parse(); err != nil {
+            return false, err
+        }
+    }
+    response := DigestCalcResponse(HA1, self.body.nonce, self.body.nc, self.body.cnonce, self.body.qop, method, self.body.uri, "")
+    return response == self.body.response, nil
 }
+*/

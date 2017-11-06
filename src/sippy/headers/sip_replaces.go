@@ -32,8 +32,7 @@ import (
     "sippy/conf"
 )
 
-type SipReplaces struct {
-    normalName
+type sipReplacesBody struct {
     call_id     string
     from_tag    string
     to_tag      string
@@ -41,31 +40,51 @@ type SipReplaces struct {
     otherparams string
 }
 
+type SipReplaces struct {
+    normalName
+    string_body     string
+    body            *sipReplacesBody
+}
+
 var _sip_replaces_name normalName = newNormalName("Replaces")
 
-func ParseSipReplaces(body string, config sippy_conf.Config) ([]SipHeader, error) {
-    self := &SipReplaces{
-        normalName : _sip_replaces_name,
+func CreateSipReplaces(body string) []SipHeader {
+    return []SipHeader{
+        &SipReplaces{
+            normalName : _sip_replaces_name,
+        },
     }
-    params := strings.Split(body, ";")
-    self.call_id = params[0]
+}
+
+func (self *SipReplaces) parse() {
+    params := strings.Split(self.string_body, ";")
+    body := &sipReplacesBody{
+        call_id     : params[0],
+    }
     for _, param := range params[1:] {
         kv := strings.SplitN(param, "=", 2)
         switch kv[0] {
         case "from-tag":
-            if len(kv) == 2 { self.from_tag = kv[1] }
+            if len(kv) == 2 { body.from_tag = kv[1] }
         case "to-tag":
-            if len(kv) == 2 { self.to_tag = kv[1] }
+            if len(kv) == 2 { body.to_tag = kv[1] }
         case "early-only":
-            self.early_only = true
+            body.early_only = true
         default:
-            self.otherparams += ";" + param
+            body.otherparams += ";" + param
         }
     }
-    return []SipHeader{ self }, nil
+    self.body = body
 }
 
-func (self *SipReplaces) Body() string {
+func (self *SipReplaces) StringBody() string {
+    if self.body != nil {
+        return self.body.String()
+    }
+    return self.string_body
+}
+
+func (self *sipReplacesBody) String() string {
     res := self.call_id + ";from-tag=" + self.from_tag + ";to-tag=" + self.to_tag
     if self.early_only {
         res += ";early-only"
@@ -78,7 +97,7 @@ func (self *SipReplaces) String() string {
 }
 
 func (self *SipReplaces) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
-    return self.Name() + ": " + self.Body()
+    return self.Name() + ": " + self.StringBody()
 }
 
 func (self *SipReplaces) GetCopy() *SipReplaces {

@@ -74,6 +74,9 @@ func (self *UacStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
 }
 
 func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
+    var err error
+    var event sippy_types.CCEvent
+
     body := resp.GetBody()
     code, reason := resp.GetSCode()
     if code < 200 {
@@ -100,15 +103,28 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         return NewUaStateConnected(self.ua, nil, "")
     }
     reason_rfc3326 := resp.GetReason()
-    var event sippy_types.CCEvent
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
+        var contact *sippy_header.SipAddress
+
+        contact, err = resp.GetContacts()[0].GetBody(self.ua.Config())
+        if err != nil {
+            self.ua.Config().ErrorLogger().Error("UacStateUpdating::RecvResponse: #1: " + err.Error())
+            return nil
+        }
         event = NewCCEventRedirect(code, reason, body,
-                    []*sippy_header.SipURL{ resp.GetContacts()[0].GetUrl().GetCopy() },
+                    []*sippy_header.SipURL{ contact.GetUrl().GetCopy() },
                     resp.GetRtime(), self.ua.GetOrigin())
     } else if code == 300 && len(resp.GetContacts()) > 0 {
         urls := make([]*sippy_header.SipURL, 0)
-        for _, c := range resp.GetContacts() {
-            urls = append(urls, c.GetUrl().GetCopy())
+        for _, contact := range resp.GetContacts() {
+            var cbody *sippy_header.SipAddress
+
+            cbody, err = contact.GetBody(self.ua.Config())
+            if err != nil {
+                self.ua.Config().ErrorLogger().Error("UacStateUpdating::RecvResponse: #2: " + err.Error())
+                return nil
+            }
+            urls = append(urls, cbody.GetUrl().GetCopy())
         }
         event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin())
     } else {
@@ -132,7 +148,11 @@ func (self *UacStateUpdating) updateFailed(event sippy_types.CCEvent) sippy_type
     if event.GetReason() != nil {
         eh = append(eh, event.GetReason())
     }
-    req := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+    req, err := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+    if err != nil {
+        self.ua.Config().ErrorLogger().Error("UacStateUpdating::updateFailed: #1: " + err.Error())
+        return nil
+    }
     self.ua.IncLCSeq()
     self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
 
@@ -152,7 +172,10 @@ func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.
     }
     if send_bye {
         self.ua.GetClientTransaction().Cancel()
-        req := self.ua.GenRequest("BYE", nil, "", "", nil, event.GetExtraHeaders()...)
+        req, err := self.ua.GenRequest("BYE", nil, "", "", nil, event.GetExtraHeaders()...)
+        if err != nil {
+            return nil, err
+        }
         self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         self.ua.CancelCreditTimer()
