@@ -46,6 +46,9 @@ func NewUaStateDead(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string
 }
 
 func (self *UaStateDead) OnActivation() {
+    if self.rtime != nil {
+        self.ua.DiscCb(self.rtime, self.origin, 0, nil)
+    }
     self.ua.OnDead()
     // Break cross-ref chain
     self.ua = nil

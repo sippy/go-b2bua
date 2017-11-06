@@ -115,7 +115,7 @@ func (self *SipVia) parse() error {
             via.extension = val
             via.extension_exists = true
         default:
-            via.extra_headers += ";" + sparam[1]
+            via.extra_headers += ";" + sparam[0]
             if val != nil {
                 via.extra_headers += "=" + *val
             }
