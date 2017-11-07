@@ -57,6 +57,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     var to_body *sippy_header.SipAddress
     var from_body *sippy_header.SipAddress
     var via0 *sippy_header.SipViaBody
+    var auth *sippy_header.SipAuthorizationBody
 
     if req.GetMethod() != "INVITE" {
         //print "wrong request %s in the Trying state" % req.getMethod()
@@ -99,10 +100,13 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetLUri(sippy_header.NewSipFrom(to_body, self.config))
     self.ua.SetRUri(sippy_header.NewSipTo(from_body, self.config))
     self.ua.SetCallId(self.ua.GetUasResp().GetCallId())
-    auth, err := req.GetSipAuthorization().GetBody()
-    if err != nil {
-        self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #5: " + err.Error())
-        return nil
+    if auth_hf := req.GetSipAuthorization(); auth_hf != nil {
+        auth, err = auth_hf.GetBody()
+        if err != nil {
+            self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #5: " + err.Error())
+            return nil
+        }
+        auth = auth.GetCopy()
     }
     body := req.GetBody()
     via0, err = req.GetVias()[0].GetBody()
@@ -112,7 +116,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     }
     self.ua.SetBranch(via0.GetBranch())
     event := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), from_body.GetUrl().Username,
-        req.GetRURI().Username, body, auth.GetCopy(), from_body.GetName(), req.GetRtime(), self.ua.GetOrigin())
+        req.GetRURI().Username, body, auth, from_body.GetName(), req.GetRtime(), self.ua.GetOrigin())
     event.SetReason(req.GetReason())
     event.SetMaxForwards(req.GetMaxForwards())
     if self.ua.GetExpireTime() > 0 {
