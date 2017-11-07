@@ -247,10 +247,10 @@ func (self *CCEventInfo) GetBody() sippy_types.MsgBody {
 
 type CCEventDisconnect struct {
     CCEventGeneric
-    redirect_url *sippy_header.SipURL
+    redirect_url *sippy_header.SipAddress
 }
 
-func NewCCEventDisconnect(also *sippy_header.SipURL, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventDisconnect {
+func NewCCEventDisconnect(also *sippy_header.SipAddress, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventDisconnect {
     return &CCEventDisconnect{
         CCEventGeneric  : newCCEventGeneric(rtime, origin, extra_headers...),
         redirect_url    : also,
@@ -259,7 +259,7 @@ func NewCCEventDisconnect(also *sippy_header.SipURL, rtime *sippy_time.MonoTime,
 
 func (self *CCEventDisconnect) String() string { return "CCEventDisconnect" }
 
-func (self *CCEventDisconnect) GetRedirectURL() *sippy_header.SipURL {
+func (self *CCEventDisconnect) GetRedirectURL() *sippy_header.SipAddress {
     return self.redirect_url
 }
 

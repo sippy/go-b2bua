@@ -131,14 +131,14 @@ func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_typ
         self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
         t.SendResponseWithLossEmul(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
         //print "BYE received in the Ringing state, going to the Disconnected state"
-        var also *sippy_header.SipURL = nil
+        var also *sippy_header.SipAddress = nil
         if len(req.GetAlso()) > 0 {
             also_body, err := req.GetAlso()[0].GetBody(self.ua.Config())
             if err != nil {
                 self.ua.Config().ErrorLogger().Error("UasStateRinging::RecvRequest: #1: " + err.Error())
                 return nil
             }
-            also = also_body.GetUrl().GetCopy()
+            also = also_body.GetCopy()
         }
         event := NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin())
         event.SetReason(req.GetReason())

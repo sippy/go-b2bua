@@ -112,10 +112,10 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
             return nil
         }
         event = NewCCEventRedirect(code, reason, body,
-                    []*sippy_header.SipURL{ contact.GetUrl().GetCopy() },
+                    []*sippy_header.SipAddress{ contact.GetCopy() },
                     resp.GetRtime(), self.ua.GetOrigin())
     } else if code == 300 && len(resp.GetContacts()) > 0 {
-        urls := make([]*sippy_header.SipURL, 0)
+        urls := make([]*sippy_header.SipAddress, 0)
         for _, contact := range resp.GetContacts() {
             var cbody *sippy_header.SipAddress
 
@@ -124,7 +124,7 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
                 self.ua.Config().ErrorLogger().Error("UacStateUpdating::RecvResponse: #2: " + err.Error())
                 return nil
             }
-            urls = append(urls, cbody.GetUrl().GetCopy())
+            urls = append(urls, cbody.GetCopy())
         }
         event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin())
     } else {

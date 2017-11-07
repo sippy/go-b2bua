@@ -76,8 +76,7 @@ func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             self.ua.Config().ErrorLogger().Error("UasStateUpdating::RecvRequest: #1: " + err.Error())
             return nil
         }
-        also := refer_to.GetUrl().GetCopy()
-        self.ua.Enqueue(NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin()))
+        self.ua.Enqueue(NewCCEventDisconnect(refer_to.GetCopy(), req.GetRtime(), self.ua.GetOrigin()))
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
         return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)

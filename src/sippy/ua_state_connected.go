@@ -74,8 +74,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             self.ua.Config().ErrorLogger().Error("UaStateConnected::RecvRequest: #1: " + err.Error())
             return nil
         }
-        also := refer_to.GetUrl().GetCopy()
-        self.ua.Enqueue(NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin()))
+        self.ua.Enqueue(NewCCEventDisconnect(refer_to.GetCopy(), req.GetRtime(), self.ua.GetOrigin()))
         self.ua.RecvEvent(NewCCEventDisconnect(nil, req.GetRtime(), self.ua.GetOrigin()))
         return nil
     }
@@ -115,14 +114,14 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
     if req.GetMethod() == "BYE" {
         t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         //print "BYE received in the Connected state, going to the Disconnected state"
-        var also *sippy_header.SipURL
+        var also *sippy_header.SipAddress
         if len(req.GetAlso()) > 0 {
             also_body, err := req.GetAlso()[0].GetBody(self.ua.Config())
             if err != nil {
                 self.ua.Config().ErrorLogger().Error("UaStateConnected::RecvRequest: #3: " + err.Error())
                 return nil
             }
-            also = also_body.GetUrl().GetCopy()
+            also = also_body.GetCopy()
         }
         event := NewCCEventDisconnect(also, req.GetRtime(), self.ua.GetOrigin())
         event.SetReason(req.GetReason())
@@ -152,7 +151,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
 
     eh := event.GetExtraHeaders()
     ok := false
-    var redirect *sippy_header.SipURL = nil
+    var redirect *sippy_header.SipAddress = nil
 
     switch ev := event.(type) {
     case *CCEventDisconnect:
@@ -174,7 +173,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
                 return nil, err
             }
             self.ua.IncLCSeq()
-            also := sippy_header.NewSipReferTo(sippy_header.NewSipAddress("", redirect))
+            also := sippy_header.NewSipReferTo(redirect)
             req.AppendHeader(also)
             lUri, err = self.ua.GetLUri().GetBody(self.ua.Config())
             if err != nil {
@@ -190,7 +189,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             }
             self.ua.IncLCSeq()
             if redirect != nil {
-                also := sippy_header.NewSipAlso(sippy_header.NewSipAddress("", redirect))
+                also := sippy_header.NewSipAlso(redirect)
                 req.AppendHeader(also)
             }
             self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)

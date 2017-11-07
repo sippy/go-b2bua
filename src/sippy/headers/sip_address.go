@@ -28,6 +28,8 @@ package sippy_header
 
 import (
     "errors"
+    "fmt"
+    "strconv"
     "strings"
     "unicode"
 
@@ -40,6 +42,7 @@ type SipAddress struct {
     url         *SipURL
     hadbrace    bool
     name        string
+    q           float64
 }
 
 func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Config) (*SipAddress, error) {
@@ -50,6 +53,7 @@ func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Confi
     self := &SipAddress{
         params : make(map[string]*string),
         hadbrace : true,
+        q : 1.0,
     }
 
     if strings.HasPrefix(strings.ToLower(address), "sip:") && strings.Index(address, "<") == -1 {
@@ -118,11 +122,22 @@ func (self *SipAddress) _parse_paramstring(s string) error {
         if len(arr) == 2 {
             tmp := arr[1]
             v = &tmp
+        } else {
+            v = nil
         }
         if _, ok := self.params[k]; ok {
             return errors.New("Duplicate parameter in SIP address: " + k)
         }
-        self.params[k] = v
+        if k == "q" {
+            if v != nil {
+                // ignore absense or possible errors in the q= value
+                if q, err := strconv.ParseFloat(*v, 64); err == nil {
+                    self.q = q
+                }
+            }
+        } else {
+            self.params[k] = v
+        }
     }
     return nil
 }
@@ -161,6 +176,9 @@ func (self *SipAddress) LocalStr(hostport *sippy_conf.HostPort) string {
         } else {
             s += ";" + k + "=" + *v
         }
+    }
+    if self.q != 1.0 {
+        s += fmt.Sprintf(";q=%g", self.q)
     }
     return s
 }
@@ -219,4 +237,8 @@ func (self *SipAddress) SetTag(tag string) {
 
 func (self *SipAddress) GenTag() {
     self.SetParam("tag", sippy_utils.GenTag())
+}
+
+func (self *SipAddress) GetQ() float64 {
+    return self.q
 }
