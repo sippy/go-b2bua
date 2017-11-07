@@ -73,17 +73,17 @@ func (self *CCEventRedirect) GetContacts() []*sippy_header.SipContact {
     return ret
 }
 
-func (self *CCEventRedirect) SortURLs() {
+func (self *CCEventRedirect) SortAddresses() {
     if len(self.redirect_addresses) == 1 {
         return
     }
-    sort.Sort(sortRedirectURLs(self.redirect_addresses))
+    sort.Sort(sortRedirectAddresses(self.redirect_addresses))
 }
 
-type sortRedirectURLs []*sippy_header.SipAddress
-func (self sortRedirectURLs) Len() int { return len(self) }
-func (self sortRedirectURLs) Swap(x, y int) { self[x], self[y] = self[y], self[x] }
-func (self sortRedirectURLs) Less(x, y int) bool {
+type sortRedirectAddresses []*sippy_header.SipAddress
+func (self sortRedirectAddresses) Len() int { return len(self) }
+func (self sortRedirectAddresses) Swap(x, y int) { self[x], self[y] = self[y], self[x] }
+func (self sortRedirectAddresses) Less(x, y int) bool {
     // descending order
     return self[x].GetQ() > self[y].GetQ()
 }
