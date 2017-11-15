@@ -98,7 +98,7 @@ func newSipAuthorizationBody(body string) (*SipAuthorizationBody, error) {
             return nil, errors.New("Error parsing authorization (2)")
         }
         name, value := kv[0], kv[1]
-        switch name {
+        switch strings.ToLower(name) {
         case "username":
             self.username = strings.Trim(value, "\"")
         case "uri":
