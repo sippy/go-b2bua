@@ -131,6 +131,7 @@ func (self *_RTPPLWorker) run() {
         }
     }
     self.shutdown_chan <- 1
+    self.userv = nil
 }
 
 type Rtp_proxy_client_stream struct {
