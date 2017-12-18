@@ -229,7 +229,7 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
             return
         }
         self.lCSeq += 1
-        self.tr, err = self.PrepTr(req)
+        self.tr, err = self.me().PrepTr(req)
         if err == nil {
             self.sip_tm.BeginClientTransaction(req, self.tr)
             delete(self.reqs, cseq_body.CSeq)
@@ -249,7 +249,7 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
             return
         }
         self.lCSeq += 1
-        self.tr, err = self.PrepTr(req)
+        self.tr, err = self.me().PrepTr(req)
         if err == nil {
             self.sip_tm.BeginClientTransaction(req, self.tr)
             delete(self.reqs, cseq_body.CSeq)
