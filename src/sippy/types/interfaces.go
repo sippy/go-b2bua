@@ -309,6 +309,7 @@ type ClientTransaction interface {
     SetUAck(bool)
     BeforeRequestSent(SipRequest)
     TransmitData()
+    SetOnSendComplete(func())
 }
 
 type ServerTransaction interface {
