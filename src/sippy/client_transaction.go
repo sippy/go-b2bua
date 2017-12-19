@@ -55,6 +55,7 @@ type clientTransaction struct {
     ack_rparams_present bool
     ack_rTarget     *sippy_header.SipURL
     ack_routes      []*sippy_header.SipRoute
+    on_send_complete func()
 }
 
 func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
@@ -96,6 +97,10 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
     }
     self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
     return self, nil
+}
+
+func (self *clientTransaction) SetOnSendComplete(fn func()) {
+    self.on_send_complete = fn
 }
 
 func (self *clientTransaction) StartTimers() {
@@ -370,7 +375,7 @@ func (self *clientTransaction) BeforeRequestSent(req sippy_types.SipRequest) {
 
 func (self *clientTransaction) TransmitData() {
     if self.sip_tm != nil {
-        self.sip_tm.transmitData(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id =*/ self.tid.CallId, 0)
+        self.sip_tm.transmitDataWithCb(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id =*/ self.tid.CallId, 0, self.on_send_complete)
     }
 }
 

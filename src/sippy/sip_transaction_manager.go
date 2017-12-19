@@ -607,9 +607,13 @@ func (self *sipTransactionManager) transmitMsg(userv sippy_types.UdpServer, msg 
 }
 
 func (self *sipTransactionManager) transmitData(userv sippy_types.UdpServer, data []byte, address *sippy_conf.HostPort, cachesum, call_id string, lossemul int /*=0*/) {
+    self.transmitDataWithCb(userv, data, address, cachesum, call_id, lossemul, nil)
+}
+
+func (self *sipTransactionManager) transmitDataWithCb(userv sippy_types.UdpServer, data []byte, address *sippy_conf.HostPort, cachesum, call_id string, lossemul int /*=0*/, on_complete func()) {
     logop := "SENDING"
     if lossemul == 0 {
-        userv.SendTo(data, address)
+        userv.SendToWithCb(data, address, on_complete)
     } else {
         logop = "DISCARDING"
     }

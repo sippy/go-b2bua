@@ -55,6 +55,7 @@ type UdpPacketReceiver func(data []byte, addr *sippy_conf.HostPort, server *udpS
 type write_req struct {
     address     net.Addr
     data        []byte
+    on_complete func()
 }
 
 type resolv_req struct {
@@ -96,7 +97,7 @@ LOOP:
         if delay > time.Duration(.5 * float64(time.Second)) {
             self.logger.Error("Udp_server: DNS resolve time for '%s' is too big: %s", wi.hostport, delay.String())
         }
-        userv._send_to(wi.data, addr)
+        userv._send_to(wi.data, addr, nil)
     }
     self.sem <- 1
 }
@@ -126,6 +127,9 @@ SEND_LOOP:
         for wi != nil {
             for i := 0; i < 20; i++ {
                 if _, err := userv.skt.WriteTo(wi.data, wi.address); err == nil {
+                    if wi.on_complete != nil {
+                        wi.on_complete()
+                    }
                     break SEND_LOOP
                 }
             }
@@ -288,6 +292,10 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
 }
 
 func (self *udpServer) SendTo(data []byte, hostport *sippy_conf.HostPort) {
+    self.SendToWithCb(data, hostport, nil)
+}
+
+func (self *udpServer) SendToWithCb(data []byte, hostport *sippy_conf.HostPort, on_complete func()) {
     ip := hostport.ParseIP()
     if ip == nil {
         self.wi_resolv <- &resolv_req{ data : data, hostport : hostport }
@@ -297,11 +305,15 @@ func (self *udpServer) SendTo(data []byte, hostport *sippy_conf.HostPort) {
     if err != nil {
         return // not reached
     }
-    self._send_to(data, address)
+    self._send_to(data, address, on_complete)
 }
 
-func (self *udpServer) _send_to(data []byte, address net.Addr) {
-    self.wi <- &write_req{ data : data, address : address }
+func (self *udpServer) _send_to(data []byte, address net.Addr, on_complete func()) {
+    self.wi <- &write_req{
+        data        : data,
+        address     : address,
+        on_complete : on_complete,
+    }
 }
 
 func (self *udpServer) handle_read(data []byte, address net.Addr, rtime *sippy_time.MonoTime) {

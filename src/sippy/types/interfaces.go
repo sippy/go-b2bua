@@ -114,6 +114,7 @@ type SipResponse interface {
 type UdpServer interface {
     GetLaddress() *sippy_conf.HostPort
     SendTo([]byte, *sippy_conf.HostPort)
+    SendToWithCb([]byte, *sippy_conf.HostPort, func())
 }
 
 type MsgBody interface {
