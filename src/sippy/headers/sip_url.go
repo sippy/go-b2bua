@@ -214,6 +214,8 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
                             return err
                         }
                         self.Port = sippy_conf.NewMyPort(pparts[0])
+                    } else {
+                        return err
                     }
                 } else {
                     return err
