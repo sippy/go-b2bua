@@ -102,7 +102,9 @@ func ParseSipAddress(address string, relaxedparser bool, config sippy_conf.Confi
         return nil, errors.New("ParseSipAddress #2")
     }
     paramstring := arr[1]
-    self.url, err = ParseSipURL(arr[0], relaxedparser, config)
+    if self.url, err = ParseSipURL(arr[0], relaxedparser, config); err != nil {
+        return nil, err
+    }
     paramstring = strings.TrimSpace(paramstring)
     if err = self._parse_paramstring(paramstring); err != nil {
         return nil, err

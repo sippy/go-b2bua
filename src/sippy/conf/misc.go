@@ -64,6 +64,9 @@ func newSystemAddress(address string) (*MyAddress) {
 }
 
 func (self *MyAddress) normalize() {
+    if self.address == "" {
+        return
+    }
     if self.address[0] != '[' && (strings.IndexByte(self.address, ':') >= 0 || strings.IndexByte(self.address, '%') >= 0) {
         self.address = "[" + self.address + "]"
     }

@@ -31,6 +31,7 @@ import (
     "errors"
     "fmt"
     "net"
+    "strings"
     "sync"
     "time"
 
@@ -206,19 +207,19 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     resp, err = ParseSipResponse(data, rtime, self.config)
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
-        self.logError("can't parse SIP response from " + address.String() + ":" + err.Error())
+        self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
         return
     }
     tid, err = resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/, self.config)
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
-        self.logError("can't parse SIP response from " + address.String() + ":" + err.Error())
+        self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
         return
     }
     self.config.SipLogger().Write(rtime, tid.CallId, "RECEIVED message from " + address.String() + ":\n" + string(data))
 
     if resp.scode < 100 || resp.scode > 999 {
-        self.logError("invalid status code in SIP response" + address.String() + ":\n" + string(data))
+        self.logBadMessage("invalid status code in SIP response" + address.String() + ":\n" + string(data), data)
         self.rcache_set_call_id(checksum, tid.CallId)
         return
     }
@@ -232,19 +233,19 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
 
             via0, err = resp.vias[0].GetBody()
             if err != nil {
-                self.logError(err.Error())
+                self.logBadMessage(err.Error(), data)
                 return
             }
             taddr := via0.GetTAddr(self.config)
             if taddr.Port.String() != self.config.SipPort().String() {
                 if len(resp.contacts) == 0 {
-                    self.logError("OnUdpPacket: no Contact: in SIP response")
+                    self.logBadMessage("OnUdpPacket: no Contact: in SIP response", data)
                     return
                 }
                 if ! resp.contacts[0].Asterisk {
                     contact, err = resp.contacts[0].GetBody(self.config)
                     if err != nil {
-                        self.logError(err.Error())
+                        self.logBadMessage(err.Error(), data)
                         return
                     }
                     curl := contact.GetUrl()
@@ -270,7 +271,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     if self.nat_traversal && len(resp.contacts) > 0 && !resp.contacts[0].Asterisk && ! check1918(t.GetHost()) {
         contact, err = resp.contacts[0].GetBody(self.config)
         if err != nil {
-            self.logError(err.Error())
+            self.logBadMessage(err.Error(), data)
             return
         }
         curl := contact.GetUrl()
@@ -302,19 +303,19 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
             }
         }
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
-        self.logError("can't parse SIP request from " + address.String() + ": " + err.Error())
+        self.logBadMessage("can't parse SIP request from " + address.String() + ": " + err.Error(), data)
         return
     }
     tids, err = req.getTIds(self.config)
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
-        self.logError(err)
+        self.logBadMessage(err.Error(), data)
         return
     }
     self.config.SipLogger().Write(rtime, tids[0].CallId, "RECEIVED message from " + address.String() + ":\n" + string(data))
     via0, err = req.vias[0].GetBody()
     if err != nil {
-        self.logError(err)
+        self.logBadMessage(err.Error(), data)
         return
     }
     ahost, aport := via0.GetAddr(self.config)
@@ -342,7 +343,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     }
     host, port := address.Host.String(), address.Port.String()
     req.source = sippy_conf.NewHostPort(host, port)
-    self.incomingRequest(req, checksum, tids, server)
+    self.incomingRequest(req, checksum, tids, server, data)
 }
 
 // 1. Client transaction methods
@@ -404,7 +405,7 @@ func (self *sipTransactionManager) BeginNewClientTransaction(req sippy_types.Sip
 }
 
 // 2. Server transaction methods
-func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum string, tids []*sippy_header.TID, server *udpServer) {
+func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum string, tids []*sippy_header.TID, server *udpServer, data []byte) {
     var tid *sippy_header.TID
     var err error
 
@@ -417,7 +418,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
             resp := req.GenResponse(482, "Loop Detected", /*body*/ nil, /*server*/ nil)
             via0, err = resp.GetVias()[0].GetBody()
             if err != nil {
-                self.logError("cannot parse via: " + err.Error())
+                self.logBadMessage("cannot parse via: " + err.Error(), data)
             } else {
                 hostport := via0.GetTAddr(self.config)
                 self.transmitMsg(server, resp, hostport, checksum, tid.CallId)
@@ -432,7 +433,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
         tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/, self.config)
     }
     if err != nil {
-        self.logError("cannot get transaction ID: " + err.Error())
+        self.logBadMessage("cannot get transaction ID: " + err.Error(), data)
         return
     }
     self.tserver_lock.Lock()
@@ -454,7 +455,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
         resp := req.GenResponse(481, "Call Leg/Transaction Does Not Exist", /*body*/ nil, /*server*/ nil)
         via0, err = resp.GetVias()[0].GetBody()
         if err != nil {
-            self.logError("Cannot parse Via: " + err.Error())
+            self.logBadMessage("Cannot parse Via: " + err.Error(), data)
             return
         }
         self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
@@ -632,8 +633,16 @@ func (self *sipTransactionManager) transmitDataWithCb(userv sippy_types.UdpServe
     }
 }
 
-func (self *sipTransactionManager) logError(args ...interface{}) {
-    self.config.ErrorLogger().Error(args...)
+func (self *sipTransactionManager) logError(msg string) {
+    self.config.ErrorLogger().Error(msg)
+}
+
+func (self *sipTransactionManager) logBadMessage(msg string, data []byte) {
+    self.config.ErrorLogger().Error(msg)
+    arr := strings.Split(string(data), "\n")
+    for _, l := range arr {
+        self.config.ErrorLogger().Error(l)
+    }
 }
 
 func (self *sipTransactionManager) tclient_del(tid *sippy_header.TID) {
