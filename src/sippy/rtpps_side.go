@@ -69,17 +69,29 @@ func (self *_rtpps_side) __play(prompt_name string, times int, result_callback f
 }
 
 func (self *_rtpps_side) update(remote_ip string, remote_port string, result_callback func(*rtpproxy_update_result), options/*= ""*/ string, index /*= 0*/int, atype /*= "IP4"*/string) {
+    var sbind_supported, is_local, tnot_supported bool
+    var err error
+
     command := "U"
     self.owner.max_index = int(math.Max(float64(self.owner.max_index), float64(index)))
-    if self.owner.rtp_proxy_client.SBindSupported() {
+    if sbind_supported, err = self.owner.SBindSupported(); err != nil {
+        return
+    }
+    if is_local, err = self.owner.IsLocal(); err != nil {
+        return
+    }
+    if tnot_supported, err = self.owner.TNotSupported(); err != nil {
+        return
+    }
+    if sbind_supported {
         if self.raddress != nil {
-            //if self.owner.rtp_proxy_client.IsLocal() && atype == "IP4" {
+            //if self.owner.IsLocal() && atype == "IP4" {
             //    options += fmt.Sprintf("L%s", self.laddress)
-            //} else if ! self.owner.rtp_proxy_client.IsLocal() {
+            //} else if ! self.owner.IsLocal() {
             //    options += fmt.Sprintf("R%s", self.raddress.Host.String())
             //}
             options += "R" + self.raddress.Host.String()
-        } else if self.laddress != "" && self.owner.rtp_proxy_client.IsLocal() {
+        } else if self.laddress != "" && is_local {
             options += "L" + self.laddress
         }
     }
@@ -89,7 +101,7 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     } else {
         command += fmt.Sprintf(" %s-%d %s %s %s", self.owner.call_id, index, remote_ip, remote_port, self.owner.from_tag)
     }
-    if self.owner.notify_socket != "" && index == 0 && self.owner.rtp_proxy_client.TNotSupported() {
+    if self.owner.notify_socket != "" && index == 0 && tnot_supported {
         command += fmt.Sprintf(" %s %s", self.owner.notify_socket, self.owner.notify_tag)
     }
     self.owner.send_command(command, func(r string) { self.update_result(r, remote_ip, atype, result_callback) })
@@ -121,7 +133,9 @@ func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_c
             family = "IP6"
         }
     } else {
-        rtpproxy_address = self.owner.rtp_proxy_client.GetProxyAddress()
+        if rtpproxy_address, err = self.owner.GetProxyAddress(); err != nil {
+            return
+        }
     }
     sendonly := false
     if atype == "IP4" && remote_ip == "0.0.0.0" {

@@ -28,6 +28,7 @@ package sippy
 
 import (
     "crypto/rand"
+    "errors"
     "fmt"
     "math/big"
     "runtime"
@@ -43,7 +44,7 @@ type Rtp_proxy_session struct {
     call_id                 string
     from_tag                string
     to_tag                  string
-    rtp_proxy_client        sippy_types.RtpProxyClient
+    _rtp_proxy_client       sippy_types.RtpProxyClient
     max_index               int
     l4r                     *local4remote
     notify_socket           string
@@ -114,9 +115,9 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     }
     idx, err := rand.Int(rand.Reader, big.NewInt(int64(n)))
     if err != nil {
-        self.rtp_proxy_client = online_clients[0]
+        self._rtp_proxy_client = online_clients[0]
     } else {
-        self.rtp_proxy_client = online_clients[idx.Int64()]
+        self._rtp_proxy_client = online_clients[idx.Int64()]
     }
     if self.call_id == "" {
         buf := make([]byte, 16)
@@ -148,7 +149,7 @@ func (self *Rtp_proxy_session) PlayCaller(prompt_name string, times int/*= 1*/, 
 }
 
 func (self *Rtp_proxy_session) send_command(cmd string, cb func(string)) {
-    rtp_proxy_client := self.rtp_proxy_client
+    rtp_proxy_client := self._rtp_proxy_client
     if rtp_proxy_client != nil {
         rtp_proxy_client.SendCommand(cmd, cb, self.session_lock)
     }
@@ -193,7 +194,7 @@ func (self *Rtp_proxy_session) command_result(result string, result_callback fun
 }
 
 func (self *Rtp_proxy_session) Delete() {
-    if self.rtp_proxy_client == nil {
+    if self._rtp_proxy_client == nil {
         return
     }
     for self.max_index >= 0 {
@@ -201,7 +202,7 @@ func (self *Rtp_proxy_session) Delete() {
         self.send_command(command, nil)
         self.max_index--
     }
-    self.rtp_proxy_client = nil
+    self._rtp_proxy_client = nil
 }
 
 func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, cc_event sippy_types.CCEvent, result_callback func(sippy_types.MsgBody)) error {
@@ -247,4 +248,36 @@ func (self *Rtp_proxy_session) CalleeOrigin() *sippy_sdp.SdpOrigin {
         return nil
     }
     return self.callee.origin
+}
+
+func (self Rtp_proxy_session) SBindSupported() (bool, error) {
+    rtp_proxy_client := self._rtp_proxy_client
+    if rtp_proxy_client == nil {
+        return true, errors.New("the session already deleted")
+    }
+    return rtp_proxy_client.SBindSupported(), nil
+}
+
+func (self Rtp_proxy_session) IsLocal() (bool, error) {
+    rtp_proxy_client := self._rtp_proxy_client
+    if rtp_proxy_client == nil {
+        return true, errors.New("the session already deleted")
+    }
+    return rtp_proxy_client.IsLocal(), nil
+}
+
+func (self Rtp_proxy_session) TNotSupported() (bool, error) {
+    rtp_proxy_client := self._rtp_proxy_client
+    if rtp_proxy_client == nil {
+        return true, errors.New("the session already deleted")
+    }
+    return rtp_proxy_client.TNotSupported(), nil
+}
+
+func (self Rtp_proxy_session) GetProxyAddress() (string, error) {
+    rtp_proxy_client := self._rtp_proxy_client
+    if rtp_proxy_client == nil {
+        return "", errors.New("the session already deleted")
+    }
+    return rtp_proxy_client.GetProxyAddress(), nil
 }
