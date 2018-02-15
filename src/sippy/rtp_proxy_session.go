@@ -54,6 +54,9 @@ type Rtp_proxy_session struct {
     callee                  _rtpps_side
     session_lock            sync.Locker
     config                  sippy_conf.Config
+    inflight_lock           sync.Mutex
+    inflight_cmd            *rtpp_cmd
+    rtpp_wi                 chan *rtpp_cmd
 }
 
 type rtpproxy_update_result struct {
@@ -61,6 +64,11 @@ type rtpproxy_update_result struct {
     rtpproxy_port       string
     family              string
     sendonly            bool
+}
+
+type rtpp_cmd struct {
+    cmd         string
+    cb          func(string)
 }
 
 func (self *rtpproxy_update_result) Address() string {
@@ -78,6 +86,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         max_index       : -1,
         session_lock    : session_lock,
         config          : config,
+        rtpp_wi         : make(chan *rtpp_cmd, 50),
     }
     self.caller.otherside = &self.callee
     self.callee.otherside = &self.caller
@@ -149,9 +158,37 @@ func (self *Rtp_proxy_session) PlayCaller(prompt_name string, times int/*= 1*/, 
 }
 
 func (self *Rtp_proxy_session) send_command(cmd string, cb func(string)) {
-    rtp_proxy_client := self._rtp_proxy_client
-    if rtp_proxy_client != nil {
-        rtp_proxy_client.SendCommand(cmd, cb, self.session_lock)
+    if rtp_proxy_client := self._rtp_proxy_client; rtp_proxy_client != nil {
+        self.inflight_lock.Lock()
+        defer self.inflight_lock.Unlock()
+        new_cmd := &rtpp_cmd{ cmd, cb }
+        if self.inflight_cmd == nil {
+            self.inflight_cmd = new_cmd
+            rtp_proxy_client.SendCommand(cmd, self.cmd_done, nil)
+        } else {
+            self.rtpp_wi <- new_cmd
+        }
+    }
+}
+
+func (self *Rtp_proxy_session) cmd_done(res string) {
+    self.inflight_lock.Lock()
+    done_cmd := self.inflight_cmd
+    select {
+        case self.inflight_cmd = <-self.rtpp_wi:
+            if rtp_proxy_client := self._rtp_proxy_client; rtp_proxy_client != nil {
+                rtp_proxy_client.SendCommand(self.inflight_cmd.cmd, self.cmd_done, nil)
+            } else {
+                self.inflight_cmd = nil // the client is not ready. just drop the command
+            }
+        default:
+            self.inflight_cmd = nil
+    }
+    self.inflight_lock.Unlock()
+    if done_cmd != nil && done_cmd.cb != nil {
+        self.session_lock.Lock()
+        done_cmd.cb(res)
+        self.session_lock.Unlock()
     }
 }
 
