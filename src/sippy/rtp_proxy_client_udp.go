@@ -177,13 +177,13 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
         }
         return
     }
+    self.lock.Unlock()
     req.next_retr *= 2
     req.retransmits += 1
     req.timer = StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
     req.stime, _ = sippy_time.NewMonoTime()
     self.worker.SendTo([]byte(req.command), self.hostport)
     req.triesleft -= 1
-    self.lock.Unlock()
 }
 
 func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_conf.HostPort, worker *udpServer, rtime *sippy_time.MonoTime) {
