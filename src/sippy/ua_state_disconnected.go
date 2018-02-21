@@ -27,8 +27,9 @@
 package sippy
 
 import (
-    "sippy/types"
+    "sippy/conf"
     "sippy/time"
+    "sippy/types"
 )
 
 type UaStateDisconnected struct {
@@ -39,9 +40,9 @@ type UaStateDisconnected struct {
     inreq   sippy_types.SipRequest
 }
 
-func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, inreq sippy_types.SipRequest) *UaStateDisconnected {
+func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, inreq sippy_types.SipRequest, config sippy_conf.Config) *UaStateDisconnected {
     self := &UaStateDisconnected{
-        uaStateGeneric  : newUaStateGeneric(ua),
+        uaStateGeneric  : newUaStateGeneric(ua, config),
         rtime           : rtime,
         origin          : origin,
         scode           : scode,
@@ -56,7 +57,7 @@ func (self *UaStateDisconnected) OnActivation() {
     if self.rtime != nil {
         self.ua.DiscCb(self.rtime, self.origin, self.scode, self.inreq)
     }
-    StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, self.ua.Config().ErrorLogger())
+    StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, self.config.ErrorLogger())
 }
 
 func (self *UaStateDisconnected) String() string {
@@ -75,5 +76,5 @@ func (self *UaStateDisconnected) RecvRequest(req sippy_types.SipRequest, t sippy
 
 func (self *UaStateDisconnected) goDead() {
     //print "Time in Disconnected state expired, going to the Dead state"
-    self.ua.ChangeState(NewUaStateDead(self.ua, nil, ""))
+    self.ua.ChangeState(NewUaStateDead(self.ua, nil, "", self.config))
 }

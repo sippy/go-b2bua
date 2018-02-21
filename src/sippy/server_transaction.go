@@ -258,7 +258,7 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
         self.sip_tm.logError("BUG: attempt to send reply on already finished transaction!!!")
     }
     if resp.GetSCodeNum() > 100 {
-        to, err := resp.GetTo().GetBody(self.sip_tm.config)
+        to, err := resp.GetTo().GetBody()
         if err != nil {
             self.sip_tm.config.ErrorLogger().Debug("error parsing To: " + err.Error())
             return
@@ -296,7 +296,7 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
                 // could differ as well.
                 tid := self.tid
                 if tid != nil {
-                    to, err := resp.GetTo().GetBody(self.sip_tm.config)
+                    to, err := resp.GetTo().GetBody()
                     if err != nil {
                         self.sip_tm.config.ErrorLogger().Debug("error parsing To: " + err.Error())
                         return

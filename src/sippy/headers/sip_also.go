@@ -49,10 +49,10 @@ func CreateSipAlso(body string) []SipHeader {
     return rval
 }
 
-func NewSipAlso(addr *SipAddress) *SipAlso {
+func NewSipAlso(addr *SipAddress, config sippy_conf.Config) *SipAlso {
     return &SipAlso{
         normalName   : _sip_also_name,
-        sipAddressHF : newSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr, config),
     }
 }
 

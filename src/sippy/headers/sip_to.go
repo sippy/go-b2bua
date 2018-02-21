@@ -46,7 +46,7 @@ func NewSipTo(address *SipAddress, config sippy_conf.Config) *SipTo {
     }
     return &SipTo{
         compactName     : _sip_to_name,
-        sipAddressHF    : newSipAddressHF(address),
+        sipAddressHF    : newSipAddressHF(address, config),
     }
 }
 

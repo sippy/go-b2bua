@@ -37,10 +37,10 @@ type SipRoute struct {
 
 var _sip_route_name normalName = newNormalName("Route")
 
-func NewSipRoute(addr *SipAddress) *SipRoute {
+func NewSipRoute(addr *SipAddress, config sippy_conf.Config) *SipRoute {
     return &SipRoute{
         normalName   : _sip_route_name,
-        sipAddressHF : newSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr, config),
     }
 }
 

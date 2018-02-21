@@ -37,10 +37,10 @@ type SipDiversion struct {
 
 var _sip_diversion_name normalName = newNormalName("Diversion")
 
-func NewSipDiversion(addr *SipAddress) *SipDiversion {
+func NewSipDiversion(addr *SipAddress, config sippy_conf.Config) *SipDiversion {
     return &SipDiversion{
         normalName   : _sip_diversion_name,
-        sipAddressHF : newSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr, config),
     }
 }
 

@@ -210,7 +210,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
         self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
         return
     }
-    tid, err = resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/, self.config)
+    tid, err = resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
@@ -243,7 +243,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
                     return
                 }
                 if ! resp.contacts[0].Asterisk {
-                    contact, err = resp.contacts[0].GetBody(self.config)
+                    contact, err = resp.contacts[0].GetBody()
                     if err != nil {
                         self.logBadMessage(err.Error(), data)
                         return
@@ -269,7 +269,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     t.Lock()
     defer t.Unlock()
     if self.nat_traversal && len(resp.contacts) > 0 && !resp.contacts[0].Asterisk && ! check1918(t.GetHost()) {
-        contact, err = resp.contacts[0].GetBody(self.config)
+        contact, err = resp.contacts[0].GetBody()
         if err != nil {
             self.logBadMessage(err.Error(), data)
             return
@@ -282,7 +282,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     }
     host, port := address.Host.String(), address.Port.String()
     resp.source = sippy_conf.NewHostPort(host, port)
-    sippy_utils.SafeCall(func() { t.IncomingResponse(resp, checksum, self.config) }, nil, self.config.ErrorLogger())
+    sippy_utils.SafeCall(func() { t.IncomingResponse(resp, checksum) }, nil, self.config.ErrorLogger())
 }
 
 func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, data []byte, checksum string, address *sippy_conf.HostPort, server *udpServer) {
@@ -332,7 +332,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     if self.nat_traversal && len(req.contacts) > 0 && !req.contacts[0].Asterisk && len(req.vias) == 1 {
         var contact *sippy_header.SipAddress
 
-        contact, err = req.contacts[0].GetBody(self.config)
+        contact, err = req.contacts[0].GetBody()
         curl := contact.GetUrl()
         if check1918(curl.Host.String()) {
             tmp_host, tmp_port := address.Host.String(), address.Port.String()
@@ -370,7 +370,7 @@ func (self *sipTransactionManager) CreateClientTransaction(req sippy_types.SipRe
     if userv == nil {
         return nil, errors.New("BUG: cannot get userv from local4remote!!!")
     }
-    tid, err = req.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/, self.config)
+    tid, err = req.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
     if err != nil {
         return nil, err
     }
@@ -428,9 +428,9 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     }
     self.tclient_lock.Unlock()
     if req.GetMethod() != "ACK" {
-        tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/, self.config)
+        tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
     } else {
-        tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/, self.config)
+        tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/)
     }
     if err != nil {
         self.logBadMessage("cannot get transaction ID: " + err.Error(), data)
@@ -582,7 +582,7 @@ func (self *sipTransactionManager) SendResponse(resp sippy_types.SipResponse, lo
 
 func (self *sipTransactionManager) SendResponseWithLossEmul(resp sippy_types.SipResponse, lock bool, ack_cb func(sippy_types.SipRequest), lossemul int) {
     //print self.tserver
-    tid, err := resp.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/, self.config)
+    tid, err := resp.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
     if err != nil {
         self.logError("Cannot get transaction ID for server transaction: " + err.Error())
         return

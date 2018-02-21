@@ -55,7 +55,7 @@ type SipMsg interface {
     GetSipServer() *sippy_header.SipServer
     LocalStr(hostport *sippy_conf.HostPort, compact bool) string
     GetCSeq() *sippy_header.SipCSeq
-    GetTId(wCSM, wBRN, wTTG bool, config sippy_conf.Config) (*sippy_header.TID, error)
+    GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error)
     GetTo() *sippy_header.SipTo
     GetReason() *sippy_header.SipReason
     AppendHeader(hdr sippy_header.SipHeader)
@@ -91,8 +91,8 @@ type SipRequest interface {
     GenResponse(int, string, MsgBody, *sippy_header.SipServer) SipResponse
     GetMethod() string
     GetExpires() *sippy_header.SipExpires
-    GenACK(to *sippy_header.SipTo, config sippy_conf.Config) (SipRequest, error)
-    GenCANCEL(sippy_conf.Config) (SipRequest, error)
+    GenACK(to *sippy_header.SipTo) (SipRequest, error)
+    GenCANCEL() (SipRequest, error)
     GetRURI() *sippy_header.SipURL
     SetRURI(ruri *sippy_header.SipURL)
     GetReferTo() *sippy_header.SipReferTo
@@ -284,7 +284,6 @@ type UA interface {
     GetCLI() string
     GetCLD() string
     GetUasLossEmul() int
-    Config() sippy_conf.Config
     UasLossEmul() int
     BeforeRequestSent(SipRequest)
     BeforeResponseSent(SipResponse)
@@ -300,7 +299,7 @@ type baseTransaction interface {
 
 type ClientTransaction interface {
     baseTransaction
-    IncomingResponse(resp SipResponse, checksum string, config sippy_conf.Config)
+    IncomingResponse(resp SipResponse, checksum string)
     SetOutboundProxy(*sippy_conf.HostPort)
     SetAckRparams(*sippy_conf.HostPort, *sippy_header.SipURL, []*sippy_header.SipRoute)
     Cancel(...sippy_header.SipHeader)

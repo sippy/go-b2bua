@@ -49,10 +49,10 @@ func CreateSipReferredBy(body string) []SipHeader {
     return rval
 }
 
-func NewSipReferredBy(addr *SipAddress) *SipReferredBy {
+func NewSipReferredBy(addr *SipAddress, config sippy_conf.Config) *SipReferredBy {
     return &SipReferredBy{
         normalName   : _sip_referred_by_name,
-        sipAddressHF : newSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr, config),
     }
 }
 

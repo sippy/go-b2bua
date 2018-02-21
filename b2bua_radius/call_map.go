@@ -104,7 +104,7 @@ func NewCallMap(global_config *myConfigParser) *callMap {
 }
 
 func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
-    to_body, err := req.GetTo().GetBody(self.global_config)
+    to_body, err := req.GetTo().GetBody()
     if err != nil {
         self.global_config.ErrorLogger().Error("CallMap::OnNewDialog: #1: " + err.Error())
         return nil, nil, req.GenResponse(500, "Internal Server Error", nil, nil)

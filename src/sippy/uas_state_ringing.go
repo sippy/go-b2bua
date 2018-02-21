@@ -27,9 +27,10 @@
 package sippy
 
 import (
-    "sippy/types"
-    "sippy/time"
+    "sippy/conf"
     "sippy/headers"
+    "sippy/time"
+    "sippy/types"
 )
 
 type UasStateRinging struct {
@@ -39,9 +40,9 @@ type UasStateRinging struct {
     scode   int
 }
 
-func NewUasStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *UasStateRinging {
+func NewUasStateRinging(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, config sippy_conf.Config) *UasStateRinging {
     return &UasStateRinging{
-        uaStateGeneric  : newUaStateGeneric(ua),
+        uaStateGeneric  : newUaStateGeneric(ua, config),
         rtime           : rtime,
         origin          : origin,
         scode           : scode,
@@ -92,7 +93,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.CancelExpireTimer()
         self.ua.StartCreditTimer(event.GetRtime())
         self.ua.SetConnectTs(event.GetRtime())
-        return NewUaStateConnected(self.ua, event.GetRtime(), event.GetOrigin()), nil
+        return NewUaStateConnected(self.ua, event.GetRtime(), event.GetOrigin(), self.config), nil
     case *CCEventPreConnect:
         body := event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
@@ -101,12 +102,12 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         }
         self.ua.SetLSDP(body)
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
-        return NewUaStateConnected(self.ua, nil, ""), nil
+        return NewUaStateConnected(self.ua, nil, "", self.config), nil
     case *CCEventRedirect:
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), event.scode), nil
+        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), event.scode, self.config), nil
     case *CCEventFail:
         code, reason := event.scode, event.scode_reason
         if code == 0 {
@@ -115,12 +116,12 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.SendUasResponse(nil, code, reason, nil, nil, false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), code), nil
+        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), code, self.config), nil
     case *CCEventDisconnect:
         self.ua.SendUasResponse(nil, 500, "Disconnected", nil, nil, false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), nil), nil
+        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), nil, self.config), nil
     }
     //return nil, fmt.Errorf("wrong event %s in the Ringing state", _event.String())
     return nil, nil
@@ -133,9 +134,9 @@ func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_typ
         //print "BYE received in the Ringing state, going to the Disconnected state"
         var also *sippy_header.SipAddress = nil
         if len(req.GetAlso()) > 0 {
-            also_body, err := req.GetAlso()[0].GetBody(self.ua.Config())
+            also_body, err := req.GetAlso()[0].GetBody()
             if err != nil {
-                self.ua.Config().ErrorLogger().Error("UasStateRinging::RecvRequest: #1: " + err.Error())
+                self.config.ErrorLogger().Error("UasStateRinging::RecvRequest: #1: " + err.Error())
                 return nil
             }
             also = also_body.GetCopy()
@@ -145,7 +146,7 @@ func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_typ
         self.ua.Enqueue(event)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
-        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
+        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req, self.config)
     }
     return nil
 }
@@ -156,6 +157,6 @@ func (self *UasStateRinging) Cancel(rtime *sippy_time.MonoTime, req sippy_types.
         event.SetReason(req.GetReason())
     }
     self.ua.SetDisconnectTs(rtime)
-    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0, req))
+    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0, req, self.config))
     self.ua.EmitEvent(event)
 }

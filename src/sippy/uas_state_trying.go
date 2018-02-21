@@ -27,17 +27,18 @@
 package sippy
 
 import (
-    "sippy/types"
+    "sippy/conf"
     "sippy/time"
+    "sippy/types"
 )
 
 type UasStateTrying struct {
     *uaStateGeneric
 }
 
-func NewUasStateTrying(ua sippy_types.UA) *UasStateTrying {
+func NewUasStateTrying(ua sippy_types.UA, config sippy_conf.Config) *UasStateTrying {
     return &UasStateTrying{
-        uaStateGeneric : newUaStateGeneric(ua),
+        uaStateGeneric : newUaStateGeneric(ua, config),
     }
 }
 
@@ -75,7 +76,7 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(event.GetRtime())
         }
-        return NewUasStateRinging(self.ua, event.GetRtime(), event.GetOrigin(), code), nil
+        return NewUasStateRinging(self.ua, event.GetRtime(), event.GetOrigin(), code, self.config), nil
     case *CCEventPreConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
@@ -85,7 +86,7 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         self.ua.SetLSDP(body)
         self.ua.CancelNoProgressTimer()
         self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
-        return NewUaStateConnected(self.ua, nil, ""), nil
+        return NewUaStateConnected(self.ua, nil, "", self.config), nil
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
@@ -98,13 +99,13 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         self.ua.CancelNoProgressTimer()
         self.ua.StartCreditTimer(event.GetRtime())
         self.ua.SetConnectTs(event.GetRtime())
-        return NewUaStateConnected(self.ua, event.GetRtime(), event.GetOrigin()), nil
+        return NewUaStateConnected(self.ua, event.GetRtime(), event.GetOrigin(), self.config), nil
     case *CCEventRedirect:
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.CancelNoProgressTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), event.scode), nil
+        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), event.scode, self.config), nil
     case *CCEventFail:
         code, reason := event.scode, event.scode_reason
         if code == 0 {
@@ -114,13 +115,13 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         self.ua.CancelExpireTimer()
         self.ua.CancelNoProgressTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), code), nil
+        return NewUaStateFailed(self.ua, event.GetRtime(), event.GetOrigin(), code, self.config), nil
     case *CCEventDisconnect:
         self.ua.SendUasResponse(nil, 500, "Disconnected", nil, nil, false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.CancelNoProgressTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), nil), nil
+        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), nil, self.config), nil
     }
     //return nil, fmt.Errorf("uas-trying: wrong event %s in the Trying state", _event.String())
     return nil, nil
@@ -132,6 +133,6 @@ func (self *UasStateTrying) Cancel(rtime *sippy_time.MonoTime, req sippy_types.S
         event.SetReason(req.GetReason())
     }
     self.ua.SetDisconnectTs(rtime)
-    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0, req))
+    self.ua.ChangeState(NewUaStateDisconnected(self.ua, rtime, self.ua.GetOrigin(), 0, req, self.config))
     self.ua.EmitEvent(event)
 }

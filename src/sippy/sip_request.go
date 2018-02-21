@@ -80,7 +80,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         routes = make([]*sippy_header.SipRoute, 0)
     }
     self := &sipRequest{ nated : false }
-    self.sipMsg = NewSipMsg(nil)
+    self.sipMsg = NewSipMsg(nil, config)
     self.method = method
     self.ruri = ruri
     if target == nil {
@@ -89,7 +89,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         } else {
             var r0 *sippy_header.SipAddress
             var err error
-            if r0, err = routes[0].GetBody(config); err != nil {
+            if r0, err = routes[0].GetBody(); err != nil {
                 return nil, err
             }
             self.SetTarget(r0.GetUrl().GetAddr(config))
@@ -186,10 +186,10 @@ func (self *sipRequest) GenResponse(scode int, reason string, body sippy_types.M
     }
     return NewSipResponse(scode, reason, self.sipver, self.from.GetCopy(),
                        self.call_id.GetCopy(), vias, self.to.GetCopy(),
-                       self.cseq.GetCopy(), rrs, body, server)
+                       self.cseq.GetCopy(), rrs, body, server, self.config)
 }
 
-func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config) (sippy_types.SipRequest, error) {
+func (self *sipRequest) GenACK(to *sippy_header.SipTo) (sippy_types.SipRequest, error) {
     if to == nil {
         to = self.to.GetCopy()
     }
@@ -207,10 +207,10 @@ func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config)
                       cseq.CSeq, self.call_id.GetCopy(),
                       maxforwards, /*body*/ nil, /*contact*/ nil,
                       /*routes*/ nil, /*target*/ nil, /*cguid*/ nil, self.user_agent,
-                      /*expires*/ nil, config)
+                      /*expires*/ nil, self.config)
 }
 
-func (self *sipRequest) GenCANCEL(config sippy_conf.Config) (sippy_types.SipRequest, error) {
+func (self *sipRequest) GenCANCEL() (sippy_types.SipRequest, error) {
     var maxforwards *sippy_header.SipMaxForwards = nil
 
     if self.maxforwards != nil {
@@ -229,7 +229,7 @@ func (self *sipRequest) GenCANCEL(config sippy_conf.Config) (sippy_types.SipRequ
                       cseq.CSeq, self.call_id.GetCopy(),
                       maxforwards, /*body*/ nil, /*contact*/ nil,
                       routes, self.GetTarget(), /*cguid*/ nil,
-                      self.user_agent, /*expires*/ nil, config)
+                      self.user_agent, /*expires*/ nil, self.config)
 }
 
 func (self *sipRequest) GetExpires() *sippy_header.SipExpires {

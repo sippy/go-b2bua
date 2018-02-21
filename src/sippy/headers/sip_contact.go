@@ -44,15 +44,16 @@ func NewSipContact(config sippy_conf.Config) *SipContact {
         Asterisk     : false,
         sipAddressHF : newSipAddressHF(
                             NewSipAddress("Anonymous",
-                                NewSipURL("", config.GetMyAddress(), config.GetMyPort(), false))),
+                                NewSipURL("", config.GetMyAddress(), config.GetMyPort(), false)),
+                            config),
     }
 }
 
-func NewSipContactFromAddress(addr *SipAddress) *SipContact {
+func NewSipContactFromAddress(addr *SipAddress, config sippy_conf.Config) *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
         Asterisk : false,
-        sipAddressHF : newSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr, config),
     }
 }
 

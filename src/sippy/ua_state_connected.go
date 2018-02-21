@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "sippy/conf"
     "sippy/headers"
     "sippy/time"
     "sippy/types"
@@ -39,15 +40,15 @@ type UaStateConnected struct {
     origin      string
 }
 
-func NewUaStateConnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string) *UaStateConnected {
+func NewUaStateConnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, config sippy_conf.Config) *UaStateConnected {
     ua.SetBranch("")
     self := &UaStateConnected{
-        uaStateGeneric : newUaStateGeneric(ua),
+        uaStateGeneric : newUaStateGeneric(ua, config),
         ka_tr       : nil,
         rtime       : rtime,
         origin      : origin,
     }
-    newKeepaliveController(ua)
+    newKeepaliveController(ua, config)
     self.connected = true
     return self
 }
@@ -69,9 +70,9 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             return nil
         }
         t.SendResponse(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
-        refer_to, err := req.GetReferTo().GetBody(self.ua.Config())
+        refer_to, err := req.GetReferTo().GetBody()
         if err != nil {
-            self.ua.Config().ErrorLogger().Error("UaStateConnected::RecvRequest: #1: " + err.Error())
+            self.config.ErrorLogger().Error("UaStateConnected::RecvRequest: #1: " + err.Error())
             return nil
         }
         self.ua.Enqueue(NewCCEventDisconnect(refer_to.GetCopy(), req.GetRtime(), self.ua.GetOrigin()))
@@ -89,7 +90,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             body = self.ua.GetRSDP().GetCopy()
             parsed_body, err := body.GetParsedBody()
             if err != nil {
-                self.ua.Config().ErrorLogger().Error("UaStateConnected::RecvRequest: #2: " + err.Error())
+                self.config.ErrorLogger().Error("UaStateConnected::RecvRequest: #2: " + err.Error())
                 return nil
             }
             parsed_body.SetCHeaderAddr("0.0.0.0")
@@ -101,7 +102,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, req, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
-                return NewUasStateUpdating(self.ua)
+                return NewUasStateUpdating(self.ua, self.config)
             } else {
                 self.ua.SetRSDP(body.GetCopy())
             }
@@ -109,16 +110,16 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             self.ua.SetRSDP(nil)
         }
         self.ua.Enqueue(event)
-        return NewUasStateUpdating(self.ua)
+        return NewUasStateUpdating(self.ua, self.config)
     }
     if req.GetMethod() == "BYE" {
         t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
         //print "BYE received in the Connected state, going to the Disconnected state"
         var also *sippy_header.SipAddress
         if len(req.GetAlso()) > 0 {
-            also_body, err := req.GetAlso()[0].GetBody(self.ua.Config())
+            also_body, err := req.GetAlso()[0].GetBody()
             if err != nil {
-                self.ua.Config().ErrorLogger().Error("UaStateConnected::RecvRequest: #3: " + err.Error())
+                self.config.ErrorLogger().Error("UaStateConnected::RecvRequest: #3: " + err.Error())
                 return nil
             }
             also = also_body.GetCopy()
@@ -128,7 +129,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.Enqueue(event)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(req.GetRtime())
-        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req)
+        return NewUaStateDisconnected(self.ua, req.GetRtime(), self.ua.GetOrigin(), 0, req, self.config)
     }
     if req.GetMethod() == "INFO" {
         t.SendResponse(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
@@ -173,13 +174,13 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
                 return nil, err
             }
             self.ua.IncLCSeq()
-            also := sippy_header.NewSipReferTo(redirect)
+            also := sippy_header.NewSipReferTo(redirect, self.config)
             req.AppendHeader(also)
-            lUri, err = self.ua.GetLUri().GetBody(self.ua.Config())
+            lUri, err = self.ua.GetLUri().GetBody()
             if err != nil {
                 return nil, err
             }
-            rby := sippy_header.NewSipReferredBy(sippy_header.NewSipAddress("", lUri.GetUrl()))
+            rby := sippy_header.NewSipReferredBy(sippy_header.NewSipAddress("", lUri.GetUrl()), self.config)
             req.AppendHeader(rby)
             self.ua.SipTM().BeginNewClientTransaction(req, newRedirectController(self.ua), self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         } else {
@@ -189,14 +190,14 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             }
             self.ua.IncLCSeq()
             if redirect != nil {
-                also := sippy_header.NewSipAlso(redirect)
+                also := sippy_header.NewSipAlso(redirect, self.config)
                 req.AppendHeader(also)
             }
             self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         }
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
-        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0, nil), nil
+        return NewUaStateDisconnected(self.ua, event.GetRtime(), event.GetOrigin(), 0, nil, self.config), nil
     }
     if _event, ok := event.(*CCEventUpdate); ok {
         var tr sippy_types.ClientTransaction
@@ -245,7 +246,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         }
         self.ua.SetClientTransaction(tr)
         self.ua.SipTM().BeginClientTransaction(req, tr)
-        return NewUacStateUpdating(self.ua), nil
+        return NewUacStateUpdating(self.ua, self.config), nil
     }
     if _event, ok := event.(*CCEventInfo); ok {
         body := _event.GetBody()

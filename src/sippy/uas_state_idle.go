@@ -39,7 +39,7 @@ type UasStateIdle struct {
 
 func NewUasStateIdle(ua sippy_types.UA, config sippy_conf.Config) *UasStateIdle {
     return &UasStateIdle{
-        uaStateGeneric  : newUaStateGeneric(ua),
+        uaStateGeneric  : newUaStateGeneric(ua, config),
         config          : config,
     }
 }
@@ -77,7 +77,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     if self.ua.GetLContact() == nil {
         self.ua.SetLContact(sippy_header.NewSipContact(self.config))
     }
-    contact, err = req.GetContacts()[0].GetBody(self.config)
+    contact, err = req.GetContacts()[0].GetBody()
     if err != nil {
         self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #1: " + err.Error())
         return nil
@@ -86,13 +86,13 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.UpdateRouting(self.ua.GetUasResp(), /*update_rtarget*/ false, /*reverse_routes*/ false)
     self.ua.SetRAddr0(self.ua.GetRAddr())
     t.SendResponseWithLossEmul(self.ua.GetUasResp(), false, nil, self.ua.GetUasLossEmul())
-    to_body, err = self.ua.GetUasResp().GetTo().GetBody(self.config)
+    to_body, err = self.ua.GetUasResp().GetTo().GetBody()
     if err != nil {
         self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #2: " + err.Error())
         return nil
     }
     to_body.SetTag(self.ua.GetLTag())
-    from_body, err = self.ua.GetUasResp().GetFrom().GetBody(self.config)
+    from_body, err = self.ua.GetUasResp().GetFrom().GetBody()
     if err != nil {
         self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #3: " + err.Error())
         return nil
@@ -134,7 +134,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
         if self.ua.HasOnRemoteSdpChange() {
             self.ua.OnRemoteSdpChange(body, req, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
             self.ua.SetSetupTs(req.GetRtime())
-            return NewUasStateTrying(self.ua)
+            return NewUasStateTrying(self.ua, self.config)
         } else {
             self.ua.SetRSDP(body.GetCopy())
         }
@@ -143,5 +143,5 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     }
     self.ua.Enqueue(event)
     self.ua.SetSetupTs(req.GetRtime())
-    return NewUasStateTrying(self.ua)
+    return NewUasStateTrying(self.ua, self.config)
 }
