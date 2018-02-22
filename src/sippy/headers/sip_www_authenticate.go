@@ -32,12 +32,12 @@ import (
     "fmt"
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
     "sippy/utils"
 )
 
 type SipWWWAuthenticateBody struct {
-    realm *sippy_conf.MyAddress
+    realm *sippy_net.MyAddress
     nonce string
 }
 
@@ -64,7 +64,7 @@ func newSipWWWAutenticateBody(realm string) *SipWWWAuthenticateBody {
     buf := make([]byte, 20)
     rand.Read(buf)
     return &SipWWWAuthenticateBody{
-        realm : sippy_conf.NewMyAddress(realm),
+        realm : sippy_net.NewMyAddress(realm),
         nonce : fmt.Sprintf("%x", buf),
     }
 }
@@ -86,7 +86,7 @@ func (self *SipWWWAuthenticate) parse() error {
         if len(arr) != 2 { continue }
         switch arr[0] {
         case "realm":
-            body.realm = sippy_conf.NewMyAddress(strings.Trim(arr[1], "\""))
+            body.realm = sippy_net.NewMyAddress(strings.Trim(arr[1], "\""))
         case "nonce":
             body.nonce = strings.Trim(arr[1], "\"")
         }
@@ -112,18 +112,18 @@ func (self *SipWWWAuthenticate) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipWWWAuthenticate) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipWWWAuthenticate) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
-func (self *SipWWWAuthenticate) LocalStringBody(hostport *sippy_conf.HostPort) string {
+func (self *SipWWWAuthenticate) LocalStringBody(hostport *sippy_net.HostPort) string {
     if self.body != nil {
         return self.body.localString(hostport)
     }
     return self.string_body
 }
 
-func (self *SipWWWAuthenticateBody) localString(hostport *sippy_conf.HostPort) string {
+func (self *SipWWWAuthenticateBody) localString(hostport *sippy_net.HostPort) string {
     if hostport != nil && self.realm.IsSystemDefault() {
         return "Digest realm=\"" + hostport.Host.String() + "\",nonce=\"" + self.nonce + "\""
     }

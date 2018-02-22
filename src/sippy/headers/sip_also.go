@@ -28,6 +28,7 @@ package sippy_header
 
 import (
     "sippy/conf"
+    "sippy/net"
 )
 
 type SipAlso struct {
@@ -60,7 +61,7 @@ func (self *SipAlso) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipAlso) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipAlso) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 

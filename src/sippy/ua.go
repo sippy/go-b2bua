@@ -32,8 +32,9 @@ import (
 
     "sippy/conf"
     "sippy/headers"
-    "sippy/types"
+    "sippy/net"
     "sippy/time"
+    "sippy/types"
     "sippy/utils"
 )
 
@@ -53,7 +54,7 @@ type Ua struct {
     on_remote_sdp_change sippy_types.OnRemoteSdpChange
     cId             *sippy_header.SipCallId
     rTarget         *sippy_header.SipURL
-    rAddr0          *sippy_conf.HostPort
+    rAddr0          *sippy_net.HostPort
     rUri            *sippy_header.SipTo
     lUri            *sippy_header.SipFrom
     ruri_userparams []string
@@ -67,15 +68,15 @@ type Ua struct {
     h323_conf_id    *sippy_header.SipH323ConfId
     lSDP            sippy_types.MsgBody
     rSDP            sippy_types.MsgBody
-    outbound_proxy  *sippy_conf.HostPort
-    rAddr           *sippy_conf.HostPort
+    outbound_proxy  *sippy_net.HostPort
+    rAddr           *sippy_net.HostPort
     local_ua        *sippy_header.SipUserAgent
     username        string
     password        string
     extra_headers   []sippy_header.SipHeader
     reqs            map[int]*sipRequest
     tr              sippy_types.ClientTransaction
-    source_address  *sippy_conf.HostPort
+    source_address  *sippy_net.HostPort
     remote_ua       string
     expire_time     time.Duration
     expire_timer    *Timeout
@@ -127,7 +128,7 @@ func (self *Ua) String() string {
     return "UA state: " + self.state.String() + ", Call-Id: " + self.cId.CallId
 }
 
-func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, nh_address *sippy_conf.HostPort, call_controller sippy_types.CallController, session_lock sync.Locker, heir sippy_types.UA) *Ua {
+func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, nh_address *sippy_net.HostPort, call_controller sippy_types.CallController, session_lock sync.Locker, heir sippy_types.UA) *Ua {
     return &Ua{
         sip_tm          : sip_tm,
         call_controller : call_controller,
@@ -370,7 +371,7 @@ func (self *Ua) emitPendingEvents() {
 }
 
 func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (sippy_types.SipRequest, error) {
-    var target *sippy_conf.HostPort
+    var target *sippy_net.HostPort
 
     if self.outbound_proxy != nil {
         target = self.outbound_proxy
@@ -623,11 +624,11 @@ func (self *Ua) SetRTarget(url *sippy_header.SipURL) {
     self.rTarget = url
 }
 
-func (self *Ua) GetRAddr0() *sippy_conf.HostPort {
+func (self *Ua) GetRAddr0() *sippy_net.HostPort {
     return self.rAddr0
 }
 
-func (self *Ua) SetRAddr0(addr *sippy_conf.HostPort) {
+func (self *Ua) SetRAddr0(addr *sippy_net.HostPort) {
     self.rAddr0 = addr
 }
 
@@ -731,11 +732,11 @@ func (self *Ua) IncLCSeq() {
     self.lCSeq += 1
 }
 
-func (self *Ua) GetSourceAddress() *sippy_conf.HostPort {
+func (self *Ua) GetSourceAddress() *sippy_net.HostPort {
     return self.source_address
 }
 
-func (self *Ua) SetSourceAddress(addr *sippy_conf.HostPort) {
+func (self *Ua) SetSourceAddress(addr *sippy_net.HostPort) {
     self.source_address = addr
 }
 
@@ -747,11 +748,11 @@ func (self *Ua) GetClientTransaction() sippy_types.ClientTransaction {
     return self.tr
 }
 
-func (self *Ua) GetOutboundProxy() *sippy_conf.HostPort {
+func (self *Ua) GetOutboundProxy() *sippy_net.HostPort {
     return self.outbound_proxy
 }
 
-func (self *Ua) SetOutboundProxy(outbound_proxy *sippy_conf.HostPort) {
+func (self *Ua) SetOutboundProxy(outbound_proxy *sippy_net.HostPort) {
     self.outbound_proxy = outbound_proxy
 }
 
@@ -845,11 +846,11 @@ func (self *Ua) SetDeadCb(dead_cb sippy_types.OnDeadListener) {
     self.dead_cb = dead_cb
 }
 
-func (self *Ua) GetRAddr() *sippy_conf.HostPort {
+func (self *Ua) GetRAddr() *sippy_net.HostPort {
     return self.rAddr
 }
 
-func (self *Ua) SetRAddr(addr *sippy_conf.HostPort) {
+func (self *Ua) SetRAddr(addr *sippy_net.HostPort) {
     self.rAddr = addr
 }
 

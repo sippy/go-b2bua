@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SipContentType struct {
@@ -54,7 +54,7 @@ func (self *SipContentType) String() string {
     return self.Name() + ": " + self.body
 }
 
-func (self *SipContentType) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipContentType) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     if compact {
         return self.CompactName() + ": " + self.body
     }

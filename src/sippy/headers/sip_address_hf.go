@@ -30,6 +30,7 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/net"
 )
 
 type sipAddressHFBody struct {
@@ -120,7 +121,7 @@ func (self *sipAddressHF) StringBody() string {
     return self.LocalStringBody(nil)
 }
 
-func (self *sipAddressHF) LocalStringBody(hostport *sippy_conf.HostPort) string {
+func (self *sipAddressHF) LocalStringBody(hostport *sippy_net.HostPort) string {
     if self.body != nil {
         return self.body.Address.LocalStr(hostport)
     }

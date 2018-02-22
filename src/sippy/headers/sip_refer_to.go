@@ -27,6 +27,7 @@
 package sippy_header
 
 import (
+    "sippy/net"
     "sippy/conf"
 )
 
@@ -60,7 +61,7 @@ func (self *SipReferTo) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipReferTo) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipReferTo) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     prefix := self.Name()
     if compact {
         prefix = self.CompactName()

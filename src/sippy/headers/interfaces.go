@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SipHeader interface {
@@ -35,6 +35,6 @@ type SipHeader interface {
     CompactName() string
     String() string
     StringBody() string
-    LocalStr(hostport *sippy_conf.HostPort, compact bool) string
+    LocalStr(hostport *sippy_net.HostPort, compact bool) string
     GetCopyAsIface() SipHeader
 }

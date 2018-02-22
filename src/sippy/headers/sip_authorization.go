@@ -32,7 +32,7 @@ import (
     "fmt"
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
     "sippy/utils"
 )
 
@@ -149,7 +149,7 @@ func (self *SipAuthorization) String() string {
     return self.Name() + ": " + self.StringBody()
 }
 
-func (self *SipAuthorization) LocalStr(*sippy_conf.HostPort, bool) string {
+func (self *SipAuthorization) LocalStr(*sippy_net.HostPort, bool) string {
     return self.String()
 }
 

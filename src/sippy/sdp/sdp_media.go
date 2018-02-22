@@ -29,7 +29,7 @@ package sippy_sdp
 import (
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SdpMedia struct {
@@ -63,7 +63,7 @@ func (self *SdpMedia) String() string {
     return rval
 }
 
-func (self *SdpMedia) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *SdpMedia) LocalStr(hostport *sippy_net.HostPort) string {
     return self.String()
 }
 

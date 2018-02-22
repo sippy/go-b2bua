@@ -33,14 +33,15 @@ import (
     "net"
     "strings"
 
-    "sippy/utils"
     "sippy/conf"
+    "sippy/net"
+    "sippy/utils"
 )
 
 type SipViaBody struct {
     sipver      string
-    host        *sippy_conf.MyAddress
-    port        *sippy_conf.MyPort
+    host        *sippy_net.MyAddress
+    port        *sippy_net.MyPort
     extra_headers string
 
     received    *string
@@ -123,11 +124,11 @@ func (self *SipVia) parse() error {
     }
     host, port, err := net.SplitHostPort(arr[0])
     if err != nil {
-        via.host = sippy_conf.NewMyAddress(arr[0])
+        via.host = sippy_net.NewMyAddress(arr[0])
         via.port = nil
     } else {
-        via.host = sippy_conf.NewMyAddress(host)
-        via.port = sippy_conf.NewMyPort(port)
+        via.host = sippy_net.NewMyAddress(host)
+        via.port = sippy_net.NewMyPort(port)
     }
     self.body = via
     return nil
@@ -172,21 +173,21 @@ func (self *SipVia) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipVia) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipVia) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     if compact {
         return self.CompactName() + ":" + self.LocalStringBody(hostport)
     }
     return self.Name() + ":" + self.LocalStringBody(hostport)
 }
 
-func (self *SipVia) LocalStringBody(hostport *sippy_conf.HostPort) string {
+func (self *SipVia) LocalStringBody(hostport *sippy_net.HostPort) string {
     if self.body != nil {
         return self.body.localString(hostport)
     }
     return self.string_body
 }
 
-func (self *SipViaBody) localString(hostport *sippy_conf.HostPort) string {
+func (self *SipViaBody) localString(hostport *sippy_net.HostPort) string {
     s := ""
     if hostport != nil && self.host.IsSystemDefault() {
         s = self.sipver + " " + hostport.Host.String()
@@ -264,7 +265,7 @@ func (self *SipViaBody) GetAddr(config sippy_conf.Config) (string, string) {
     }
 }
 
-func (self *SipViaBody) GetTAddr(config sippy_conf.Config) *sippy_conf.HostPort {
+func (self *SipViaBody) GetTAddr(config sippy_conf.Config) *sippy_net.HostPort {
     var host, rport string
 
     if self.rport_exists && self.rport != nil {
@@ -277,7 +278,7 @@ func (self *SipViaBody) GetTAddr(config sippy_conf.Config) *sippy_conf.HostPort 
     } else {
         host, _ = self.GetAddr(config)
     }
-    return sippy_conf.NewHostPort(host, rport)
+    return sippy_net.NewHostPort(host, rport)
 }
 
 func (self *SipViaBody) SetRport(v *string) {

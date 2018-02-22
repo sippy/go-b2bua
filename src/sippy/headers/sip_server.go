@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SipServer struct {
@@ -61,7 +61,7 @@ func (self *SipServer) String() string {
     return self.Name() + ": " + self.Server
 }
 
-func (self *SipServer) LocalStr(*sippy_conf.HostPort, bool) string {
+func (self *SipServer) LocalStr(*sippy_net.HostPort, bool) string {
     return self.String()
 }
 

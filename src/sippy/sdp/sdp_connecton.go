@@ -29,7 +29,7 @@ package sippy_sdp
 import (
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SdpConnecton struct {
@@ -54,7 +54,7 @@ func (self *SdpConnecton) String() string {
     return self.ntype + " " + self.atype + " " + self.addr
 }
 
-func (self *SdpConnecton) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *SdpConnecton) LocalStr(hostport *sippy_net.HostPort) string {
     return self.String()
 }
 

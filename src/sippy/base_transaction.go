@@ -30,10 +30,9 @@ import (
     "sync"
     "time"
 
-    "sippy/conf"
     "sippy/headers"
     "sippy/log"
-    "sippy/types"
+    "sippy/net"
 )
 
 type sip_transaction_state int
@@ -60,19 +59,19 @@ func (self sip_transaction_state) String() string {
 
 type baseTransaction struct {
     lock            sync.Locker
-    userv           sippy_types.UdpServer
+    userv           sippy_net.Transport
     sip_tm          *sipTransactionManager
     state           sip_transaction_state
     tid             *sippy_header.TID
     teA             *Timeout
-    address         *sippy_conf.HostPort
+    address         *sippy_net.HostPort
     needack         bool
     tout            time.Duration
     data            []byte
     logger          sippy_log.ErrorLogger
 }
 
-func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager, address *sippy_conf.HostPort, data []byte, needack bool, logger sippy_log.ErrorLogger) *baseTransaction {
+func newBaseTransaction(lock sync.Locker, tid *sippy_header.TID, userv sippy_net.Transport, sip_tm *sipTransactionManager, address *sippy_net.HostPort, data []byte, needack bool, logger sippy_log.ErrorLogger) *baseTransaction {
     return &baseTransaction{
         tout    : time.Duration(0.5 * float64(time.Second)),
         userv   : userv,

@@ -31,8 +31,9 @@ import (
 
     "sippy/conf"
     "sippy/headers"
-    "sippy/types"
+    "sippy/net"
     "sippy/time"
+    "sippy/types"
 )
 
 type UacStateIdle struct {
@@ -102,7 +103,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         lUri.GetUrl().Port = nil
         if self.ua.GetFromDomain() != "" {
-            lUri.GetUrl().Host = sippy_conf.NewMyAddress(self.ua.GetFromDomain())
+            lUri.GetUrl().Host = sippy_net.NewMyAddress(self.ua.GetFromDomain())
         }
         lUri.SetTag(self.ua.GetLTag())
         self.ua.SetLCSeq(200)

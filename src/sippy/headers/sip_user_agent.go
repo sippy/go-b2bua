@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SipUserAgent struct {
@@ -61,7 +61,7 @@ func (self *SipUserAgent) String() string {
     return self.Name() + ": " + self.UserAgent
 }
 
-func (self *SipUserAgent) LocalStr(*sippy_conf.HostPort, bool) string {
+func (self *SipUserAgent) LocalStr(*sippy_net.HostPort, bool) string {
     return self.String()
 }
 

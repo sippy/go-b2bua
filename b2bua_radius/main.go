@@ -30,7 +30,7 @@ import (
     "strings"
 
     "sippy"
-    "sippy/conf"
+    "sippy/net"
     "sippy/types"
 )
 
@@ -167,12 +167,12 @@ func main() {
     //sip_tm.nat_traversal = global_config.nat_traversal
     global_cmap.sip_tm = sip_tm
     if global_config.sip_proxy != "" {
-        var sip_proxy *sippy_conf.HostPort
+        var sip_proxy *sippy_net.HostPort
         host_port := strings.SplitN(global_config.sip_proxy, ":", 2)
         if len(host_port) == 1 {
-            sip_proxy = sippy_conf.NewHostPort(host_port[0], "5060")
+            sip_proxy = sippy_net.NewHostPort(host_port[0], "5060")
         } else {
-            sip_proxy = sippy_conf.NewHostPort(host_port[0], host_port[1])
+            sip_proxy = sippy_net.NewHostPort(host_port[0], host_port[1])
         }
         global_cmap.proxy = sippy.NewStatefulProxy(sip_tm, sip_proxy, global_config)
     }

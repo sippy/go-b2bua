@@ -34,7 +34,7 @@ import (
     "strconv"
     "sync/atomic"
 
-    "sippy/conf"
+    "sippy/net"
 )
 
 var _sdp_session_id int64
@@ -101,7 +101,7 @@ func (self *SdpOrigin) String() string {
     return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address }, " ")
 }
 
-func (self *SdpOrigin) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *SdpOrigin) LocalStr(hostport *sippy_net.HostPort) string {
     version := strconv.FormatInt(self.version, 10)
     return strings.Join([]string{ self.username, self.session_id, version, self.network_type, self.address_type, self.address }, " ")
 }

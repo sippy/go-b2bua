@@ -32,8 +32,8 @@ import (
     "sync"
 
     "sippy"
-    "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
 )
@@ -44,8 +44,8 @@ type callController struct {
     uaO             sippy_types.UA
     global_config   *myConfigParser
     state           CCState
-    remote_ip       *sippy_conf.MyAddress
-    source          *sippy_conf.HostPort
+    remote_ip       *sippy_net.MyAddress
+    source          *sippy_net.HostPort
     routes          []*B2BRoute
     pass_headers    []sippy_header.SipHeader
     lock            *sync.Mutex // this must be a reference to prevent memory leak
@@ -72,7 +72,7 @@ class CallController(object):
     auth_proc = nil
     challenge = nil
 */
-func NewCallController(id int64, remote_ip *sippy_conf.MyAddress, source *sippy_conf.HostPort, global_config *myConfigParser, pass_headers []sippy_header.SipHeader, sip_tm sippy_types.SipTransactionManager) *callController {
+func NewCallController(id int64, remote_ip *sippy_net.MyAddress, source *sippy_net.HostPort, global_config *myConfigParser, pass_headers []sippy_header.SipHeader, sip_tm sippy_types.SipTransactionManager) *callController {
     self := &callController{
         id              : id,
         global_config   : global_config,
@@ -157,7 +157,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                     self.state = CCStateDead
                     return
                 }
-                self.rtp_proxy_session.SetCalleeRaddress(sippy_conf.NewHostPort(self.remote_ip.String(), "5060"))
+                self.rtp_proxy_session.SetCalleeRaddress(sippy_net.NewHostPort(self.remote_ip.String(), "5060"))
                 self.rtp_proxy_session.SetInsertNortpp(true)
             }
             self.eTry = ev_try
@@ -290,7 +290,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     //if self.global_config.has_key('static_tr_out') {
     //    cld = re_replace(self.global_config['static_tr_out'], cld)
     //}
-    var nh_address *sippy_conf.HostPort
+    var nh_address *sippy_net.HostPort
     if oroute.hostport == "sip-ua" {
         //host = self.source[0]
         nh_address = self.source

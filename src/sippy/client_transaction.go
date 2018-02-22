@@ -30,8 +30,8 @@ import (
     "sync"
     "time"
 
-    "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
 )
@@ -45,11 +45,11 @@ type clientTransaction struct {
     resp_receiver   sippy_types.ResponseReceiver
     expires         time.Duration
     ack             sippy_types.SipRequest
-    outbound_proxy  *sippy_conf.HostPort
+    outbound_proxy  *sippy_net.HostPort
     cancel          sippy_types.SipRequest
     cancelPending   bool
     uack            bool
-    ack_rAddr       *sippy_conf.HostPort
+    ack_rAddr       *sippy_net.HostPort
     ack_checksum    string
     before_request_sent func(sippy_types.SipRequest)
     ack_rparams_present bool
@@ -58,7 +58,7 @@ type clientTransaction struct {
     on_send_complete func()
 }
 
-func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_types.UdpServer, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_conf.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
+func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_net.Transport, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_net.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
     var r408 sippy_types.SipResponse = nil
     var err error
 
@@ -119,7 +119,7 @@ func (self *clientTransaction) cleanup() {
     self.cancel = nil
 }
 
-func (self *clientTransaction) SetOutboundProxy(outbound_proxy *sippy_conf.HostPort) {
+func (self *clientTransaction) SetOutboundProxy(outbound_proxy *sippy_net.HostPort) {
     self.outbound_proxy = outbound_proxy
 }
 
@@ -237,7 +237,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             }
             to_body.SetTag(tag)
         }
-        var rAddr *sippy_conf.HostPort
+        var rAddr *sippy_net.HostPort
         var rTarget *sippy_header.SipURL
         if resp.GetSCodeNum() >= 200 && resp.GetSCodeNum() < 300 {
             // Some hairy code ahead
@@ -379,7 +379,7 @@ func (self *clientTransaction) TransmitData() {
     }
 }
 
-func (self *clientTransaction) SetAckRparams(rAddr *sippy_conf.HostPort, rTarget *sippy_header.SipURL, routes []*sippy_header.SipRoute) {
+func (self *clientTransaction) SetAckRparams(rAddr *sippy_net.HostPort, rTarget *sippy_header.SipURL, routes []*sippy_header.SipRoute) {
     self.ack_rparams_present = true
     self.ack_rAddr = rAddr
     self.ack_rTarget = rTarget

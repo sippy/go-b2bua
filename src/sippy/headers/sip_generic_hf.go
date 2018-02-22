@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type sipGenericHF struct {
@@ -46,7 +46,7 @@ func (self *sipGenericHF) StringBody() string {
     return self.body
 }
 
-func (self *sipGenericHF) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *sipGenericHF) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.String()
 }
 

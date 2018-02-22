@@ -29,7 +29,7 @@ package sippy_header
 import (
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
 )
 
 type sipReplacesBody struct {
@@ -96,7 +96,7 @@ func (self *SipReplaces) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipReplaces) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipReplaces) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.StringBody()
 }
 

@@ -31,6 +31,7 @@ import (
     "time"
 
     "sippy/headers"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
 )
@@ -54,7 +55,7 @@ type serverTransaction struct {
     before_response_sent func(sippy_types.SipResponse)
 }
 
-func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sippy_header.TID, userv sippy_types.UdpServer, sip_tm *sipTransactionManager) (sippy_types.ServerTransaction, error) {
+func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sippy_header.TID, userv sippy_net.Transport, sip_tm *sipTransactionManager) (sippy_types.ServerTransaction, error) {
     needack := false
     var r487 sippy_types.SipResponse
     var branch string
@@ -268,7 +269,7 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
         }
     }
     self.sip_tm.beforeResponseSent(resp)
-    self.data = []byte(resp.LocalStr(self.userv.GetLaddress(), /*compact*/ false))
+    self.data = []byte(resp.LocalStr(self.userv.GetLAddress(), /*compact*/ false))
     via0, err = resp.GetVias()[0].GetBody()
     if err != nil {
         self.sip_tm.config.ErrorLogger().Debug("error parsing Via: " + err.Error())

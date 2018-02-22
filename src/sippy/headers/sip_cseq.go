@@ -29,7 +29,7 @@ package sippy_header
 import (
     "strconv"
 
-    "sippy/conf"
+    "sippy/net"
     "sippy/utils"
 )
 
@@ -103,7 +103,7 @@ func (self *SipCSeq) GetCopy() *SipCSeq {
     return &tmp
 }
 
-func (self *SipCSeq) LocalStr(*sippy_conf.HostPort, bool) string {
+func (self *SipCSeq) LocalStr(*sippy_net.HostPort, bool) string {
     return self.String()
 }
 

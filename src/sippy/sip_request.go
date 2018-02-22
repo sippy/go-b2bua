@@ -32,6 +32,7 @@ import (
 
     "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
 )
@@ -74,7 +75,7 @@ func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.C
 func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *sippy_header.SipTo,
         from *sippy_header.SipFrom, via *sippy_header.SipVia, cseq int, callid *sippy_header.SipCallId,
         maxforwards *sippy_header.SipMaxForwards, body sippy_types.MsgBody, contact *sippy_header.SipContact,
-        routes []*sippy_header.SipRoute, target *sippy_conf.HostPort, cguid *sippy_header.SipCiscoGUID,
+        routes []*sippy_header.SipRoute, target *sippy_net.HostPort, cguid *sippy_header.SipCiscoGUID,
         user_agent *sippy_header.SipUserAgent, expires *sippy_header.SipExpires, config sippy_conf.Config) (*sipRequest, error) {
     if routes == nil {
         routes = make([]*sippy_header.SipRoute, 0)
@@ -147,7 +148,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
     return self, nil
 }
 
-func (self *sipRequest) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+func (self *sipRequest) LocalStr(hostport *sippy_net.HostPort, compact bool /*= False*/ ) string {
     return self.GetSL() + "\r\n" + self.localStr(hostport, compact)
 }
 

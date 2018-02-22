@@ -30,40 +30,49 @@ import (
     "net"
 
     "sippy/conf"
+    "sippy/net"
 )
 
 type local4remote struct {
     config          sippy_conf.Config
-    cache_r2l       map[string]*sippy_conf.HostPort
-    cache_r2l_old   map[string]*sippy_conf.HostPort
-    cache_l2s       map[string]*udpServer
-    handleIncoming  UdpPacketReceiver
+    cache_r2l       map[string]*sippy_net.HostPort
+    cache_r2l_old   map[string]*sippy_net.HostPort
+    cache_l2s       map[string]sippy_net.Transport
+    handleIncoming  sippy_net.SipPacketReceiver
     fixed           bool
+    tfactory        sippy_net.SipTransportFactory
 }
 
-func NewLocal4Remote(config sippy_conf.Config, handleIncoming UdpPacketReceiver) (*local4remote, error) {
+func NewLocal4Remote(config sippy_conf.Config, handleIncoming sippy_net.SipPacketReceiver) (*local4remote, error) {
     self := &local4remote{
         config          : config,
-        cache_r2l       : make(map[string]*sippy_conf.HostPort),
-        cache_r2l_old   : make(map[string]*sippy_conf.HostPort),
-        cache_l2s       : make(map[string]*udpServer),
+        cache_r2l       : make(map[string]*sippy_net.HostPort),
+        cache_r2l_old   : make(map[string]*sippy_net.HostPort),
+        cache_l2s       : make(map[string]sippy_net.Transport),
         handleIncoming  : handleIncoming,
         fixed           : false,
+        tfactory        : config.GetSipTransportFactory(),
     }
-    laddresses := make([]*sippy_conf.HostPort, 0)
+    if self.tfactory == nil {
+        self.tfactory = NewDefaultSipTransportFactory(config)
+    }
+    laddresses := make([]*sippy_net.HostPort, 0)
     if config.SipAddress().IsSystemDefault() {
-        laddresses = append(laddresses, sippy_conf.NewHostPort("0.0.0.0", config.GetMyPort().String()))
+        laddresses = append(laddresses, sippy_net.NewHostPort("0.0.0.0", config.GetMyPort().String()))
         if config.GetIPV6Enabled() {
-            laddresses = append(laddresses, sippy_conf.NewHostPort("[::]", config.GetMyPort().String()))
+            laddresses = append(laddresses, sippy_net.NewHostPort("[::]", config.GetMyPort().String()))
         }
     } else {
-        laddresses = append(laddresses, sippy_conf.NewHostPort(config.SipAddress().String(), config.GetMyPort().String()))
+        laddresses = append(laddresses, sippy_net.NewHostPort(config.SipAddress().String(), config.GetMyPort().String()))
         self.fixed = true
     }
     var last_error error
     for _, laddress := range laddresses {
+        /*
         sopts := NewUdpServerOpts(laddress, handleIncoming)
         server, err := NewUdpServer(config, sopts)
+        */
+        server, err := self.tfactory.NewSipTransport(laddress, handleIncoming)
         if err != nil {
             if ! config.SipAddress().IsSystemDefault() {
                 return nil, err
@@ -80,8 +89,8 @@ func NewLocal4Remote(config sippy_conf.Config, handleIncoming UdpPacketReceiver)
     return self, nil
 }
 
-func (self *local4remote) getServer(address *sippy_conf.HostPort, is_local bool /*= false*/) *udpServer {
-    var laddress *sippy_conf.HostPort
+func (self *local4remote) getServer(address *sippy_net.HostPort, is_local bool /*= false*/) sippy_net.Transport {
+    var laddress *sippy_net.HostPort
     var ok bool
 
     if self.fixed {
@@ -130,7 +139,7 @@ func (self *local4remote) getServer(address *sippy_conf.HostPort, is_local bool 
                 return nil // should not happen
             }
         }
-        laddress = sippy_conf.NewHostPort(_laddress, self.config.GetMyPort().String())
+        laddress = sippy_net.NewHostPort(_laddress, self.config.GetMyPort().String())
         self.cache_r2l[address.Host.String()] = laddress
     } else {
         laddress = address
@@ -138,8 +147,11 @@ func (self *local4remote) getServer(address *sippy_conf.HostPort, is_local bool 
     server, ok := self.cache_l2s[laddress.String()]
     if ! ok {
         var err error
+        /*
         sopts := NewUdpServerOpts(laddress, self.handleIncoming)
         server, err = NewUdpServer(self.config, sopts)
+        */
+        server, err = self.tfactory.NewSipTransport(laddress, self.handleIncoming)
         if err != nil {
             return nil
         }
@@ -151,13 +163,13 @@ func (self *local4remote) getServer(address *sippy_conf.HostPort, is_local bool 
 
 func (self *local4remote) rotateCache() {
     self.cache_r2l_old = self.cache_r2l
-    self.cache_r2l = make(map[string]*sippy_conf.HostPort)
+    self.cache_r2l = make(map[string]*sippy_net.HostPort)
 }
 
 func (self *local4remote) shutdown() {
     for _, userv := range self.cache_l2s {
         userv.Shutdown()
     }
-    self.cache_l2s = make(map[string]*udpServer)
+    self.cache_l2s = make(map[string]sippy_net.Transport)
 }
 

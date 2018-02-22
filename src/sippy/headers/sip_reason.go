@@ -29,7 +29,7 @@ import (
     "errors"
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
 )
 
 type sipReasonBody struct {
@@ -110,7 +110,7 @@ func (self *SipReason) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipReason) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipReason) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.StringBody()
 }
 

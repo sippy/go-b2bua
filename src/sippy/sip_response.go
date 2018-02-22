@@ -32,6 +32,7 @@ import (
 
     "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
     "sippy/utils"
@@ -100,7 +101,7 @@ func NewSipResponse(scode int, reason, sipver string, from *sippy_header.SipFrom
     return self
 }
 
-func (self *sipResponse) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+func (self *sipResponse) LocalStr(hostport *sippy_net.HostPort, compact bool /*= False*/ ) string {
     return self.GetSL() + "\r\n" + self.localStr(hostport, compact)
 }
 

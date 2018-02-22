@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 var _sip_content_length_name compactName = newCompactName("Content-Length", "l")
@@ -48,7 +48,7 @@ func (self *SipContentLength) String() string {
     return self.Name() + ": " + self.StringBody()
 }
 
-func (self *SipContentLength) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipContentLength) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     if compact {
         return self.CompactName() + ": " + self.StringBody()
     }

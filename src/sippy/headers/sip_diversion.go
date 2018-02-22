@@ -27,6 +27,7 @@
 package sippy_header
 
 import (
+    "sippy/net"
     "sippy/conf"
 )
 
@@ -60,7 +61,7 @@ func (self *SipDiversion) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipDiversion) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipDiversion) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 

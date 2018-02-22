@@ -36,6 +36,7 @@ import (
     "sippy"
     "sippy/conf"
     "sippy/headers"
+    "sippy/net"
 )
 
 type ainfo_item struct {
@@ -43,8 +44,8 @@ type ainfo_item struct {
     port        string
 }
 
-func (self *ainfo_item) HostPort() *sippy_conf.HostPort {
-    return sippy_conf.NewHostPort(self.ip.String(), self.port)
+func (self *ainfo_item) HostPort() *sippy_net.HostPort {
+    return sippy_net.NewHostPort(self.ip.String(), self.port)
 }
 
 type B2BRoute struct {
@@ -66,7 +67,7 @@ type B2BRoute struct {
     caller_name     string
     extra_headers   []sippy_header.SipHeader
     rtpp            bool
-    outbound_proxy  *sippy_conf.HostPort
+    outbound_proxy  *sippy_net.HostPort
     rnum            int
 }
 /*
@@ -123,11 +124,11 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
         ipv6only = true
         self.hostonly = "[" + hostport[0] + "]"
     }
-    var port *sippy_conf.MyPort
+    var port *sippy_net.MyPort
     if len(hostport) == 1 {
         port = global_config.GetMyPort()
     } else {
-        port = sippy_conf.NewMyPort(hostport[1])
+        port = sippy_net.NewMyPort(hostport[1])
     }
     self.ainfo = make([]*ainfo_item, 0)
     ips, err := net.LookupIP(hostport[0])
@@ -212,9 +213,9 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
         case "op":
             host_port := strings.SplitN(av[1], ":", 2)
             if len(host_port) == 1 {
-                self.outbound_proxy = sippy_conf.NewHostPort(av[1], "5060")
+                self.outbound_proxy = sippy_net.NewHostPort(av[1], "5060")
             } else {
-                self.outbound_proxy = sippy_conf.NewHostPort(host_port[0], host_port[1])
+                self.outbound_proxy = sippy_net.NewHostPort(host_port[0], host_port[1])
             }
         //default:
         //    self.params[a] = v
@@ -267,7 +268,7 @@ func (self *B2BRoute) getCopy() *B2BRoute {
     return &cself
 }
 
-func (self *B2BRoute) getNHAddr(source *sippy_conf.HostPort) (*sippy_conf.HostPort, bool) {
+func (self *B2BRoute) getNHAddr(source *sippy_net.HostPort) (*sippy_net.HostPort, bool) {
     src_ip := net.ParseIP(source.Host.String())
     if src_ip == nil {
         return self.ainfo[0].HostPort(), true

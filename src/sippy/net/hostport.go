@@ -26,7 +26,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package sippy_conf
+package sippy_net
 
 import (
     "net"
@@ -54,7 +54,7 @@ func NewMyAddress(address string) (*MyAddress) {
     return self
 }
 
-func newSystemAddress(address string) (*MyAddress) {
+func NewSystemAddress(address string) (*MyAddress) {
     self := &MyAddress{
         is_system   : true,
         address     : address,
@@ -101,7 +101,7 @@ func NewMyPort(port string) (*MyPort) {
     }
 }
 
-func newSystemPort(port string) (*MyPort) {
+func NewSystemPort(port string) (*MyPort) {
     return &MyPort{
         is_system   : true,
         port        : port,

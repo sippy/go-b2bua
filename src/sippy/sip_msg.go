@@ -33,9 +33,10 @@ import (
     "strings"
 
     "sippy/conf"
-    "sippy/types"
-    "sippy/time"
     "sippy/headers"
+    "sippy/net"
+    "sippy/time"
+    "sippy/types"
 )
 
 type sipMsg struct {
@@ -55,10 +56,10 @@ type sipMsg struct {
     also                []*sippy_header.SipAlso
     rtime               *sippy_time.MonoTime
     body                sippy_types.MsgBody
-    source              *sippy_conf.HostPort
+    source              *sippy_net.HostPort
     record_routes       []*sippy_header.SipRecordRoute
     routes              []*sippy_header.SipRoute
-    target              *sippy_conf.HostPort
+    target              *sippy_net.HostPort
     reason_hf           *sippy_header.SipReason
     sip_warning         *sippy_header.SipWarning
     sip_www_authenticate *sippy_header.SipWWWAuthenticate
@@ -304,7 +305,7 @@ func (self *sipMsg) Bytes() []byte {
     return ret
 }
 
-func (self *sipMsg) localStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+func (self *sipMsg) localStr(hostport *sippy_net.HostPort, compact bool /*= False*/ ) string {
     s := ""
     for _, via := range self.vias {
         s += via.LocalStr(hostport, compact) + "\r\n"
@@ -348,15 +349,15 @@ func (self *sipMsg) SetBody(body sippy_types.MsgBody) {
     self.body = body
 }
 
-func (self *sipMsg) GetTarget() *sippy_conf.HostPort {
+func (self *sipMsg) GetTarget() *sippy_net.HostPort {
     return self.target
 }
 
-func (self *sipMsg) SetTarget(address *sippy_conf.HostPort) {
+func (self *sipMsg) SetTarget(address *sippy_net.HostPort) {
     self.target = address
 }
 
-func (self *sipMsg) GetSource() *sippy_conf.HostPort {
+func (self *sipMsg) GetSource() *sippy_net.HostPort {
     return self.source
 }
 

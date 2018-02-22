@@ -28,6 +28,7 @@ package sippy_header
 
 import (
     "sippy/conf"
+    "sippy/net"
 )
 
 type SipContact struct {
@@ -93,7 +94,7 @@ func (self *SipContact) StringBody() string {
     return self.LocalStringBody(nil)
 }
 
-func (self *SipContact) LocalStringBody(hostport *sippy_conf.HostPort) string {
+func (self *SipContact) LocalStringBody(hostport *sippy_net.HostPort) string {
     if self.Asterisk {
         return "*"
     }
@@ -104,7 +105,7 @@ func (self *SipContact) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipContact) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipContact) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     hname := self.Name()
     if compact {
         hname = self.CompactName()

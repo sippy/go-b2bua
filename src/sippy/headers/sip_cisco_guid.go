@@ -30,7 +30,7 @@ import (
     "crypto/rand"
     "strconv"
 
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SipCiscoGUID struct {
@@ -57,7 +57,7 @@ func (self *SipCiscoGUID) String() string {
     return self.Name() + ": " + self.body
 }
 
-func (self *SipCiscoGUID) LocalStr(*sippy_conf.HostPort, bool) string {
+func (self *SipCiscoGUID) LocalStr(*sippy_net.HostPort, bool) string {
     return self.String()
 }
 

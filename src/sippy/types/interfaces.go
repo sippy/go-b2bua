@@ -28,8 +28,8 @@ import (
     "sync"
     "time"
 
-    "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/sdp"
     "sippy/time"
 )
@@ -53,7 +53,7 @@ type CallMap interface {
 type SipMsg interface {
     GetSipUserAgent() *sippy_header.SipUserAgent
     GetSipServer() *sippy_header.SipServer
-    LocalStr(hostport *sippy_conf.HostPort, compact bool) string
+    LocalStr(hostport *sippy_net.HostPort, compact bool) string
     GetCSeq() *sippy_header.SipCSeq
     GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error)
     GetTo() *sippy_header.SipTo
@@ -62,8 +62,8 @@ type SipMsg interface {
     GetVias() []*sippy_header.SipVia
     GetCallId() *sippy_header.SipCallId
     SetRtime(*sippy_time.MonoTime)
-    GetTarget() *sippy_conf.HostPort
-    SetTarget(address *sippy_conf.HostPort)
+    GetTarget() *sippy_net.HostPort
+    SetTarget(address *sippy_net.HostPort)
     InsertFirstVia(*sippy_header.SipVia)
     RemoveFirstVia()
     SetRoutes([]*sippy_header.SipRoute)
@@ -77,7 +77,7 @@ type SipMsg interface {
     GetCGUID() *sippy_header.SipCiscoGUID
     GetH323ConfId() *sippy_header.SipH323ConfId
     GetSipAuthorization() *sippy_header.SipAuthorization
-    GetSource() *sippy_conf.HostPort
+    GetSource() *sippy_net.HostPort
     GetFirstHF(string) sippy_header.SipHeader
     GetHFs(string) []sippy_header.SipHeader
     GetSL() string
@@ -111,16 +111,10 @@ type SipResponse interface {
     GetCopy() SipResponse
 }
 
-type UdpServer interface {
-    GetLaddress() *sippy_conf.HostPort
-    SendTo([]byte, *sippy_conf.HostPort)
-    SendToWithCb([]byte, *sippy_conf.HostPort, func())
-}
-
 type MsgBody interface {
     String() string
     GetMtype() string
-    LocalStr(hostport *sippy_conf.HostPort) string
+    LocalStr(hostport *sippy_net.HostPort) string
     GetCopy() MsgBody
     NeedsUpdate() bool
     SetNeedsUpdate(bool)
@@ -130,7 +124,7 @@ type MsgBody interface {
 
 type ParsedMsgBody interface {
     String() string
-    LocalStr(hostport *sippy_conf.HostPort) string
+    LocalStr(hostport *sippy_net.HostPort) string
     GetCopy() ParsedMsgBody
     SetCHeaderAddr(string)
     GetCHeader() *sippy_sdp.SdpConnecton
@@ -165,10 +159,10 @@ type UA interface {
     SetCallId(*sippy_header.SipCallId)
     GetCallId() *sippy_header.SipCallId
     SetRTarget(*sippy_header.SipURL)
-    GetRAddr() *sippy_conf.HostPort
-    SetRAddr(addr *sippy_conf.HostPort)
-    GetRAddr0() *sippy_conf.HostPort
-    SetRAddr0(addr *sippy_conf.HostPort)
+    GetRAddr() *sippy_net.HostPort
+    SetRAddr(addr *sippy_net.HostPort)
+    GetRAddr0() *sippy_net.HostPort
+    SetRAddr0(addr *sippy_net.HostPort)
     GetRTarget() *sippy_header.SipURL
     SetRUri(*sippy_header.SipTo)
     GetRuriUserparams() []string
@@ -199,12 +193,12 @@ type UA interface {
     SetRSDP(MsgBody)
     GenRequest(method string, body MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (SipRequest, error)
     IncLCSeq()
-    GetSourceAddress() *sippy_conf.HostPort
-    SetSourceAddress(*sippy_conf.HostPort)
+    GetSourceAddress() *sippy_net.HostPort
+    SetSourceAddress(*sippy_net.HostPort)
     GetClientTransaction() ClientTransaction
     SetClientTransaction(ClientTransaction)
-    GetOutboundProxy() *sippy_conf.HostPort
-    SetOutboundProxy(*sippy_conf.HostPort)
+    GetOutboundProxy() *sippy_net.HostPort
+    SetOutboundProxy(*sippy_net.HostPort)
     GetNoReplyTime() time.Duration
     SetNoReplyTime(time.Duration)
     GetExpireTime() time.Duration
@@ -300,8 +294,8 @@ type baseTransaction interface {
 type ClientTransaction interface {
     baseTransaction
     IncomingResponse(resp SipResponse, checksum string)
-    SetOutboundProxy(*sippy_conf.HostPort)
-    SetAckRparams(*sippy_conf.HostPort, *sippy_header.SipURL, []*sippy_header.SipRoute)
+    SetOutboundProxy(*sippy_net.HostPort)
+    SetAckRparams(*sippy_net.HostPort, *sippy_header.SipURL, []*sippy_header.SipRoute)
     Cancel(...sippy_header.SipHeader)
     GetACK() SipRequest
     SendACK()
@@ -328,8 +322,8 @@ type ServerTransaction interface {
 type SipTransactionManager interface {
     RegConsumer(UA, string)
     UnregConsumer(UA, string)
-    BeginNewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer, func(SipRequest)) (ClientTransaction, error)
-    CreateClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_conf.HostPort, UdpServer, func(SipRequest)) (ClientTransaction, error)
+    BeginNewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort, sippy_net.Transport, func(SipRequest)) (ClientTransaction, error)
+    CreateClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort, sippy_net.Transport, func(SipRequest)) (ClientTransaction, error)
     BeginClientTransaction(SipRequest, ClientTransaction)
     SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))
     SendResponseWithLossEmul(resp SipResponse, lock bool, ack_cb func(SipRequest), lossemul int)
