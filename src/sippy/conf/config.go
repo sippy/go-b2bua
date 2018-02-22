@@ -57,6 +57,7 @@ type Config interface {
     AutoConvertTelUrl() bool
     SetAutoConvertTelUrl(bool)
     GetSipTransportFactory() sippy_net.SipTransportFactory
+    SetSipTransportFactory(sippy_net.SipTransportFactory)
 }
 
 type config struct {
@@ -169,4 +170,8 @@ func (self *config) SetAutoConvertTelUrl(v bool) {
 
 func (self *config) GetSipTransportFactory() sippy_net.SipTransportFactory {
     return self.tfactory
+}
+
+func (self *config) SetSipTransportFactory(tfactory sippy_net.SipTransportFactory) {
+    self.tfactory = tfactory
 }

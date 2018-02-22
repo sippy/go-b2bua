@@ -171,12 +171,12 @@ func (self *asyncReceiver) run(userv *udpServer) {
 
 type udpServerOpts struct {
     laddress        *sippy_net.HostPort
-    data_callback   sippy_net.SipPacketReceiver
+    data_callback   sippy_net.DataPacketReceiver
     shut_down       bool
     nworkers        int
 }
 
-func NewUdpServerOpts(laddress *sippy_net.HostPort, data_callback sippy_net.SipPacketReceiver) *udpServerOpts {
+func NewUdpServerOpts(laddress *sippy_net.HostPort, data_callback sippy_net.DataPacketReceiver) *udpServerOpts {
     self := &udpServerOpts{
         laddress        : laddress,
         data_callback   : data_callback,

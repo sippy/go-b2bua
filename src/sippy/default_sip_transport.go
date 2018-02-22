@@ -42,7 +42,7 @@ func NewDefaultSipTransportFactory(config sippy_conf.Config) *default_sip_transp
     }
 }
 
-func (self *default_sip_transport_factory) NewSipTransport(laddress *sippy_net.HostPort, handler sippy_net.SipPacketReceiver) (sippy_net.Transport, error) {
+func (self *default_sip_transport_factory) NewSipTransport(laddress *sippy_net.HostPort, handler sippy_net.DataPacketReceiver) (sippy_net.Transport, error) {
     sopts := NewUdpServerOpts(laddress, handler)
     return NewUdpServer(self.config, sopts)
 }

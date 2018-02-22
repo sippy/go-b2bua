@@ -31,10 +31,10 @@ import (
     "sippy/time"
 )
 
-type SipPacketReceiver func(data []byte, addr *HostPort, server Transport, rtime *sippy_time.MonoTime)
+type DataPacketReceiver func(data []byte, addr *HostPort, server Transport, rtime *sippy_time.MonoTime)
 
 type SipTransportFactory interface {
-    NewSipTransport(*HostPort, SipPacketReceiver) (Transport, error)
+    NewSipTransport(*HostPort, DataPacketReceiver) (Transport, error)
 }
 
 type Transport interface {

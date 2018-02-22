@@ -38,12 +38,12 @@ type local4remote struct {
     cache_r2l       map[string]*sippy_net.HostPort
     cache_r2l_old   map[string]*sippy_net.HostPort
     cache_l2s       map[string]sippy_net.Transport
-    handleIncoming  sippy_net.SipPacketReceiver
+    handleIncoming  sippy_net.DataPacketReceiver
     fixed           bool
     tfactory        sippy_net.SipTransportFactory
 }
 
-func NewLocal4Remote(config sippy_conf.Config, handleIncoming sippy_net.SipPacketReceiver) (*local4remote, error) {
+func NewLocal4Remote(config sippy_conf.Config, handleIncoming sippy_net.DataPacketReceiver) (*local4remote, error) {
     self := &local4remote{
         config          : config,
         cache_r2l       : make(map[string]*sippy_net.HostPort),
