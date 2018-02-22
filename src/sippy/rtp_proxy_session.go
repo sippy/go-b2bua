@@ -69,6 +69,7 @@ type rtpproxy_update_result struct {
 type rtpp_cmd struct {
     cmd         string
     cb          func(string)
+    rtp_proxy_client sippy_types.RtpProxyClient
 }
 
 func (self *rtpproxy_update_result) Address() string {
@@ -161,7 +162,7 @@ func (self *Rtp_proxy_session) send_command(cmd string, cb func(string)) {
     if rtp_proxy_client := self._rtp_proxy_client; rtp_proxy_client != nil {
         self.inflight_lock.Lock()
         defer self.inflight_lock.Unlock()
-        new_cmd := &rtpp_cmd{ cmd, cb }
+        new_cmd := &rtpp_cmd{ cmd, cb, rtp_proxy_client }
         if self.inflight_cmd == nil {
             self.inflight_cmd = new_cmd
             rtp_proxy_client.SendCommand(cmd, self.cmd_done, nil)
@@ -176,11 +177,7 @@ func (self *Rtp_proxy_session) cmd_done(res string) {
     done_cmd := self.inflight_cmd
     select {
         case self.inflight_cmd = <-self.rtpp_wi:
-            if rtp_proxy_client := self._rtp_proxy_client; rtp_proxy_client != nil {
-                rtp_proxy_client.SendCommand(self.inflight_cmd.cmd, self.cmd_done, nil)
-            } else {
-                self.inflight_cmd = nil // the client is not ready. just drop the command
-            }
+            self.inflight_cmd.rtp_proxy_client.SendCommand(self.inflight_cmd.cmd, self.cmd_done, nil)
         default:
             self.inflight_cmd = nil
     }
