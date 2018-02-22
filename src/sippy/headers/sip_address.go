@@ -187,10 +187,11 @@ func (self *SipAddress) LocalStr(hostport *sippy_conf.HostPort) string {
 
 func NewSipAddress(name string, url *SipURL) *SipAddress {
     return &SipAddress{
-        name : name,
-        url : url,
-        hadbrace : true,
-        params : make(map[string]*string),
+        name        : name,
+        url         : url,
+        hadbrace    : true,
+        params      : make(map[string]*string),
+        q           : 1.0,
     }
 }
 
