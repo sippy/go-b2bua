@@ -41,7 +41,6 @@ import (
 )
 
 type Rtp_proxy_session struct {
-    caller_session_exists   bool
     call_id                 string
     from_tag                string
     to_tag                  string
@@ -191,7 +190,7 @@ func (self *Rtp_proxy_session) cmd_done(res string) {
 }
 
 func (self *Rtp_proxy_session) StopPlayCaller(result_callback func(string)/*= nil*/, index int/*= 0*/) {
-    if ! self.caller_session_exists {
+    if ! self.caller.session_exists {
         return
     }
     command := fmt.Sprintf("S %s-%d %s %s", self.call_id, index, self.from_tag, self.to_tag)
@@ -252,7 +251,7 @@ func rtp_proxy_session_destructor(self *Rtp_proxy_session) {
     self.Delete()
 }
 
-func (self *Rtp_proxy_session) CallerSessionExists() bool { return self.caller_session_exists }
+func (self *Rtp_proxy_session) CallerSessionExists() bool { return self.caller.session_exists }
 
 func (self *Rtp_proxy_session) SetCallerLaddress(addr string) {
     self.caller.laddress = addr
