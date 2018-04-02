@@ -32,6 +32,7 @@ import (
 
     "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
     "sippy/utils"
@@ -75,13 +76,14 @@ func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.
 }
 
 func NewSipResponse(scode int, reason, sipver string, from *sippy_header.SipFrom, callid *sippy_header.SipCallId,
-        vias []*sippy_header.SipVia, to *sippy_header.SipTo, cseq *sippy_header.SipCSeq, rrs []*sippy_header.SipRecordRoute, body sippy_types.MsgBody, server *sippy_header.SipServer) *sipResponse {
+        vias []*sippy_header.SipVia, to *sippy_header.SipTo, cseq *sippy_header.SipCSeq, rrs []*sippy_header.SipRecordRoute,
+        body sippy_types.MsgBody, server *sippy_header.SipServer, config sippy_conf.Config) *sipResponse {
     self := &sipResponse{
         scode : scode,
         reason : reason,
         sipver : sipver,
     }
-    self.sipMsg = NewSipMsg(nil)
+    self.sipMsg = NewSipMsg(nil, config)
     for _, via := range vias {
         self.AppendHeader(via)
     }
@@ -99,7 +101,7 @@ func NewSipResponse(scode int, reason, sipver string, from *sippy_header.SipFrom
     return self
 }
 
-func (self *sipResponse) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+func (self *sipResponse) LocalStr(hostport *sippy_net.HostPort, compact bool /*= False*/ ) string {
     return self.GetSL() + "\r\n" + self.localStr(hostport, compact)
 }
 

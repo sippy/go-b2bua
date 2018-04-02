@@ -1,6 +1,6 @@
+//
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2018 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,59 +24,22 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy_header
+
+package sippy_net
 
 import (
-    "sippy/net"
+    "sippy/time"
 )
 
-type SipServer struct {
-    normalName
-    Server    string
+type DataPacketReceiver func(data []byte, addr *HostPort, server Transport, rtime *sippy_time.MonoTime)
+
+type SipTransportFactory interface {
+    NewSipTransport(*HostPort, DataPacketReceiver) (Transport, error)
 }
 
-var _sip_server_name normalName = newNormalName("Server")
-
-func CreateSipServer(body string) []SipHeader {
-    return []SipHeader{
-        &SipServer{
-            normalName  : _sip_server_name,
-            Server        : body,
-        },
-    }
-}
-
-func NewSipServer(body string) *SipServer {
-    return &SipServer{
-        normalName  : _sip_server_name,
-        Server      : body,
-    }
-}
-
-func (self *SipServer) StringBody() string {
-    return self.Server
-}
-
-func (self *SipServer) String() string {
-    return self.Name() + ": " + self.Server
-}
-
-func (self *SipServer) LocalStr(*sippy_net.HostPort, bool) string {
-    return self.String()
-}
-
-func (self *SipServer) GetCopy() *SipServer {
-    tmp := *self
-    return &tmp
-}
-
-func (self *SipServer) GetCopyAsIface() SipHeader {
-    return self.GetCopy()
-}
-
-func (self *SipServer) AsSipUserAgent() *SipUserAgent {
-    if self == nil {
-        return nil
-    }
-    return NewSipUserAgent(self.Server)
+type Transport interface {
+    Shutdown()
+    GetLAddress() *HostPort
+    SendTo([]byte, *HostPort)
+    SendToWithCb([]byte, *HostPort, func())
 }

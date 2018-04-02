@@ -30,7 +30,7 @@ import (
     "fmt"
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SdpMediaDescription struct {
@@ -84,7 +84,7 @@ func (self *SdpMediaDescription) String() string {
     return s
 }
 
-func (self *SdpMediaDescription) LocalStr(hostport *sippy_conf.HostPort, noC bool) string {
+func (self *SdpMediaDescription) LocalStr(hostport *sippy_net.HostPort, noC bool) string {
     s := ""
     for _, it := range self.all_headers() {
         if noC && it.Name == "c" {

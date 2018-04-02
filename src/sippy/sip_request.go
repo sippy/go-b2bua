@@ -32,6 +32,7 @@ import (
 
     "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
 )
@@ -74,13 +75,13 @@ func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.C
 func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *sippy_header.SipTo,
         from *sippy_header.SipFrom, via *sippy_header.SipVia, cseq int, callid *sippy_header.SipCallId,
         maxforwards *sippy_header.SipMaxForwards, body sippy_types.MsgBody, contact *sippy_header.SipContact,
-        routes []*sippy_header.SipRoute, target *sippy_conf.HostPort, cguid *sippy_header.SipCiscoGUID,
+        routes []*sippy_header.SipRoute, target *sippy_net.HostPort, cguid *sippy_header.SipCiscoGUID,
         user_agent *sippy_header.SipUserAgent, expires *sippy_header.SipExpires, config sippy_conf.Config) (*sipRequest, error) {
     if routes == nil {
         routes = make([]*sippy_header.SipRoute, 0)
     }
     self := &sipRequest{ nated : false }
-    self.sipMsg = NewSipMsg(nil)
+    self.sipMsg = NewSipMsg(nil, config)
     self.method = method
     self.ruri = ruri
     if target == nil {
@@ -89,7 +90,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         } else {
             var r0 *sippy_header.SipAddress
             var err error
-            if r0, err = routes[0].GetBody(config); err != nil {
+            if r0, err = routes[0].GetBody(); err != nil {
                 return nil, err
             }
             self.SetTarget(r0.GetUrl().GetAddr(config))
@@ -147,7 +148,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
     return self, nil
 }
 
-func (self *sipRequest) LocalStr(hostport *sippy_conf.HostPort, compact bool /*= False*/ ) string {
+func (self *sipRequest) LocalStr(hostport *sippy_net.HostPort, compact bool /*= False*/ ) string {
     return self.GetSL() + "\r\n" + self.localStr(hostport, compact)
 }
 
@@ -186,10 +187,10 @@ func (self *sipRequest) GenResponse(scode int, reason string, body sippy_types.M
     }
     return NewSipResponse(scode, reason, self.sipver, self.from.GetCopy(),
                        self.call_id.GetCopy(), vias, self.to.GetCopy(),
-                       self.cseq.GetCopy(), rrs, body, server)
+                       self.cseq.GetCopy(), rrs, body, server, self.config)
 }
 
-func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config) (sippy_types.SipRequest, error) {
+func (self *sipRequest) GenACK(to *sippy_header.SipTo) (sippy_types.SipRequest, error) {
     if to == nil {
         to = self.to.GetCopy()
     }
@@ -207,10 +208,10 @@ func (self *sipRequest) GenACK(to *sippy_header.SipTo, config sippy_conf.Config)
                       cseq.CSeq, self.call_id.GetCopy(),
                       maxforwards, /*body*/ nil, /*contact*/ nil,
                       /*routes*/ nil, /*target*/ nil, /*cguid*/ nil, self.user_agent,
-                      /*expires*/ nil, config)
+                      /*expires*/ nil, self.config)
 }
 
-func (self *sipRequest) GenCANCEL(config sippy_conf.Config) (sippy_types.SipRequest, error) {
+func (self *sipRequest) GenCANCEL() (sippy_types.SipRequest, error) {
     var maxforwards *sippy_header.SipMaxForwards = nil
 
     if self.maxforwards != nil {
@@ -229,7 +230,7 @@ func (self *sipRequest) GenCANCEL(config sippy_conf.Config) (sippy_types.SipRequ
                       cseq.CSeq, self.call_id.GetCopy(),
                       maxforwards, /*body*/ nil, /*contact*/ nil,
                       routes, self.GetTarget(), /*cguid*/ nil,
-                      self.user_agent, /*expires*/ nil, config)
+                      self.user_agent, /*expires*/ nil, self.config)
 }
 
 func (self *sipRequest) GetExpires() *sippy_header.SipExpires {

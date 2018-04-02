@@ -35,6 +35,7 @@ import (
     "sync"
 
     "sippy/conf"
+    "sippy/net"
     "sippy/sdp"
     "sippy/types"
 )
@@ -257,7 +258,7 @@ func (self *Rtp_proxy_session) SetCallerLaddress(addr string) {
     self.caller.laddress = addr
 }
 
-func (self *Rtp_proxy_session) SetCallerRaddress(addr *sippy_conf.HostPort) {
+func (self *Rtp_proxy_session) SetCallerRaddress(addr *sippy_net.HostPort) {
     self.caller.raddress = addr
 }
 
@@ -265,7 +266,7 @@ func (self *Rtp_proxy_session) SetCalleeLaddress(addr string) {
     self.callee.laddress = addr
 }
 
-func (self *Rtp_proxy_session) SetCalleeRaddress(addr *sippy_conf.HostPort) {
+func (self *Rtp_proxy_session) SetCalleeRaddress(addr *sippy_net.HostPort) {
     self.callee.raddress = addr
 }
 

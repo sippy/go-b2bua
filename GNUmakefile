@@ -6,3 +6,6 @@ b2bua_simple: *.go src/sippy/*.go src/sippy/conf/*.go src/sippy/time/*.go src/si
 
 clean:
 	-rm b2bua_simple
+
+test:
+	cd $(CURDIR)/src/sippy; GOPATH=$(CURDIR):$(GOPATH) go test

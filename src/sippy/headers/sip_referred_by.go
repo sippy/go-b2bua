@@ -27,6 +27,7 @@
 package sippy_header
 
 import (
+    "sippy/net"
     "sippy/conf"
 )
 
@@ -49,10 +50,10 @@ func CreateSipReferredBy(body string) []SipHeader {
     return rval
 }
 
-func NewSipReferredBy(addr *SipAddress) *SipReferredBy {
+func NewSipReferredBy(addr *SipAddress, config sippy_conf.Config) *SipReferredBy {
     return &SipReferredBy{
         normalName   : _sip_referred_by_name,
-        sipAddressHF : newSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr, config),
     }
 }
 
@@ -60,7 +61,7 @@ func (self *SipReferredBy) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipReferredBy) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipReferredBy) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 

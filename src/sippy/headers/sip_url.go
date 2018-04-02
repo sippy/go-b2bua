@@ -33,6 +33,7 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/net"
     "sippy/utils"
 )
 
@@ -56,8 +57,8 @@ type SipURL struct {
     Username    string
     password    string
     ttl         int
-    Host        *sippy_conf.MyAddress
-    Port        *sippy_conf.MyPort
+    Host        *sippy_net.MyAddress
+    Port        *sippy_net.MyPort
     usertype    string
     transport   string
     maddr       string
@@ -70,7 +71,7 @@ type SipURL struct {
     scheme      string
 }
 
-func NewSipURL(username string, host *sippy_conf.MyAddress, port *sippy_conf.MyPort, lr bool /* false */) *SipURL {
+func NewSipURL(username string, host *sippy_net.MyAddress, port *sippy_net.MyPort, lr bool /* false */) *SipURL {
     self := &SipURL{
         scheme      : "sip",
         other       : make([]string, 0),
@@ -110,7 +111,7 @@ func (self *SipURL) convertTelUrl(url string, relaxedparser bool, config sippy_c
     self.scheme = "sip"
 
     if relaxedparser {
-        self.Host = sippy_conf.NewMyAddress("")
+        self.Host = sippy_net.NewMyAddress("")
     } else {
         self.Host = config.GetMyAddress()
         self.Port = config.GetMyPort()
@@ -173,11 +174,11 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
     }
     var parseport *string = nil
     if relaxedparser && len(hostport) == 0 {
-        self.Host = sippy_conf.NewMyAddress("")
+        self.Host = sippy_net.NewMyAddress("")
     } else if hostport[0] == '[' {
         // IPv6 host
         hpparts := strings.SplitN(hostport, "]", 2)
-        self.Host = sippy_conf.NewMyAddress(hpparts[0] + "]")
+        self.Host = sippy_net.NewMyAddress(hpparts[0] + "]")
         if len(hpparts[1]) > 0 {
             hpparts = strings.SplitN(hpparts[1], ":", 2)
             if len(hpparts) > 1 {
@@ -188,9 +189,9 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
         // IPv4 host
         hpparts := strings.SplitN(hostport, ":", 2)
         if len(hpparts) == 1 {
-            self.Host = sippy_conf.NewMyAddress(hpparts[0])
+            self.Host = sippy_net.NewMyAddress(hpparts[0])
         } else {
-            self.Host = sippy_conf.NewMyAddress(hpparts[0])
+            self.Host = sippy_net.NewMyAddress(hpparts[0])
             parseport = &hpparts[1]
         }
     }
@@ -213,7 +214,7 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
                         if _, err = strconv.Atoi(pparts[0]); err != nil {
                             return err
                         }
-                        self.Port = sippy_conf.NewMyPort(pparts[0])
+                        self.Port = sippy_net.NewMyPort(pparts[0])
                     } else {
                         return err
                     }
@@ -221,7 +222,7 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
                     return err
                 }
             } else {
-                self.Port = sippy_conf.NewMyPort(port)
+                self.Port = sippy_net.NewMyPort(port)
             }
         }
     }
@@ -278,7 +279,7 @@ func (self *SipURL) String() string {
     return self.LocalStr(nil)
 }
 
-func (self *SipURL) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *SipURL) LocalStr(hostport *sippy_net.HostPort) string {
     l := self.scheme + ":"
     if self.Username != "" {
         username := user_enc.Escape(self.Username)
@@ -333,11 +334,11 @@ func (self *SipURL) GetCopy() *SipURL {
     return &ret
 }
 
-func (self *SipURL) GetAddr(config sippy_conf.Config) *sippy_conf.HostPort {
+func (self *SipURL) GetAddr(config sippy_conf.Config) *sippy_net.HostPort {
     if self.Port != nil {
-        return sippy_conf.NewHostPort(self.Host.String(), self.Port.String())
+        return sippy_net.NewHostPort(self.Host.String(), self.Port.String())
     }
-    return sippy_conf.NewHostPort(self.Host.String(), config.SipPort().String())
+    return sippy_net.NewHostPort(self.Host.String(), config.SipPort().String())
 }
 
 func (self *SipURL) SetUserparams(userparams []string) {

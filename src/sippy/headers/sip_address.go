@@ -34,6 +34,7 @@ import (
     "unicode"
 
     "sippy/conf"
+    "sippy/net"
     "sippy/utils"
 )
 
@@ -148,7 +149,7 @@ func (self *SipAddress) String() string {
     return self.LocalStr(nil)
 }
 
-func (self *SipAddress) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *SipAddress) LocalStr(hostport *sippy_net.HostPort) string {
     var od, cd, s string
     if self.hadbrace {
         od = "<"

@@ -27,6 +27,7 @@
 package sippy_header
 
 import (
+    "sippy/net"
     "sippy/conf"
 )
 
@@ -58,7 +59,7 @@ func NewSipFrom(address *SipAddress, config sippy_conf.Config) *SipFrom {
     }
     return &SipFrom{
         compactName     : _sip_from_name,
-        sipAddressHF    : newSipAddressHF(address),
+        sipAddressHF    : newSipAddressHF(address, config),
     }
 }
 
@@ -66,7 +67,7 @@ func (self *SipFrom) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipFrom) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipFrom) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     if compact {
         return self.CompactName() + ": " + self.LocalStringBody(hostport)
     }

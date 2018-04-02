@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "sippy/conf"
     "sippy/headers"
     "sippy/time"
     "sippy/types"
@@ -40,9 +41,9 @@ type UacStateCancelling struct {
     scode   int
 }
 
-func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int) *UacStateCancelling {
+func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, config sippy_conf.Config) *UacStateCancelling {
     self := &UacStateCancelling{
-        uaStateGeneric  : newUaStateGeneric(ua),
+        uaStateGeneric  : newUaStateGeneric(ua, config),
         rtime           : rtime,
         origin          : origin,
         scode           : scode,
@@ -52,7 +53,7 @@ func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin
     // 300 provides good estimate on the amount of time during which
     // we can wait for receiving non-negative response to CANCELled
     // INVITE transaction.
-    self.te = StartTimeout(self.goIdle, self.ua.GetSessionLock(), 300.0, 1, self.ua.Config().ErrorLogger())
+    self.te = StartTimeout(self.goIdle, self.ua.GetSessionLock(), 300.0, 1, self.config.ErrorLogger())
     return self
 }
 
@@ -69,7 +70,7 @@ func (self *UacStateCancelling) String() string {
 func (self *UacStateCancelling) goIdle() {
     //print "Time in Cancelling state expired, going to the Dead state"
     self.te = nil
-    self.ua.ChangeState(NewUaStateDead(self.ua, nil, ""))
+    self.ua.ChangeState(NewUaStateDead(self.ua, nil, "", self.config))
 }
 
 func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
@@ -103,23 +104,23 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
         var req sippy_types.SipRequest
 
         self.ua.UpdateRouting(resp, true, true)
-        rUri, err = self.ua.GetRUri().GetBody(self.ua.Config())
+        rUri, err = self.ua.GetRUri().GetBody()
         if err != nil {
-            self.ua.Config().ErrorLogger().Error("UacStateCancelling::RecvResponse: #1: " + err.Error())
+            self.config.ErrorLogger().Error("UacStateCancelling::RecvResponse: #1: " + err.Error())
             return nil
         }
-        to_body, err = resp.GetTo().GetBody(self.ua.Config())
+        to_body, err = resp.GetTo().GetBody()
         rUri.SetTag(to_body.GetTag())
         req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
         if err != nil {
-            self.ua.Config().ErrorLogger().Error("UacStateCancelling::RecvResponse: #2: " + err.Error())
+            self.config.ErrorLogger().Error("UacStateCancelling::RecvResponse: #2: " + err.Error())
             return nil
         }
         self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
-        return NewUaStateDisconnected(self.ua, nil, "", 0, nil)
+        return NewUaStateDisconnected(self.ua, nil, "", 0, nil, self.config)
     }
-    return NewUaStateDead(self.ua, nil, "")
+    return NewUaStateDead(self.ua, nil, "", self.config)
 }
 
 func (self *UacStateCancelling) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {

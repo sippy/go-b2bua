@@ -32,6 +32,7 @@ import (
     "fmt"
 
     "sippy/conf"
+    "sippy/net"
 )
 
 type SipCallId struct {
@@ -87,7 +88,7 @@ func (self *SipCallId) String() string {
     return self.Name() + ": " + self.CallId
 }
 
-func (self *SipCallId) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipCallId) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     if compact {
         return self.CompactName() + ": " + self.CallId
     }

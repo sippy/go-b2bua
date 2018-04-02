@@ -30,7 +30,7 @@ import (
     "fmt"
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
     "sippy/sdp"
     "sippy/types"
 )
@@ -63,7 +63,7 @@ func (self *genericMsgBody) String() string {
     return self.body
 }
 
-func (self *genericMsgBody) LocalStr(*sippy_conf.HostPort) string {
+func (self *genericMsgBody) LocalStr(*sippy_net.HostPort) string {
     return self.body
 }
 
@@ -180,7 +180,7 @@ func (self *msgBody) String() string {
     return self.string_content
 }
 
-func (self *msgBody) LocalStr(local_hostport *sippy_conf.HostPort) string {
+func (self *msgBody) LocalStr(local_hostport *sippy_net.HostPort) string {
     if self.parsed_body != nil {
         return self.parsed_body.LocalStr(local_hostport)
     }

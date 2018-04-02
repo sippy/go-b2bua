@@ -27,19 +27,22 @@
 package sippy
 
 import (
-    "sippy/types"
+    "sippy/conf"
     "sippy/time"
+    "sippy/types"
 )
 
 type uaStateGeneric struct {
     ua          sippy_types.UA
     connected   bool
+    config      sippy_conf.Config
 }
 
-func newUaStateGeneric(ua sippy_types.UA) *uaStateGeneric {
+func newUaStateGeneric(ua sippy_types.UA, config sippy_conf.Config) *uaStateGeneric {
     return &uaStateGeneric{
         ua          : ua,
         connected   : false,
+        config      : config,
     }
 }
 

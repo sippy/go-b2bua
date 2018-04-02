@@ -25,12 +25,12 @@
 package sippy_sdp
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SdpHeader interface {
     String() string
-    LocalStr(hostport *sippy_conf.HostPort) string
+    LocalStr(hostport *sippy_net.HostPort) string
 }
 
 type Sdp_header_and_name struct {

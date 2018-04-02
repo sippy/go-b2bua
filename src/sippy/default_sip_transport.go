@@ -1,6 +1,6 @@
+//
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2018 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,59 +24,25 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy_header
+
+package sippy
 
 import (
+    "sippy/conf"
     "sippy/net"
 )
 
-type SipServer struct {
-    normalName
-    Server    string
+type default_sip_transport_factory struct {
+    config  sippy_conf.Config
 }
 
-var _sip_server_name normalName = newNormalName("Server")
-
-func CreateSipServer(body string) []SipHeader {
-    return []SipHeader{
-        &SipServer{
-            normalName  : _sip_server_name,
-            Server        : body,
-        },
+func NewDefaultSipTransportFactory(config sippy_conf.Config) *default_sip_transport_factory {
+    return &default_sip_transport_factory{
+        config  : config,
     }
 }
 
-func NewSipServer(body string) *SipServer {
-    return &SipServer{
-        normalName  : _sip_server_name,
-        Server      : body,
-    }
-}
-
-func (self *SipServer) StringBody() string {
-    return self.Server
-}
-
-func (self *SipServer) String() string {
-    return self.Name() + ": " + self.Server
-}
-
-func (self *SipServer) LocalStr(*sippy_net.HostPort, bool) string {
-    return self.String()
-}
-
-func (self *SipServer) GetCopy() *SipServer {
-    tmp := *self
-    return &tmp
-}
-
-func (self *SipServer) GetCopyAsIface() SipHeader {
-    return self.GetCopy()
-}
-
-func (self *SipServer) AsSipUserAgent() *SipUserAgent {
-    if self == nil {
-        return nil
-    }
-    return NewSipUserAgent(self.Server)
+func (self *default_sip_transport_factory) NewSipTransport(laddress *sippy_net.HostPort, handler sippy_net.DataPacketReceiver) (sippy_net.Transport, error) {
+    sopts := NewUdpServerOpts(laddress, handler)
+    return NewUdpServer(self.config, sopts)
 }

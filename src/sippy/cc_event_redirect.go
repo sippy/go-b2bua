@@ -30,6 +30,7 @@ import (
     "sort"
 
     "sippy/headers"
+    "sippy/conf"
     "sippy/time"
     "sippy/types"
 )
@@ -39,15 +40,17 @@ type CCEventRedirect struct {
     scode           int
     scode_reason    string
     body            sippy_types.MsgBody
+    config          sippy_conf.Config
 }
 
-func NewCCEventRedirect(scode int, scode_reason string, body sippy_types.MsgBody, addrs []*sippy_header.SipAddress, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventRedirect {
+func NewCCEventRedirect(scode int, scode_reason string, body sippy_types.MsgBody, addrs []*sippy_header.SipAddress, rtime *sippy_time.MonoTime, origin string, config sippy_conf.Config, extra_headers ...sippy_header.SipHeader) *CCEventRedirect {
     return &CCEventRedirect{
         CCEventGeneric  : newCCEventGeneric(rtime, origin, extra_headers...),
         scode           : scode,
         scode_reason    : scode_reason,
         body            : body,
         redirect_addresses : addrs,
+        config          : config,
     }
 }
 
@@ -68,7 +71,7 @@ func (self *CCEventRedirect) GetContacts() []*sippy_header.SipContact {
     }
     ret := make([]*sippy_header.SipContact, len(addrs))
     for i, addr := range addrs {
-        ret[i] = sippy_header.NewSipContactFromAddress(addr)
+        ret[i] = sippy_header.NewSipContactFromAddress(addr, self.config)
     }
     return ret
 }

@@ -35,6 +35,7 @@ import (
 
     "sippy/conf"
     "sippy/log"
+    "sippy/net"
 )
 
 type myConfigParser struct {
@@ -261,7 +262,7 @@ func (self *myConfigParser) Parse() error {
     self.hrtb_ival = time.Duration(hrtb_ival) * time.Second
     self.hrtb_retr_ival = time.Duration(hrtb_retr_ival) * time.Second
     self.Config = sippy_conf.NewConfig(error_logger, sip_logger)
-    self.SetMyPort(sippy_conf.NewMyPort(strconv.Itoa(sip_port)))
+    self.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(sip_port)))
     return nil
 }
 /*

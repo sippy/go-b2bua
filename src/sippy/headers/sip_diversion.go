@@ -27,6 +27,7 @@
 package sippy_header
 
 import (
+    "sippy/net"
     "sippy/conf"
 )
 
@@ -37,10 +38,10 @@ type SipDiversion struct {
 
 var _sip_diversion_name normalName = newNormalName("Diversion")
 
-func NewSipDiversion(addr *SipAddress) *SipDiversion {
+func NewSipDiversion(addr *SipAddress, config sippy_conf.Config) *SipDiversion {
     return &SipDiversion{
         normalName   : _sip_diversion_name,
-        sipAddressHF : newSipAddressHF(addr),
+        sipAddressHF : newSipAddressHF(addr, config),
     }
 }
 
@@ -60,7 +61,7 @@ func (self *SipDiversion) String() string {
     return self.LocalStr(nil, false)
 }
 
-func (self *SipDiversion) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipDiversion) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 

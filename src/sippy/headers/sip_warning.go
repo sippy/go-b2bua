@@ -31,7 +31,7 @@ import (
     "os"
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
     "sippy/utils"
 )
 
@@ -92,7 +92,7 @@ func newSipWarningBody(text string) *sipWarningBody {
     return self
 }
 
-func (self *SipWarning) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipWarning) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.String()
 }
 

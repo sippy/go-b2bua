@@ -33,8 +33,8 @@ import (
     "strings"
     "sync"
 
+    "sippy/net"
     "sippy/sdp"
-    "sippy/conf"
     "sippy/types"
 )
 
@@ -43,7 +43,7 @@ type _rtpps_side struct {
     owner           *Rtp_proxy_session
     session_exists  bool
     laddress        string
-    raddress        *sippy_conf.HostPort
+    raddress        *sippy_net.HostPort
     codecs          string
     origin          *sippy_sdp.SdpOrigin
     repacketize     int

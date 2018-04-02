@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "sippy/conf"
     "sippy/time"
     "sippy/types"
 )
@@ -37,9 +38,9 @@ type UaStateDead struct {
     origin  string
 }
 
-func NewUaStateDead(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string) *UaStateDead {
+func NewUaStateDead(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, config sippy_conf.Config) *UaStateDead {
     return &UaStateDead {
-        uaStateGeneric  : newUaStateGeneric(ua),
+        uaStateGeneric  : newUaStateGeneric(ua, config),
         rtime           : rtime,
         origin          : origin,
     }

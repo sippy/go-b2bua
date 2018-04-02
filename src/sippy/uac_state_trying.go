@@ -27,18 +27,19 @@
 package sippy
 
 import (
+    "sippy/conf"
     "sippy/headers"
-    "sippy/types"
     "sippy/time"
+    "sippy/types"
 )
 
 type UacStateTrying struct {
     *uaStateGeneric
 }
 
-func NewUacStateTrying(ua sippy_types.UA) *UacStateTrying {
+func NewUacStateTrying(ua sippy_types.UA, config sippy_conf.Config) *UacStateTrying {
     return &UacStateTrying{
-        uaStateGeneric : newUaStateGeneric(ua),
+        uaStateGeneric : newUaStateGeneric(ua, config),
     }
 }
 
@@ -82,7 +83,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, resp, func(x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
                 self.ua.SetP1xxTs(resp.GetRtime())
-                return NewUacStateRinging(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code)
+                return NewUacStateRinging(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code, self.config)
             } else {
                 self.ua.SetRSDP(body.GetCopy())
             }
@@ -91,7 +92,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         }
         self.ua.Enqueue(event)
         self.ua.SetP1xxTs(resp.GetRtime())
-        return NewUacStateRinging(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code)
+        return NewUacStateRinging(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code, self.config)
     }
     self.ua.CancelExpireTimer()
     if code >= 200 && code < 300 {
@@ -100,9 +101,9 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         var rval sippy_types.UaState
 
         self.ua.UpdateRouting(resp, true, true)
-        to_body, err = resp.GetTo().GetBody(self.ua.Config())
+        to_body, err = resp.GetTo().GetBody()
         if err != nil {
-            self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #1: " + err.Error())
+            self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #1: " + err.Error())
             return nil
         }
         tag := to_body.GetTag()
@@ -114,7 +115,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             // Generate and send BYE
             req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
             if err != nil {
-                self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #2: " + err.Error())
+                self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #2: " + err.Error())
                 return nil
             }
             self.ua.IncLCSeq()
@@ -125,11 +126,11 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
                 now, _ := sippy_time.NewMonoTime()
                 self.ua.SetDisconnectTs(now)
             }
-            return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code)
+            return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code, self.config)
         }
-        rUri, err = self.ua.GetRUri().GetBody(self.ua.Config())
+        rUri, err = self.ua.GetRUri().GetBody()
         if err != nil {
-            self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #3: " + err.Error())
+            self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #3: " + err.Error())
             return nil
         }
         rUri.SetTag(tag)
@@ -138,12 +139,12 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             self.ua.StartCreditTimer(resp.GetRtime())
             self.ua.SetConnectTs(resp.GetRtime())
-            rval = NewUaStateConnected(self.ua, resp.GetRtime(), self.ua.GetOrigin())
+            rval = NewUaStateConnected(self.ua, resp.GetRtime(), self.ua.GetOrigin(), self.config)
         } else {
             event = NewCCEventPreConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             tr.SetUAck(true)
             self.ua.SetPendingTr(tr)
-            rval = NewUaStateConnected(self.ua, nil, "")
+            rval = NewUaStateConnected(self.ua, nil, "", self.config)
         }
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
@@ -162,27 +163,27 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
         var contact *sippy_header.SipAddress
 
-        contact, err = resp.GetContacts()[0].GetBody(self.ua.Config())
+        contact, err = resp.GetContacts()[0].GetBody()
         if err != nil {
-            self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #4: " + err.Error())
+            self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #4: " + err.Error())
             return nil
         }
         event = NewCCEventRedirect(code, reason, body,
                     []*sippy_header.SipAddress{ contact.GetCopy() },
-                    resp.GetRtime(), self.ua.GetOrigin())
+                    resp.GetRtime(), self.ua.GetOrigin(), self.config)
     } else if code == 300 && len(resp.GetContacts()) > 0 {
         urls := make([]*sippy_header.SipAddress, 0)
         for _, contact := range resp.GetContacts() {
             var cbody *sippy_header.SipAddress
 
-            cbody, err = contact.GetBody(self.ua.Config())
+            cbody, err = contact.GetBody()
             if err != nil {
-                self.ua.Config().ErrorLogger().Error("UacStateTrying::RecvResponse: #5: " + err.Error())
+                self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #5: " + err.Error())
                 return nil
             }
             urls = append(urls, cbody.GetCopy())
         }
-        event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin())
+        event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin(), self.config)
     } else {
         event_fail := NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event = event_fail
@@ -205,7 +206,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         now, _ := sippy_time.NewMonoTime()
         self.ua.SetDisconnectTs(now)
     }
-    return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code)
+    return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), code, self.config)
 }
 
 func (self *UacStateTrying) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
@@ -226,7 +227,7 @@ func (self *UacStateTrying) RecvEvent(event sippy_types.CCEvent) (sippy_types.Ua
             now, _ := sippy_time.NewMonoTime()
             self.ua.SetDisconnectTs(now)
         }
-        return NewUacStateCancelling(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode()), nil
+        return NewUacStateCancelling(self.ua, event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), self.config), nil
     }
     //return nil, fmt.Errorf("uac-trying: wrong event %s in the Trying state", event.String())
     return nil, nil

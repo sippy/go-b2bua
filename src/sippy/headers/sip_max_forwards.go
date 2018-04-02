@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SipMaxForwards struct {
@@ -61,7 +61,7 @@ func (self *SipMaxForwards) String() string {
     return self.Name() + ": " + self.StringBody()
 }
 
-func (self *SipMaxForwards) LocalStr(*sippy_conf.HostPort, bool) string {
+func (self *SipMaxForwards) LocalStr(*sippy_net.HostPort, bool) string {
     return self.String()
 }
 

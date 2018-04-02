@@ -36,6 +36,7 @@ import (
 
     "sippy/conf"
     "sippy/math"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
     "sippy/utils"
@@ -48,7 +49,7 @@ type Rtp_proxy_client_udp struct {
     global_config       sippy_conf.Config
     delay_flt           sippy_math.RecFilter
     worker              *udpServer
-    hostport            *sippy_conf.HostPort
+    hostport            *sippy_net.HostPort
     lock                sync.Mutex
     owner               sippy_types.RtpProxyClient
 }
@@ -96,7 +97,7 @@ func getnretrans(first_retr, timeout float64) (int64, error) {
 
 func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
     var err error
-    var laddress *sippy_conf.HostPort
+    var laddress *sippy_net.HostPort
 
     self := &Rtp_proxy_client_udp{
         owner               : owner,
@@ -105,21 +106,21 @@ func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sip
         global_config       : global_config,
         delay_flt           : sippy_math.NewRecFilter(0.95, 0.25),
     }
-    self.hostport, err = sippy_conf.NewHostPortFromAddr(self.address)
+    self.hostport, err = sippy_net.NewHostPortFromAddr(self.address)
     if err != nil {
         return nil, err
     }
     if self.hostport.Host.String()[0] == '[' {
         if self.hostport.Host.String() == "[::1]" {
-            laddress = sippy_conf.NewHostPort("[::1]", "0")
+            laddress = sippy_net.NewHostPort("[::1]", "0")
         } else {
-            laddress = sippy_conf.NewHostPort("[::]", "0")
+            laddress = sippy_net.NewHostPort("[::]", "0")
         }
     } else {
         if strings.HasPrefix(self.hostport.Host.String(), "127.") {
-            laddress = sippy_conf.NewHostPort("127.0.0.1", "0")
+            laddress = sippy_net.NewHostPort("127.0.0.1", "0")
         } else {
-            laddress = sippy_conf.NewHostPort("0.0.0.0", "0")
+            laddress = sippy_net.NewHostPort("0.0.0.0", "0")
         }
     }
     self.uopts = NewUdpServerOpts(laddress, self.process_reply)
@@ -186,7 +187,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
     req.triesleft -= 1
 }
 
-func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_conf.HostPort, worker *udpServer, rtime *sippy_time.MonoTime) {
+func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_net.HostPort, worker sippy_net.Transport, rtime *sippy_time.MonoTime) {
     arr := sippy_utils.FieldsN(string(data), 2)
     if len(arr) != 2 {
         self.global_config.ErrorLogger().Debug("Rtp_proxy_client_udp.process_reply(): invalid response " + string(data))

@@ -30,6 +30,7 @@ import (
     "strings"
 
     "sippy/conf"
+    "sippy/net"
 )
 
 type sipAddressHFBody struct {
@@ -44,12 +45,14 @@ func (self *sipAddressHFBody) getCopy() *sipAddressHFBody {
 
 type sipAddressHF struct {
     string_body     string
+    config          sippy_conf.Config
     body            *sipAddressHFBody
 }
 
-func newSipAddressHF(addr *SipAddress) *sipAddressHF {
+func newSipAddressHF(addr *SipAddress, config sippy_conf.Config) *sipAddressHF {
     return &sipAddressHF{
         body    : &sipAddressHFBody{ Address : addr },
+        config  : config,
     }
 }
 
@@ -86,8 +89,8 @@ func createSipAddressHFs(body string) []*sipAddressHF {
     return retval
 }
 
-func (self *sipAddressHF) parse(config sippy_conf.Config) error {
-    addr, err := ParseSipAddress(self.string_body, false /* relaxedparser */, config)
+func (self *sipAddressHF) parse() error {
+    addr, err := ParseSipAddress(self.string_body, false /* relaxedparser */, self.config)
     if err != nil {
         return err
     }
@@ -105,9 +108,9 @@ func (self *sipAddressHF) getCopy() *sipAddressHF {
     return &cself
 }
 
-func (self *sipAddressHF) GetBody(config sippy_conf.Config) (*SipAddress, error) {
+func (self *sipAddressHF) GetBody() (*SipAddress, error) {
     if self.body == nil {
-        if err := self.parse(config); err != nil {
+        if err := self.parse(); err != nil {
             return nil, err
         }
     }
@@ -118,7 +121,7 @@ func (self *sipAddressHF) StringBody() string {
     return self.LocalStringBody(nil)
 }
 
-func (self *sipAddressHF) LocalStringBody(hostport *sippy_conf.HostPort) string {
+func (self *sipAddressHF) LocalStringBody(hostport *sippy_net.HostPort) string {
     if self.body != nil {
         return self.body.Address.LocalStr(hostport)
     }

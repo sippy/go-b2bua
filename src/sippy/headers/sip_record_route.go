@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SipRecordRoute struct {
@@ -64,7 +64,7 @@ func (self *SipRecordRoute) String() string {
     return self.Name() + ": " + self.LocalStringBody(nil)
 }
 
-func (self *SipRecordRoute) LocalStr(hostport *sippy_conf.HostPort, compact bool) string {
+func (self *SipRecordRoute) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 

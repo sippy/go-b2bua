@@ -46,11 +46,10 @@ import (
 
     "sippy/conf"
     "sippy/log"
+    "sippy/net"
     "sippy/time"
     "sippy/utils"
 )
-
-type UdpPacketReceiver func(data []byte, addr *sippy_conf.HostPort, server *udpServer, rtime *sippy_time.MonoTime)
 
 type write_req struct {
     address     net.Addr
@@ -59,7 +58,7 @@ type write_req struct {
 }
 
 type resolv_req struct {
-    hostport    *sippy_conf.HostPort
+    hostport    *sippy_net.HostPort
     data        []byte
 }
 
@@ -171,13 +170,13 @@ func (self *asyncReceiver) run(userv *udpServer) {
 }
 
 type udpServerOpts struct {
-    laddress        *sippy_conf.HostPort
-    data_callback   UdpPacketReceiver
+    laddress        *sippy_net.HostPort
+    data_callback   sippy_net.DataPacketReceiver
     shut_down       bool
     nworkers        int
 }
 
-func NewUdpServerOpts(laddress *sippy_conf.HostPort, data_callback UdpPacketReceiver) *udpServerOpts {
+func NewUdpServerOpts(laddress *sippy_net.HostPort, data_callback sippy_net.DataPacketReceiver) *udpServerOpts {
     self := &udpServerOpts{
         laddress        : laddress,
         data_callback   : data_callback,
@@ -291,11 +290,11 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
     return self, nil
 }
 
-func (self *udpServer) SendTo(data []byte, hostport *sippy_conf.HostPort) {
+func (self *udpServer) SendTo(data []byte, hostport *sippy_net.HostPort) {
     self.SendToWithCb(data, hostport, nil)
 }
 
-func (self *udpServer) SendToWithCb(data []byte, hostport *sippy_conf.HostPort, on_complete func()) {
+func (self *udpServer) SendToWithCb(data []byte, hostport *sippy_net.HostPort, on_complete func()) {
     ip := hostport.ParseIP()
     if ip == nil {
         self.wi_resolv <- &resolv_req{ data : data, hostport : hostport }
@@ -320,7 +319,7 @@ func (self *udpServer) handle_read(data []byte, address net.Addr, rtime *sippy_t
     if len(data) > 0 {
         self.packets_recvd++
         host, port, _ := net.SplitHostPort(address.String())
-        self.uopts.data_callback(data, sippy_conf.NewHostPort(host, port), self, rtime)
+        self.uopts.data_callback(data, sippy_net.NewHostPort(host, port), self, rtime)
     }
 }
 
@@ -339,6 +338,6 @@ func (self *udpServer) Shutdown() {
     self.aresolvers = make([]*asyncResolver, 0)
 }
 
-func (self *udpServer) GetLaddress() *sippy_conf.HostPort {
+func (self *udpServer) GetLAddress() *sippy_net.HostPort {
     return self.uopts.laddress
 }

@@ -30,7 +30,7 @@ import (
     "fmt"
     "strings"
 
-    "sippy/conf"
+    "sippy/net"
     "sippy/sdp"
     "sippy/types"
 )
@@ -223,7 +223,7 @@ func (self *sdpBody) String() string {
     return s
 }
 
-func (self *sdpBody) LocalStr(hostport *sippy_conf.HostPort) string {
+func (self *sdpBody) LocalStr(hostport *sippy_net.HostPort) string {
     s := ""
     if len(self.sections) == 1 && self.sections[0].GetCHeader() != nil {
         for _, it := range self.first_half() {

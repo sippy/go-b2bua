@@ -42,8 +42,9 @@ import (
 
     "sippy"
     "sippy/conf"
-    "sippy/types"
     "sippy/log"
+    "sippy/net"
+    "sippy/types"
 )
 
 var next_cc_id chan int64
@@ -138,7 +139,7 @@ func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) *callMap {
 }
 
 func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
-    to_body, err := req.GetTo().GetBody(self.config)
+    to_body, err := req.GetTo().GetBody()
     if err != nil {
         self.logger.Error("CallMap::OnNewDialog: #1: " + err.Error())
         return nil, nil, req.GenResponse(500, "Internal Server Error", nil, nil)
@@ -184,7 +185,7 @@ func (self *callMap) Shutdown() {
 type myconfig struct {
     sippy_conf.Config
 
-    nh_addr *sippy_conf.HostPort
+    nh_addr *sippy_net.HostPort
 }
 
 func main() {
@@ -216,7 +217,7 @@ func main() {
     }
     config := &myconfig{
         Config : sippy_conf.NewConfig(error_logger, sip_logger),
-        nh_addr      : sippy_conf.NewHostPort("192.168.0.102", "5060"), // next hop address
+        nh_addr      : sippy_net.NewHostPort("192.168.0.102", "5060"), // next hop address
     }
     //config.SetIPV6Enabled(false)
     if nh_addr != "" {
@@ -237,17 +238,17 @@ func main() {
         if len(parts) == 2 {
             port = parts[1]
         }
-        config.nh_addr = sippy_conf.NewHostPort(addr, port)
+        config.nh_addr = sippy_net.NewHostPort(addr, port)
     }
     config.SetMyUAName("Sippy B2BUA (Simple)")
     config.SetAllowFormats([]int{ 0, 8, 18, 100, 101 })
     if laddr != "" {
-        config.SetSipAddress(sippy_conf.NewMyAddress(laddr))
+        config.SetSipAddress(sippy_net.NewMyAddress(laddr))
     } else {
         config.SetSipAddress(config.GetMyAddress())
     }
     if lport > 0 {
-        config.SetSipPort(sippy_conf.NewMyPort(strconv.Itoa(lport)))
+        config.SetSipPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     } else {
         config.SetSipPort(config.GetMyPort())
     }

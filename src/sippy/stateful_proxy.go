@@ -29,16 +29,17 @@ package sippy
 import (
     "sippy/conf"
     "sippy/headers"
+    "sippy/net"
     "sippy/types"
 )
 
 type statefulProxy struct {
     sip_tm      sippy_types.SipTransactionManager
-    destination *sippy_conf.HostPort
+    destination *sippy_net.HostPort
     config      sippy_conf.Config
 }
 
-func NewStatefulProxy(sip_tm sippy_types.SipTransactionManager, destination *sippy_conf.HostPort, config sippy_conf.Config) *statefulProxy {
+func NewStatefulProxy(sip_tm sippy_types.SipTransactionManager, destination *sippy_net.HostPort, config sippy_conf.Config) *statefulProxy {
     return &statefulProxy{
         sip_tm      : sip_tm,
         destination : destination,

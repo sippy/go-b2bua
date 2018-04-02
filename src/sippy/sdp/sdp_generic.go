@@ -26,7 +26,7 @@
 package sippy_sdp
 
 import (
-    "sippy/conf"
+    "sippy/net"
 )
 
 type SdpGeneric struct {
@@ -41,7 +41,7 @@ func (self *SdpGeneric) String() string {
     return self.body
 }
 
-func (self *SdpGeneric) LocalStr(hostport *sippy_conf.HostPort)  string {
+func (self *SdpGeneric) LocalStr(hostport *sippy_net.HostPort)  string {
     return self.String()
 }
 
