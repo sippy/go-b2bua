@@ -77,6 +77,7 @@ func (self *rtpproxy_update_result) Address() string {
 }
 
 func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker, callee_origin *sippy_sdp.SdpOrigin) (*Rtp_proxy_session, error) {
+    var err error
     self := &Rtp_proxy_session{
         notify_socket   : notify_socket,
         notify_tag      : notify_tag,
@@ -104,14 +105,20 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     // in a manner that does not affect the global uniqueness of the field.
     // *******
     addr := "192.0.2.1" // 192.0.2.0/24 (TEST-NET-1)
-    self.caller.origin, _ = sippy_sdp.NewSdpOrigin(addr)
+    self.caller.origin, err = sippy_sdp.NewSdpOrigin(addr)
+    if err != nil {
+        return nil, err
+    }
     if callee_origin != nil {
         self.callee.origin = callee_origin.GetCopy()
         // New session means new RTP port so the SDP is now different and the SDP
         // version must be increased.
         self.callee.origin.IncVersion()
     } else {
-        self.callee.origin, _ = sippy_sdp.NewSdpOrigin(addr)
+        self.callee.origin, err = sippy_sdp.NewSdpOrigin(addr)
+        if err != nil {
+            return nil, err
+        }
     }
     online_clients := []sippy_types.RtpProxyClient{}
     for _, cl := range rtp_proxy_clients {
@@ -123,8 +130,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     if n == 0 {
         return nil, fmt.Errorf("No online RTP proxy client has been found")
     }
-    idx, err := rand.Int(rand.Reader, big.NewInt(int64(n)))
-    if err != nil {
+    if idx, err := rand.Int(rand.Reader, big.NewInt(int64(n))); err != nil {
         self._rtp_proxy_client = online_clients[0]
     } else {
         self._rtp_proxy_client = online_clients[idx.Int64()]
