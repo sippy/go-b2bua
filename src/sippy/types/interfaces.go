@@ -380,6 +380,7 @@ type RtpProxyClient interface {
     GoOnline()
     GoOffline()
     GetOpts() RtpProxyClientOpts
+    Start() error
 }
 
 type RtpProxyUpdateResult interface {
