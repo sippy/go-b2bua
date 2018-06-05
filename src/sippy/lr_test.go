@@ -77,7 +77,7 @@ func Test_LooseRouting(t *testing.T) {
         "Via: SIP/2.0/UDP 2.2.2.2;branch=z9hG4bKb9de.5d673b5c814b2bfbfb6d44b3e414d31c.0",
         "Via: SIP/2.0/UDP 10.164.244.209:5060;received=10.164.244.209;branch=z9hG4bK0b5aac35;rport=5060",
         "Max-Forwards: 69",
-        "From: \"908502729000\" <sip:908502729000@sip.test.com>;tag=as57b03f0f",
+        "From: \"John Smith\" <sip:testcli@sip.test.com>;tag=as57b03f0f",
         "To: <sip:905399232076@sip-carriers.local>",
         "Contact: <sip:908502729000@10.164.244.209:5060>",
         "Call-ID: 699e676c1826a8323e705cbd6c61c3e6@sip.test.com",
@@ -114,7 +114,7 @@ func Test_LooseRouting(t *testing.T) {
     assertStringEqual(bye.GetRURI().Username, "908502729000", t)
 }
 
-func Test_NoLooseRouting(t *testing.T) {
+func Test_StrictRouting(t *testing.T) {
     var err error
 
     error_logger := sippy_log.NewErrorLogger()
@@ -138,7 +138,7 @@ func Test_NoLooseRouting(t *testing.T) {
         "Via: SIP/2.0/UDP 2.2.2.2;branch=z9hG4bKb9de.5d673b5c814b2bfbfb6d44b3e414d31c.0",
         "Via: SIP/2.0/UDP 10.164.244.209:5060;received=10.164.244.209;branch=z9hG4bK0b5aac35;rport=5060",
         "Max-Forwards: 69",
-        "From: \"908502729000\" <sip:908502729000@sip.test.com>;tag=as57b03f0f",
+        "From: \"John Smith\" <sip:testcli@sip.test.com>;tag=as57b03f0f",
         "To: <sip:905399232076@sip-carriers.local>",
         "Contact: <sip:908502729000@10.164.244.209:5060>",
         "Call-ID: 699e676c1826a8323e705cbd6c61c3e6@sip.test.com",
