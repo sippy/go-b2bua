@@ -257,7 +257,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                 routes = make([]*sippy_header.SipRoute, len(resp.GetRecordRoutes()))
                 for idx, r := range resp.GetRecordRoutes() {
                     r2 := r.AsSipRoute() // r.getCopy()
-                    routes[len(resp.GetRecordRoutes()) - 1 + idx] = r2 // reverse order
+                    routes[len(resp.GetRecordRoutes()) - 1 - idx] = r2 // reverse order
                 }
                 if len(routes) > 0 {
                     var r0 *sippy_header.SipAddress
