@@ -72,7 +72,7 @@ func (self *UasStateUpdating) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         }
         self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
         t.SendResponseWithLossEmul(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
-        refer_to, err := req.GetReferTo().GetBody()
+        refer_to, err := req.GetReferTo().GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UasStateUpdating::RecvRequest: #1: " + err.Error())
             return nil

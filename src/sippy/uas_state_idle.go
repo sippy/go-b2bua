@@ -77,7 +77,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     if self.ua.GetLContact() == nil {
         self.ua.SetLContact(sippy_header.NewSipContact(self.config))
     }
-    contact, err = req.GetContacts()[0].GetBody()
+    contact, err = req.GetContacts()[0].GetBody(self.config)
     if err != nil {
         self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #1: " + err.Error())
         return nil
@@ -86,13 +86,13 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.UpdateRouting(self.ua.GetUasResp(), /*update_rtarget*/ false, /*reverse_routes*/ false)
     self.ua.SetRAddr0(self.ua.GetRAddr())
     t.SendResponseWithLossEmul(self.ua.GetUasResp(), false, nil, self.ua.GetUasLossEmul())
-    to_body, err = self.ua.GetUasResp().GetTo().GetBody()
+    to_body, err = self.ua.GetUasResp().GetTo().GetBody(self.config)
     if err != nil {
         self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #2: " + err.Error())
         return nil
     }
     to_body.SetTag(self.ua.GetLTag())
-    from_body, err = self.ua.GetUasResp().GetFrom().GetBody()
+    from_body, err = self.ua.GetUasResp().GetFrom().GetBody(self.config)
     if err != nil {
         self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #3: " + err.Error())
         return nil

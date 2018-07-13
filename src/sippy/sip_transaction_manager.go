@@ -244,7 +244,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
                     return
                 }
                 if ! resp.contacts[0].Asterisk {
-                    contact, err = resp.contacts[0].GetBody()
+                    contact, err = resp.contacts[0].GetBody(self.config)
                     if err != nil {
                         self.logBadMessage(err.Error(), data)
                         return
@@ -270,7 +270,7 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
     t.Lock()
     defer t.Unlock()
     if self.nat_traversal && len(resp.contacts) > 0 && !resp.contacts[0].Asterisk && ! check1918(t.GetHost()) {
-        contact, err = resp.contacts[0].GetBody()
+        contact, err = resp.contacts[0].GetBody(self.config)
         if err != nil {
             self.logBadMessage(err.Error(), data)
             return
@@ -307,7 +307,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
         self.logBadMessage("can't parse SIP request from " + address.String() + ": " + err.Error(), data)
         return
     }
-    tids, err = req.getTIds(self.config)
+    tids, err = req.getTIds()
     if err != nil {
         self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
         self.logBadMessage(err.Error(), data)
@@ -333,7 +333,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     if self.nat_traversal && len(req.contacts) > 0 && !req.contacts[0].Asterisk && len(req.vias) == 1 {
         var contact *sippy_header.SipAddress
 
-        contact, err = req.contacts[0].GetBody()
+        contact, err = req.contacts[0].GetBody(self.config)
         curl := contact.GetUrl()
         if check1918(curl.Host.String()) {
             tmp_host, tmp_port := address.Host.String(), address.Port.String()

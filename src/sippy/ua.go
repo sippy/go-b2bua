@@ -463,12 +463,12 @@ func (self *Ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) 
         var rUri *sippy_header.SipAddress
         var from_body *sippy_header.SipAddress
 
-        from_body, err = req.GetFrom().GetBody()
+        from_body, err = req.GetFrom().GetBody(self.config)
         if err != nil {
             self.logError("UA::IsYours error #2: " + err.Error())
             return false
         }
-        rUri, err = self.rUri.GetBody()
+        rUri, err = self.rUri.GetBody(self.config)
         if err != nil {
             self.logError("UA::IsYours error #4: " + err.Error())
             return false
@@ -482,12 +482,12 @@ func (self *Ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) 
         var lUri *sippy_header.SipAddress
         var to_body *sippy_header.SipAddress
 
-        to_body, err = req.GetTo().GetBody()
+        to_body, err = req.GetTo().GetBody(self.config)
         if err != nil {
             self.logError("UA::IsYours error #3: " + err.Error())
             return false
         }
-        lUri, err = self.lUri.GetBody()
+        lUri, err = self.lUri.GetBody(self.config)
         if err != nil {
             self.logError("UA::IsYours error #5: " + err.Error())
             return false
@@ -544,7 +544,7 @@ func (self *Ua) StartCreditTimer(rtime *sippy_time.MonoTime) {
 
 func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool /*true*/, reverse_routes bool /*true*/) {
     if update_rtarget && len(resp.GetContacts()) > 0 {
-        contact, err := resp.GetContacts()[0].GetBody()
+        contact, err := resp.GetContacts()[0].GetBody(self.config)
         if err != nil {
             self.logError("UA::UpdateRouting: error #1: " + err.Error())
             return
@@ -560,13 +560,13 @@ func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool 
         }
     }
     if len(self.routes) > 0 {
-        r0, err := self.routes[0].GetBody()
+        r0, err := self.routes[0].GetBody(self.config)
         if err != nil {
             self.logError("UA::UpdateRouting: error #2: " + err.Error())
             return
         }
         if ! r0.GetUrl().Lr {
-            self.routes = append(self.routes, sippy_header.NewSipRoute(/*address*/ sippy_header.NewSipAddress("", /*url*/ self.rTarget), self.config))
+            self.routes = append(self.routes, sippy_header.NewSipRoute(/*address*/ sippy_header.NewSipAddress("", /*url*/ self.rTarget)))
             self.rTarget = r0.GetUrl()
             self.routes = self.routes[1:]
             self.rAddr = self.rTarget.GetAddr(self.config)
@@ -577,7 +577,7 @@ func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool 
         self.rAddr = self.rTarget.GetAddr(self.config)
     }
     if self.outbound_proxy != nil {
-        self.routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true)), self.config) }, self.routes...)
+        self.routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true))) }, self.routes...)
     }
 }
 
@@ -1165,7 +1165,7 @@ func (self *Ua) GetCLD() string {
     if self.rUri == nil {
         return ""
     }
-    rUri, err := self.rUri.GetBody()
+    rUri, err := self.rUri.GetBody(self.config)
     if err != nil {
         self.logError("UA::GetCLD: " + err.Error())
         return ""
@@ -1177,7 +1177,7 @@ func (self *Ua) GetCLI() string {
     if self.lUri == nil {
         return ""
     }
-    lUri, err := self.lUri.GetBody()
+    lUri, err := self.lUri.GetBody(self.config)
     if err != nil {
         self.logError("UA::GetCLI: " + err.Error())
         return ""

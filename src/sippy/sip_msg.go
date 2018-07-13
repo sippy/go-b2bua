@@ -125,7 +125,7 @@ func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Conf
 
     // Parse headers
     for _, line := range header_lines {
-        headers, err := ParseSipHeader(line, config)
+        headers, err := ParseSipHeader(line)
         if err != nil {
             return nil, err
         }
@@ -390,7 +390,7 @@ func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error) {
     }
     cseq = strconv.Itoa(cseq_hf.CSeq)
     if self.from != nil {
-        if from_hf, err = self.from.GetBody(); err != nil {
+        if from_hf, err = self.from.GetBody(self.config); err != nil {
             return nil, err
         }
         from_tag = from_hf.GetTag()
@@ -410,7 +410,7 @@ func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error) {
     }
     if wTTG {
         var to_hf *sippy_header.SipAddress
-        to_hf, err = self.to.GetBody()
+        to_hf, err = self.to.GetBody(self.config)
         if err != nil {
             return nil, err
         }
@@ -419,14 +419,14 @@ func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error) {
     return new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch), nil
 }
 
-func (self *sipMsg) getTIds(config sippy_conf.Config) ([]*sippy_header.TID, error) {
+func (self *sipMsg) getTIds() ([]*sippy_header.TID, error) {
     var call_id, cseq, method, ftag string
     var from_hf *sippy_header.SipAddress
     var cseq_hf *sippy_header.SipCSeqBody
     var err error
 
     call_id = self.call_id.CallId
-    from_hf, err = self.from.GetBody()
+    from_hf, err = self.from.GetBody(self.config)
     if err != nil {
         return nil, err
     }

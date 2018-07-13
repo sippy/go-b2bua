@@ -30,7 +30,6 @@ import (
     "fmt"
     "strings"
 
-    "sippy/conf"
     "sippy/headers"
 )
 
@@ -73,7 +72,7 @@ var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader
     "diversion"         : sippy_header.CreateSipDiversion,
 }
 
-func ParseSipHeader(s string, config sippy_conf.Config) ([]sippy_header.SipHeader, error) {
+func ParseSipHeader(s string) ([]sippy_header.SipHeader, error) {
     res := strings.SplitN(s, ":", 2)
     if len(res) != 2 {
         return nil, fmt.Errorf("Bad header line: '%s'", s)

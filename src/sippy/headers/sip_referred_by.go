@@ -28,7 +28,6 @@ package sippy_header
 
 import (
     "sippy/net"
-    "sippy/conf"
 )
 
 type SipReferredBy struct {
@@ -50,10 +49,10 @@ func CreateSipReferredBy(body string) []SipHeader {
     return rval
 }
 
-func NewSipReferredBy(addr *SipAddress, config sippy_conf.Config) *SipReferredBy {
+func NewSipReferredBy(addr *SipAddress) *SipReferredBy {
     return &SipReferredBy{
         normalName   : _sip_referred_by_name,
-        sipAddressHF : newSipAddressHF(addr, config),
+        sipAddressHF : newSipAddressHF(addr),
     }
 }
 

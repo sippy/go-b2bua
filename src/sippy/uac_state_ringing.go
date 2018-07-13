@@ -97,7 +97,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         var rval sippy_types.UaState
 
         self.ua.UpdateRouting(resp, true, true)
-        to_body, err = resp.GetTo().GetBody()
+        to_body, err = resp.GetTo().GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #1: " + err.Error())
             return nil
@@ -124,7 +124,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
             }
             return NewUaStateFailed(self.ua, resp.GetRtime(), self.ua.GetOrigin(), 502, self.config)
         }
-        rUri, err = self.ua.GetRUri().GetBody()
+        rUri, err = self.ua.GetRUri().GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #3: " + err.Error())
             return nil
@@ -159,27 +159,27 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
         var contact *sippy_header.SipAddress
 
-        contact, err = resp.GetContacts()[0].GetBody()
+        contact, err = resp.GetContacts()[0].GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #4: " + err.Error())
             return nil
         }
         event = NewCCEventRedirect(code, reason, body,
                     []*sippy_header.SipAddress{ contact.GetCopy() },
-                    resp.GetRtime(), self.ua.GetOrigin(), self.config)
+                    resp.GetRtime(), self.ua.GetOrigin())
     } else if code == 300 && len(resp.GetContacts()) > 0 {
         urls := make([]*sippy_header.SipAddress, 0)
         for _, contact := range resp.GetContacts() {
             var cbody *sippy_header.SipAddress
 
-            cbody, err = contact.GetBody()
+            cbody, err = contact.GetBody(self.config)
             if err != nil {
                 self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #5: " + err.Error())
                 return nil
             }
             urls = append(urls, cbody.GetCopy())
         }
-        event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin(), self.config)
+        event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin())
     } else {
         event = NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event.SetReason(resp.GetReason())

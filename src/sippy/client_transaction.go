@@ -223,14 +223,14 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
     if self.needack {
         // Prepare and send ACK if necessary
         fcode := resp.GetSCodeNum()
-        to_body, err := resp.GetTo().GetBody()
+        to_body, err := resp.GetTo().GetBody(self.sip_tm.config)
         if err != nil {
             self.sip_tm.config.ErrorLogger().Debug(err.Error())
             return
         }
         tag := to_body.GetTag()
         if tag != "" {
-            to_body, err = self.ack.GetTo().GetBody()
+            to_body, err = self.ack.GetTo().GetBody(self.sip_tm.config)
             if err != nil {
                 self.sip_tm.config.ErrorLogger().Debug(err.Error())
                 return
@@ -243,7 +243,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             // Some hairy code ahead
             if len(resp.GetContacts()) > 0 {
                 var contact *sippy_header.SipAddress
-                contact, err = resp.GetContacts()[0].GetBody()
+                contact, err = resp.GetContacts()[0].GetBody(self.sip_tm.config)
                 if err != nil {
                     self.sip_tm.config.ErrorLogger().Debug(err.Error())
                     return
@@ -261,14 +261,14 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                 }
                 if len(routes) > 0 {
                     var r0 *sippy_header.SipAddress
-                    r0, err = routes[0].GetBody()
+                    r0, err = routes[0].GetBody(self.sip_tm.config)
                     if err != nil {
                         self.sip_tm.config.ErrorLogger().Debug(err.Error())
                         return
                     }
                     if ! r0.GetUrl().Lr {
                         if rTarget != nil {
-                            routes = append(routes, sippy_header.NewSipRoute(sippy_header.NewSipAddress("", rTarget), self.sip_tm.config))
+                            routes = append(routes, sippy_header.NewSipRoute(sippy_header.NewSipAddress("", rTarget)))
                         }
                         rTarget = r0.GetUrl()
                         routes = routes[1:]
@@ -284,7 +284,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                     self.ack.SetRURI(rTarget)
                 }
                 if self.outbound_proxy != nil {
-                    routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true)), self.sip_tm.config) }, routes...)
+                    routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true))) }, routes...)
                     rAddr = self.outbound_proxy
                 }
             } else {

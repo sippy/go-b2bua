@@ -104,12 +104,12 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
         var req sippy_types.SipRequest
 
         self.ua.UpdateRouting(resp, true, true)
-        rUri, err = self.ua.GetRUri().GetBody()
+        rUri, err = self.ua.GetRUri().GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateCancelling::RecvResponse: #1: " + err.Error())
             return nil
         }
-        to_body, err = resp.GetTo().GetBody()
+        to_body, err = resp.GetTo().GetBody(self.config)
         rUri.SetTag(to_body.GetTag())
         req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
         if err != nil {

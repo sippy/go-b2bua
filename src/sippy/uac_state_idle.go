@@ -87,7 +87,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if self.ua.GetRuriUserparams() != nil {
             self.ua.GetRTarget().SetUserparams(self.ua.GetRuriUserparams())
         }
-        rUri, err = self.ua.GetRUri().GetBody()
+        rUri, err = self.ua.GetRUri().GetBody(self.config)
         if err != nil {
             return nil, err
         }
@@ -97,7 +97,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         self.ua.SetLUri(sippy_header.NewSipFrom(sippy_header.NewSipAddress(event.GetCallerName(), sippy_header.NewSipURL(event.GetCLI(), self.config.GetMyAddress(), self.config.GetMyPort(), false)), self.config))
         self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
-        lUri, err = self.ua.GetLUri().GetBody()
+        lUri, err = self.ua.GetLUri().GetBody(self.config)
         if err != nil {
             return nil, err
         }
@@ -110,7 +110,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if self.ua.GetLContact() == nil {
             self.ua.SetLContact(sippy_header.NewSipContact(self.config))
         }
-        contact, err = self.ua.GetLContact().GetBody()
+        contact, err = self.ua.GetLContact().GetBody(self.config)
         if err != nil {
             return nil, err
         }

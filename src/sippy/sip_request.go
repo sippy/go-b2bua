@@ -90,7 +90,7 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         } else {
             var r0 *sippy_header.SipAddress
             var err error
-            if r0, err = routes[0].GetBody(); err != nil {
+            if r0, err = routes[0].GetBody(config); err != nil {
                 return nil, err
             }
             self.SetTarget(r0.GetUrl().GetAddr(config))

@@ -134,7 +134,7 @@ func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_typ
         //print "BYE received in the Ringing state, going to the Disconnected state"
         var also *sippy_header.SipAddress = nil
         if len(req.GetAlso()) > 0 {
-            also_body, err := req.GetAlso()[0].GetBody()
+            also_body, err := req.GetAlso()[0].GetBody(self.config)
             if err != nil {
                 self.config.ErrorLogger().Error("UasStateRinging::RecvRequest: #1: " + err.Error())
                 return nil

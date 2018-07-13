@@ -27,7 +27,6 @@
 package sippy_header
 
 import (
-    "sippy/conf"
     "sippy/net"
 )
 
@@ -50,10 +49,10 @@ func CreateSipAlso(body string) []SipHeader {
     return rval
 }
 
-func NewSipAlso(addr *SipAddress, config sippy_conf.Config) *SipAlso {
+func NewSipAlso(addr *SipAddress) *SipAlso {
     return &SipAlso{
         normalName   : _sip_also_name,
-        sipAddressHF : newSipAddressHF(addr, config),
+        sipAddressHF : newSipAddressHF(addr),
     }
 }
 

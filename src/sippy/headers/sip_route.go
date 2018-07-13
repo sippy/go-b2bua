@@ -28,7 +28,6 @@ package sippy_header
 
 import (
     "sippy/net"
-    "sippy/conf"
 )
 
 type SipRoute struct {
@@ -38,10 +37,10 @@ type SipRoute struct {
 
 var _sip_route_name normalName = newNormalName("Route")
 
-func NewSipRoute(addr *SipAddress, config sippy_conf.Config) *SipRoute {
+func NewSipRoute(addr *SipAddress) *SipRoute {
     return &SipRoute{
         normalName   : _sip_route_name,
-        sipAddressHF : newSipAddressHF(addr, config),
+        sipAddressHF : newSipAddressHF(addr),
     }
 }
 

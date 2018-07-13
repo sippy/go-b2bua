@@ -70,7 +70,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             return nil
         }
         t.SendResponse(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
-        refer_to, err := req.GetReferTo().GetBody()
+        refer_to, err := req.GetReferTo().GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UaStateConnected::RecvRequest: #1: " + err.Error())
             return nil
@@ -117,7 +117,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         //print "BYE received in the Connected state, going to the Disconnected state"
         var also *sippy_header.SipAddress
         if len(req.GetAlso()) > 0 {
-            also_body, err := req.GetAlso()[0].GetBody()
+            also_body, err := req.GetAlso()[0].GetBody(self.config)
             if err != nil {
                 self.config.ErrorLogger().Error("UaStateConnected::RecvRequest: #3: " + err.Error())
                 return nil
@@ -174,13 +174,13 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
                 return nil, err
             }
             self.ua.IncLCSeq()
-            also := sippy_header.NewSipReferTo(redirect, self.config)
+            also := sippy_header.NewSipReferTo(redirect)
             req.AppendHeader(also)
-            lUri, err = self.ua.GetLUri().GetBody()
+            lUri, err = self.ua.GetLUri().GetBody(self.config)
             if err != nil {
                 return nil, err
             }
-            rby := sippy_header.NewSipReferredBy(sippy_header.NewSipAddress("", lUri.GetUrl()), self.config)
+            rby := sippy_header.NewSipReferredBy(sippy_header.NewSipAddress("", lUri.GetUrl()))
             req.AppendHeader(rby)
             self.ua.SipTM().BeginNewClientTransaction(req, newRedirectController(self.ua), self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         } else {
@@ -190,7 +190,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             }
             self.ua.IncLCSeq()
             if redirect != nil {
-                also := sippy_header.NewSipAlso(redirect, self.config)
+                also := sippy_header.NewSipAlso(redirect)
                 req.AppendHeader(also)
             }
             self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
