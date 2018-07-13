@@ -292,7 +292,7 @@ func (self *UaStateConnected) OnStateChange() {
 
 func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
     body := req.GetBody()
-    event := NewCCEventConnect(0, "ACK", nil, req.GetRtime(), self.ua.GetOrigin())
+    event := NewCCEventConnect(0, "ACK", body, req.GetRtime(), self.ua.GetOrigin())
     self.ua.CancelExpireTimer()
     self.ua.StartCreditTimer(req.GetRtime())
     self.ua.SetConnectTs(req.GetRtime())

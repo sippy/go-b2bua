@@ -220,6 +220,9 @@ func (self *clientTransaction) process_provisional_response(checksum string, res
 
 func (self *clientTransaction) process_final_response(checksum string, resp sippy_types.SipResponse) {
     // Final response - notify upper layer and remove transaction
+    if self.resp_receiver != nil {
+        self.resp_receiver.RecvResponse(resp, self)
+    }
     if self.needack {
         // Prepare and send ACK if necessary
         fcode := resp.GetSCodeNum()
@@ -315,9 +318,6 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
         }
     } else {
         self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
-    }
-    if self.resp_receiver != nil {
-        self.resp_receiver.RecvResponse(resp, self)
     }
     self.sip_tm.tclient_del(self.tid)
     self.cleanup()
