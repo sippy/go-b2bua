@@ -50,6 +50,8 @@ type _rtpps_side struct {
     origin_lock     sync.Mutex
     oh_remote       *sippy_sdp.SdpOrigin
     after_sdp_change func(sippy_types.RtpProxyUpdateResult)
+    from_tag        string
+    to_tag          string
 }
 
 func (self *_rtpps_side) _play(prompt_name string, times int, result_callback func(string), index int) {
@@ -64,7 +66,7 @@ func (self *_rtpps_side) _play(prompt_name string, times int, result_callback fu
 }
 
 func (self *_rtpps_side) __play(prompt_name string, times int, result_callback func(string), index int) {
-    command := fmt.Sprintf("P%d %s-%d %s %s %s %s", times, self.owner.call_id, index, prompt_name, self.codecs, self.owner.from_tag, self.owner.to_tag)
+    command := fmt.Sprintf("P%d %s-%d %s %s %s %s", times, self.owner.call_id, index, prompt_name, self.codecs, self.from_tag, self.to_tag)
     self.owner.send_command(command, func(r string) { self.owner.command_result(r, result_callback) })
 }
 
@@ -97,9 +99,9 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     }
     command += options
     if self.otherside.session_exists {
-        command += fmt.Sprintf(" %s-%d %s %s %s %s", self.owner.call_id, index, remote_ip, remote_port, self.owner.from_tag, self.owner.to_tag)
+        command += fmt.Sprintf(" %s-%d %s %s %s %s", self.owner.call_id, index, remote_ip, remote_port, self.from_tag, self.to_tag)
     } else {
-        command += fmt.Sprintf(" %s-%d %s %s %s", self.owner.call_id, index, remote_ip, remote_port, self.owner.from_tag)
+        command += fmt.Sprintf(" %s-%d %s %s %s", self.owner.call_id, index, remote_ip, remote_port, self.from_tag)
     }
     if self.owner.notify_socket != "" && index == 0 && tnot_supported {
         command += fmt.Sprintf(" %s %s", self.owner.notify_socket, self.owner.notify_tag)
@@ -237,4 +239,12 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
         sdp_body.SetNeedsUpdate(false)
         result_callback(sdp_body)
     }
+}
+
+func (self *_rtpps_side) _stop_play(cb func(string), index int) {
+    if ! self.otherside.session_exists {
+        return
+    }
+    command := fmt.Sprintf("S %s-%d %s %s", self.owner.call_id, index, self.from_tag, self.to_tag)
+    self.owner.send_command(command, func(r string) { self.owner.command_result(r, cb) })
 }

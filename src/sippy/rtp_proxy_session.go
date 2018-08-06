@@ -150,6 +150,10 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         rand.Read(buf)
         self.to_tag = fmt.Sprintf("%x", buf)
     }
+    self.caller.from_tag = self.from_tag
+    self.caller.to_tag = self.to_tag
+    self.callee.to_tag = self.from_tag
+    self.callee.from_tag = self.to_tag
     runtime.SetFinalizer(self, rtp_proxy_session_destructor)
     return self, nil
 }
@@ -196,11 +200,7 @@ func (self *Rtp_proxy_session) cmd_done(res string) {
 }
 
 func (self *Rtp_proxy_session) StopPlayCaller(result_callback func(string)/*= nil*/, index int/*= 0*/) {
-    if ! self.caller.session_exists {
-        return
-    }
-    command := fmt.Sprintf("S %s-%d %s %s", self.call_id, index, self.from_tag, self.to_tag)
-    self.send_command(command, func(r string) { self.command_result(r, result_callback) })
+    self.caller._stop_play(result_callback, index)
 }
 
 func (self *Rtp_proxy_session) StartRecording(rname/*= nil*/ string, result_callback func(string)/*= nil*/, index int/*= 0*/) {
