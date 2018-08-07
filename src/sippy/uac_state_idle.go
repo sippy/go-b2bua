@@ -69,9 +69,10 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             self.ua.SetSetupTs(event.rtime)
         }
         self.ua.SetOrigin("callee")
-        if event.GetBody() != nil {
-            if event.GetBody().NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
-                self.ua.OnLocalSdpChange(event.GetBody(), event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+        body := event.GetBody()
+        if body != nil {
+            if body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
+                self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
                 return nil, nil
             }
         } else {
@@ -117,12 +118,12 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         contact.GetUrl().Username = event.GetCLI()
         self.ua.SetRoutes(make([]*sippy_header.SipRoute, 0))
         self.ua.SetCGUID(event.GetSipCiscoGUID())
-        self.ua.SetLSDP(event.GetBody())
+        self.ua.SetLSDP(body)
         eh := event.GetExtraHeaders()
         if event.GetMaxForwards() != nil {
             eh = append(eh, event.GetMaxForwards())
         }
-        req, err = self.ua.GenRequest("INVITE", event.GetBody(), /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
+        req, err = self.ua.GenRequest("INVITE", body, /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
         if err != nil {
             return nil, err
         }
