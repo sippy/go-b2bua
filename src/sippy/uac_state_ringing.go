@@ -132,12 +132,12 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         rUri.SetTag(tag)
         if !self.ua.GetLateMedia() || body == nil {
             self.ua.SetLateMedia(false)
-            event = NewCCEventConnect(code, reason, resp.GetBody(), resp.GetRtime(), self.ua.GetOrigin())
+            event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             self.ua.StartCreditTimer(resp.GetRtime())
             self.ua.SetConnectTs(resp.GetRtime())
             rval = NewUaStateConnected(self.ua, resp.GetRtime(), self.ua.GetOrigin(), self.config)
         } else {
-            event = NewCCEventPreConnect(code, reason, resp.GetBody(), resp.GetRtime(), self.ua.GetOrigin())
+            event = NewCCEventPreConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             tr.SetUAck(true)
             self.ua.SetPendingTr(tr)
             rval = NewUaStateConnected(self.ua, nil, "", self.config)
