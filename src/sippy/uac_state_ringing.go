@@ -79,7 +79,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         self.ua.RingCb(resp.GetRtime(), self.ua.GetOrigin(), code)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
-                self.ua.OnRemoteSdpChange(body, resp, func(x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+                self.ua.OnRemoteSdpChange(body, func(x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
                 return nil
             } else {
                 self.ua.SetRSDP(body.GetCopy())
@@ -145,7 +145,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         self.ua.StartCreditTimer(resp.GetRtime())
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
-                self.ua.OnRemoteSdpChange(body, resp, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+                self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
                 return rval
             } else {
                 self.ua.SetRSDP(body.GetCopy())

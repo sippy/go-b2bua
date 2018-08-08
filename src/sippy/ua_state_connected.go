@@ -101,7 +101,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         event := NewCCEventUpdate(req.GetRtime(), self.ua.GetOrigin(), req.GetReason(), req.GetMaxForwards(), body)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
-                self.ua.OnRemoteSdpChange(body, req, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+                self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
                 return NewUasStateUpdating(self.ua, self.config)
             } else {
                 self.ua.SetRSDP(body.GetCopy())
@@ -291,15 +291,16 @@ func (self *UaStateConnected) OnStateChange() {
 }
 
 func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
+    rtime := req.GetRtime()
     body := req.GetBody()
-    event := NewCCEventConnect(0, "ACK", body, req.GetRtime(), self.ua.GetOrigin())
+    event := NewCCEventConnect(0, "ACK", body, rtime, self.ua.GetOrigin())
     self.ua.CancelExpireTimer()
-    self.ua.StartCreditTimer(req.GetRtime())
-    self.ua.SetConnectTs(req.GetRtime())
-    self.ua.ConnCb(req.GetRtime(), self.ua.GetOrigin())
+    self.ua.StartCreditTimer(rtime)
+    self.ua.SetConnectTs(rtime)
+    self.ua.ConnCb(rtime, self.ua.GetOrigin())
     if body != nil {
         if self.ua.HasOnRemoteSdpChange() {
-            self.ua.OnRemoteSdpChange(body, req, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+            self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
             return
         } else {
             self.ua.SetRSDP(body.GetCopy())

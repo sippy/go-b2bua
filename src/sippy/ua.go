@@ -892,9 +892,9 @@ func (self *Ua) Enqueue(event sippy_types.CCEvent) {
     self.equeue = append(self.equeue, event)
 }
 
-func (self *Ua) OnRemoteSdpChange(body sippy_types.MsgBody, req sippy_types.SipMsg, f func(x sippy_types.MsgBody)) error {
+func (self *Ua) OnRemoteSdpChange(body sippy_types.MsgBody, f func(x sippy_types.MsgBody)) error {
     if self.on_remote_sdp_change != nil {
-        return self.on_remote_sdp_change(body, req, f)
+        return self.on_remote_sdp_change(body, f)
     }
     return nil
 }

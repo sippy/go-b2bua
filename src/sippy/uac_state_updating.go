@@ -88,7 +88,7 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         event := NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
-                if err := self.ua.OnRemoteSdpChange(body, resp, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) }); err != nil {
+                if err := self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) }); err != nil {
                     ev := NewCCEventFail(502, "Bad Gateway", event.GetRtime(), "")
                     ev.SetWarning(fmt.Sprintf("Malformed SDP Body received from downstream: \"%s\"", err.Error()))
                     return self.updateFailed(ev)
