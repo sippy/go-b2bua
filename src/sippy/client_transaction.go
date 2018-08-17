@@ -307,6 +307,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             rAddr = self.address
         }
         if ! self.uack {
+            self.BeforeRequestSent(self.ack)
             self.sip_tm.transmitMsg(self.userv, self.ack, rAddr, checksum, self.tid.CallId)
         } else {
             self.state = UACK
@@ -354,6 +355,7 @@ func (self *clientTransaction) SendACK() {
         self.teG.Cancel()
         self.teG = nil
     }
+    self.BeforeRequestSent(self.ack)
     self.sip_tm.transmitMsg(self.userv, self.ack, self.ack_rAddr, self.ack_checksum, self.tid.CallId)
     self.sip_tm.tclient_del(self.tid)
     self.cleanup()
