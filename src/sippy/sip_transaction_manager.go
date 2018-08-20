@@ -43,8 +43,6 @@ import (
     "sippy/utils"
 )
 
-type SipRequestReceiver func(sippy_types.SipRequest) *sippy_types.Ua_context
-
 type sipTransactionManager struct {
     call_map        sippy_types.CallMap
     l4r             *local4remote
