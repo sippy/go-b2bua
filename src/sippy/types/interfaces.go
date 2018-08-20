@@ -142,6 +142,7 @@ type UA interface {
     ResponseReceiver
     GetSessionLock() sync.Locker
     RecvEvent(CCEvent)
+    RecvACK(SipRequest)
     SipTM() SipTransactionManager
     GetSetupTs() *sippy_time.MonoTime
     SetSetupTs(*sippy_time.MonoTime)

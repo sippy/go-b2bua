@@ -421,7 +421,7 @@ func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reas
     }
     var ack_cb func(sippy_types.SipRequest)
     if ack_wait {
-        ack_cb = self.recvACK
+        ack_cb = self.me().RecvACK
     }
     if t != nil {
         t.SendResponseWithLossEmul(uasResp, /*retrans*/ false, ack_cb, self.uas_lossemul)
@@ -431,7 +431,7 @@ func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reas
     }
 }
 
-func (self *Ua) recvACK(req sippy_types.SipRequest) {
+func (self *Ua) RecvACK(req sippy_types.SipRequest) {
     if !self.isConnected() {
         return
     }
