@@ -58,6 +58,7 @@ type Ua struct {
     rUri            *sippy_header.SipTo
     lUri            *sippy_header.SipFrom
     ruri_userparams []string
+    ruri_params     []string
     to_username     string
     from_domain     string
     lTag            string
@@ -646,6 +647,14 @@ func (self *Ua) GetRuriUserparams() []string {
 
 func (self *Ua) SetRuriUserparams(ruri_userparams []string) {
     self.ruri_userparams = ruri_userparams
+}
+
+func (self *Ua) GetRuriParams() []string {
+    return self.ruri_params
+}
+
+func (self *Ua) SetRuriParams(params []string) {
+    self.ruri_params = params
 }
 
 func (self *Ua) GetRUri() *sippy_header.SipTo {

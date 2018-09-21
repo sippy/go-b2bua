@@ -134,7 +134,7 @@ func (self *SipURL) convertTelUrl(url string, relaxedparser bool, config sippy_c
 }
 
 func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
-    var params, arr []string
+    var params []string
     var hostport string
 
     ear := strings.Index(url, "@") + 1
@@ -146,7 +146,7 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
         params = make([]string, 0)
     }
     if len(params) == 0 && strings.Contains(userdomain[ear:], "?") {
-        arr = strings.SplitN(userdomain[ear:], "?", 2)
+        arr := strings.SplitN(userdomain[ear:], "?", 2)
         userdomain_suff := arr[0]
         headers := arr[1]
         userdomain = userdomain[:ear] + userdomain_suff
@@ -226,11 +226,13 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
             }
         }
     }
-    for _, p := range params {
-        if p == params[len(params)-1] && strings.Contains(p, "?") {
+    if len(params) > 0 {
+        last_param := params[len(params) - 1]
+        arr := strings.SplitN(last_param, "?", 2)
+        params[len(params) - 1] = arr[0]
+        self.SetParams(params)
+        if len(arr) == 2 {
             self.headers = make(map[string]string)
-            arr = strings.SplitN(p, "?", 2)
-            p = arr[0]
             headers := arr[1]
             for _, header := range strings.Split(headers, "&") {
                 if arr := strings.SplitN(header, "=", 2); len(arr) == 2 {
@@ -238,6 +240,21 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
                 }
             }
         }
+    }
+    return nil
+}
+
+func (self *SipURL) SetParams(params []string) {
+    self.usertype = ""
+    self.transport = ""
+    self.maddr = ""
+    self.method = ""
+    self.tag = ""
+    self.ttl = -1
+    self.other = []string{}
+    self.Lr = false
+
+    for _, p := range params {
         nv := strings.SplitN(p, "=", 2)
         if len(nv) == 1 {
             if p == "lr" {
@@ -272,7 +289,6 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
             self.other = append(self.other, p)
         }
     }
-    return nil
 }
 
 func (self *SipURL) String() string {
@@ -304,19 +320,8 @@ func (self *SipURL) LocalStr(hostport *sippy_net.HostPort) string {
             l += ":" + self.Port.String()
         }
     }
-    if self.usertype != "" {
-        l += ";user=" + self.usertype
-    }
-    if self.transport != "" { l += ";transport=" + self.transport }
-    if self.maddr != ""     { l += ";maddr=" + self.maddr }
-    if self.method != ""    { l += ";method=" + self.method }
-    if self.tag != ""       { l += ";tag=" + self.tag }
-    if self.ttl != -1       { l += fmt.Sprintf(";ttl=%d", self.ttl) }
-    for _, v := range self.other {
-        l += ";" + v
-    }
-    if self.Lr {
-        l += ";lr"
+    for _, p := range self.GetParams() {
+        l += ";" + p
     }
     if len(self.headers) > 0 {
         l += "?"
@@ -327,6 +332,19 @@ func (self *SipURL) LocalStr(hostport *sippy_net.HostPort) string {
         l += strings.Join(arr, "&")
     }
     return l
+}
+
+func (self *SipURL) GetParams() []string {
+    ret := []string{}
+    if self.usertype != ""  { ret = append(ret, "user=" + self.usertype) }
+    if self.transport != "" { ret = append(ret, "transport=" + self.transport) }
+    if self.maddr != ""     { ret = append(ret, "maddr=" + self.maddr) }
+    if self.method != ""    { ret = append(ret, "method=" + self.method) }
+    if self.tag != ""       { ret = append(ret, "tag=" + self.tag) }
+    if self.ttl != -1       { ret = append(ret, fmt.Sprintf("ttl=%d", self.ttl)) }
+    ret = append(ret, self.other...)
+    if self.Lr              { ret = append(ret, "lr") }
+    return ret
 }
 
 func (self *SipURL) GetCopy() *SipURL {

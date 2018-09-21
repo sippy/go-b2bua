@@ -85,8 +85,11 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         self.ua.SetRTarget(sippy_header.NewSipURL(event.GetCLD(), self.ua.GetRAddr0().Host, self.ua.GetRAddr0().Port, false))
         self.ua.SetRUri(sippy_header.NewSipTo(sippy_header.NewSipAddress("", self.ua.GetRTarget().GetCopy()), self.config))
-        if self.ua.GetRuriUserparams() != nil {
-            self.ua.GetRTarget().SetUserparams(self.ua.GetRuriUserparams())
+        if uparams := self.ua.GetRuriUserparams(); uparams != nil {
+            self.ua.GetRTarget().SetUserparams(uparams)
+        }
+        if params := self.ua.GetRuriParams(); params != nil {
+            self.ua.GetRTarget().SetParams(params)
         }
         rUri, err = self.ua.GetRUri().GetBody(self.config)
         if err != nil {

@@ -283,6 +283,8 @@ type UA interface {
     BeforeRequestSent(SipRequest)
     BeforeResponseSent(SipResponse)
     PrepTr(SipRequest) (ClientTransaction, error)
+    GetRuriParams() []string
+    SetRuriParams([]string)
 }
 
 type baseTransaction interface {
