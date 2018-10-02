@@ -325,7 +325,7 @@ type ServerTransaction interface {
 type SipTransactionManager interface {
     RegConsumer(UA, string)
     UnregConsumer(UA, string)
-    BeginNewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort, sippy_net.Transport, func(SipRequest)) (ClientTransaction, error)
+    BeginNewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort, sippy_net.Transport, func(SipRequest))
     CreateClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort, sippy_net.Transport, func(SipRequest)) (ClientTransaction, error)
     BeginClientTransaction(SipRequest, ClientTransaction)
     SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))

@@ -153,6 +153,7 @@ func (self *local4remote) getServer(address *sippy_net.HostPort, is_local bool /
         */
         server, err = self.tfactory.NewSipTransport(laddress, self.handleIncoming)
         if err != nil {
+            self.config.ErrorLogger().Errorf("Cannot bind %s: %s", laddress.String(), err.Error())
             return nil
         }
         self.cache_l2s[laddress.String()] = server

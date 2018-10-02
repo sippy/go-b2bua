@@ -165,7 +165,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         ok = true
     }
     if ok {
-        //print "event", event, "received in the Connected state sending BYE"
+        //println("event", event.String(), "received in the Connected state sending BYE")
         if redirect != nil && self.ua.ShouldUseRefer() {
             var lUri *sippy_header.SipAddress
 

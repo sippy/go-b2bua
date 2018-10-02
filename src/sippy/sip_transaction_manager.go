@@ -357,10 +357,11 @@ func (self *sipTransactionManager) CreateClientTransaction(req sippy_types.SipRe
     target := req.GetTarget()
     if userv == nil {
         var uv sippy_net.Transport
-        if laddress == nil {
-            uv = self.l4r.getServer(target, /*is_local =*/ false)
-        } else {
+        if laddress != nil {
             uv = self.l4r.getServer(laddress, /*is_local =*/ true)
+        }
+        if uv == nil {
+            uv = self.l4r.getServer(target, /*is_local =*/ false)
         }
         if uv != nil {
             userv = uv
@@ -394,13 +395,13 @@ func (self *sipTransactionManager) BeginClientTransaction(req sippy_types.SipReq
     tr.TransmitData()
 }
 
-func (self *sipTransactionManager) BeginNewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_net.HostPort, userv sippy_net.Transport, req_out_cb func(sippy_types.SipRequest)) (sippy_types.ClientTransaction, error) {
+func (self *sipTransactionManager) BeginNewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_net.HostPort, userv sippy_net.Transport, req_out_cb func(sippy_types.SipRequest)) {
     tr, err := self.CreateClientTransaction(req, resp_receiver, session_lock, laddress, userv, req_out_cb)
     if err != nil {
-        return nil, err
+        self.config.ErrorLogger().Error(err.Error())
+    } else {
+        self.BeginClientTransaction(req, tr)
     }
-    self.BeginClientTransaction(req, tr)
-    return tr, nil
 }
 
 // 2. Server transaction methods
