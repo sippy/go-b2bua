@@ -57,10 +57,6 @@ type Ua struct {
     rAddr0          *sippy_net.HostPort
     rUri            *sippy_header.SipTo
     lUri            *sippy_header.SipFrom
-    ruri_userparams []string
-    ruri_params     []string
-    to_username     string
-    from_domain     string
     lTag            string
     lCSeq           int
     lContact        *sippy_header.SipContact
@@ -112,6 +108,7 @@ type Ua struct {
     late_media      bool
     heir            sippy_types.UA
     uas_lossemul    int
+    on_uac_setup_complete   func()
 }
 
 func (self *Ua) me() sippy_types.UA {
@@ -135,7 +132,6 @@ func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, n
         call_controller : call_controller,
         equeue          : make([]sippy_types.CCEvent, 0),
         elast_seq       : -1,
-        ruri_userparams : nil,
         reqs            : make(map[int]*sipRequest),
         rCSeq           : -1,
         useRefer        : true,
@@ -641,32 +637,8 @@ func (self *Ua) SetRUri(ruri *sippy_header.SipTo) {
     self.rUri = ruri
 }
 
-func (self *Ua) GetRuriUserparams() []string {
-    return self.ruri_userparams
-}
-
-func (self *Ua) SetRuriUserparams(ruri_userparams []string) {
-    self.ruri_userparams = ruri_userparams
-}
-
-func (self *Ua) GetRuriParams() []string {
-    return self.ruri_params
-}
-
-func (self *Ua) SetRuriParams(params []string) {
-    self.ruri_params = params
-}
-
 func (self *Ua) GetRUri() *sippy_header.SipTo {
     return self.rUri
-}
-
-func (self *Ua) GetToUsername() string {
-    return self.to_username
-}
-
-func (self *Ua) SetToUsername(to_username string) {
-    self.to_username = to_username
 }
 
 func (self *Ua) SetLUri(from *sippy_header.SipFrom) {
@@ -675,14 +647,6 @@ func (self *Ua) SetLUri(from *sippy_header.SipFrom) {
 
 func (self *Ua) GetLUri() *sippy_header.SipFrom {
     return self.lUri
-}
-
-func (self *Ua) GetFromDomain() string {
-    return self.from_domain
-}
-
-func (self *Ua) SetFromDomain(from_domain string) {
-    self.from_domain = from_domain
 }
 
 func (self *Ua) GetLTag() string {
@@ -1206,4 +1170,14 @@ func (self *Ua) BeforeResponseSent(sippy_types.SipResponse) {
 }
 
 func (self *Ua) BeforeRequestSent(sippy_types.SipRequest) {
+}
+
+func (self *Ua) OnUacSetupComplete() {
+    if self.on_uac_setup_complete != nil {
+        self.on_uac_setup_complete()
+    }
+}
+
+func (self *Ua) SetOnUacSetupComplete(fn func()) {
+    self.on_uac_setup_complete = fn
 }

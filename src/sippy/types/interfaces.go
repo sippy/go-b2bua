@@ -166,19 +166,13 @@ type UA interface {
     SetRAddr0(addr *sippy_net.HostPort)
     GetRTarget() *sippy_header.SipURL
     SetRUri(*sippy_header.SipTo)
-    GetRuriUserparams() []string
-    SetRuriUserparams([]string)
     GetRUri() *sippy_header.SipTo
-    GetToUsername() string
-    SetToUsername(string)
     GetUsername() string
     SetUsername(string)
     GetPassword() string
     SetPassword(string)
     SetLUri(*sippy_header.SipFrom)
     GetLUri() *sippy_header.SipFrom
-    GetFromDomain() string
-    SetFromDomain(string)
     GetLTag() string
     SetLCSeq(int)
     SetLContact(*sippy_header.SipContact)
@@ -238,6 +232,7 @@ type UA interface {
     SetKaInterval(time.Duration)
     GetKaInterval() time.Duration
     OnDead()
+    OnUacSetupComplete()
     GetGoDeadTimeout() time.Duration
     ChangeState(UaState)
     GetLastScode() int
@@ -283,8 +278,6 @@ type UA interface {
     BeforeRequestSent(SipRequest)
     BeforeResponseSent(SipResponse)
     PrepTr(SipRequest) (ClientTransaction, error)
-    GetRuriParams() []string
-    SetRuriParams([]string)
 }
 
 type baseTransaction interface {
