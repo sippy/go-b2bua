@@ -95,7 +95,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             }
             parsed_body.SetCHeaderAddr("0.0.0.0")
         } else if self.ua.GetRSDP().String() == body.String() {
-            t.SendResponse(req.GenResponse(200, "OK", self.ua.GetLSDP(), self.ua.GetLocalUA().AsSipServer()), false, nil)
+            self.ua.SendUasResponse(t, 200, "OK", self.ua.GetLSDP(), self.ua.GetLContacts(), false /*ack_wait*/)
             return nil
         }
         event := NewCCEventUpdate(req.GetRtime(), self.ua.GetOrigin(), req.GetReason(), req.GetMaxForwards(), body)
