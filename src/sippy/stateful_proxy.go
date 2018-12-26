@@ -27,6 +27,8 @@
 package sippy
 
 import (
+    "sync"
+
     "sippy/conf"
     "sippy/headers"
     "sippy/net"
@@ -54,7 +56,7 @@ func (self *statefulProxy) RecvRequest(req sippy_types.SipRequest, t sippy_types
     req.InsertFirstVia(via0)
     req.SetTarget(self.destination)
     //print req
-    self.sip_tm.BeginNewClientTransaction(req, self, nil, nil, nil, nil)
+    self.sip_tm.BeginNewClientTransaction(req, self, new(sync.Mutex), nil, nil, nil)
     return &sippy_types.Ua_context{}
 }
 
