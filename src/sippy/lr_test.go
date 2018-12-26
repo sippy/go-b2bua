@@ -171,7 +171,7 @@ func Test_StrictRouting(t *testing.T) {
     if len(bye.routes) != 2 {
         t.Fatal("The number of routes in BYE is not 2")
     }
-    addr, err := bye.routes[1].GetBody()
+    addr, err := bye.routes[1].GetBody(config)
     if err != nil {
         t.Fatal("Cannot parse Route: " + err.Error())
     }
