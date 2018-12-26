@@ -71,6 +71,7 @@ func newSipWWWAutenticateBody(realm string) *SipWWWAuthenticateBody {
 
 func createSipWWWAuthenticateObj(body string) *SipWWWAuthenticate {
     return &SipWWWAuthenticate{
+        normalName      : _sip_www_authenticate_name,
         string_body     : body,
     }
 }
