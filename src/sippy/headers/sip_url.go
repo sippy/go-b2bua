@@ -356,7 +356,7 @@ func (self *SipURL) GetAddr(config sippy_conf.Config) *sippy_net.HostPort {
     if self.Port != nil {
         return sippy_net.NewHostPort(self.Host.String(), self.Port.String())
     }
-    return sippy_net.NewHostPort(self.Host.String(), config.SipPort().String())
+    return sippy_net.NewHostPort(self.Host.String(), config.GetMyPort().String())
 }
 
 func (self *SipURL) SetUserparams(userparams []string) {

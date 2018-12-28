@@ -58,12 +58,12 @@ func NewLocal4Remote(config sippy_conf.Config, handleIncoming sippy_net.DataPack
     }
     laddresses := make([]*sippy_net.HostPort, 0)
     if config.SipAddress().IsSystemDefault() {
-        laddresses = append(laddresses, sippy_net.NewHostPort("0.0.0.0", config.GetMyPort().String()))
+        laddresses = append(laddresses, sippy_net.NewHostPort("0.0.0.0", config.SipPort().String()))
         if config.GetIPV6Enabled() {
-            laddresses = append(laddresses, sippy_net.NewHostPort("[::]", config.GetMyPort().String()))
+            laddresses = append(laddresses, sippy_net.NewHostPort("[::]", config.SipPort().String()))
         }
     } else {
-        laddresses = append(laddresses, sippy_net.NewHostPort(config.SipAddress().String(), config.GetMyPort().String()))
+        laddresses = append(laddresses, sippy_net.NewHostPort(config.SipAddress().String(), config.SipPort().String()))
         self.fixed = true
     }
     var last_error error
@@ -139,7 +139,7 @@ func (self *local4remote) getServer(address *sippy_net.HostPort, is_local bool /
                 return nil // should not happen
             }
         }
-        laddress = sippy_net.NewHostPort(_laddress, self.config.GetMyPort().String())
+        laddress = sippy_net.NewHostPort(_laddress, self.config.SipPort().String())
         self.cache_r2l[address.Host.String()] = laddress
     } else {
         laddress = address

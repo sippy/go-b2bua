@@ -259,7 +259,7 @@ func (self *SipViaBody) GetBranch() string {
 
 func (self *SipViaBody) GetAddr(config sippy_conf.Config) (string, string) {
     if self.port == nil {
-        return self.host.String(), config.SipPort().String()
+        return self.host.String(), config.GetMyPort().String()
     } else {
         return self.host.String(), self.port.String()
     }
