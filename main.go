@@ -243,15 +243,13 @@ func main() {
     config.SetMyUAName("Sippy B2BUA (Simple)")
     config.SetAllowFormats([]int{ 0, 8, 18, 100, 101 })
     if laddr != "" {
-        config.SetSipAddress(sippy_net.NewMyAddress(laddr))
-    } else {
-        config.SetSipAddress(config.GetMyAddress())
+        config.SetMyAddress(sippy_net.NewMyAddress(laddr))
     }
+    config.SetSipAddress(config.GetMyAddress())
     if lport > 0 {
-        config.SetSipPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
-    } else {
-        config.SetSipPort(config.GetMyPort())
+        config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     }
+    config.SetSipPort(config.GetMyPort())
     cmap := NewCallMap(config, error_logger)
     sip_tm, err := sippy.NewSipTransactionManager(config, cmap)
     if err != nil {
