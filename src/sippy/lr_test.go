@@ -65,11 +65,11 @@ func Test_LooseRouting(t *testing.T) {
     tfactory := NewTestSipTransportFactory()
     config.SetSipTransportFactory(tfactory)
     cmap.sip_tm, err = NewSipTransactionManager(config, cmap)
-    defer cmap.sip_tm.Shutdown()
     if err != nil {
         t.Fatal("Cannot create SIP transaction manager: " + err.Error())
     }
     go cmap.sip_tm.Run()
+    defer cmap.sip_tm.Shutdown()
     tfactory.feed([]string{
         "INVITE sip:905399232076@10.20.30.40 SIP/2.0",
         "Record-Route: <sip:2.2.2.2;r2=on;lr=on;ftag=as57b03f0f>",
