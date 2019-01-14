@@ -62,10 +62,9 @@ type rtpp_req_udp struct {
     result_callback func(string)
     stime           *sippy_time.MonoTime
     retransmits     int
-    session_lock    sync.Locker
 }
 
-func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *Timeout, command string, result_callback func(string), session_lock sync.Locker) *rtpp_req_udp {
+func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *Timeout, command string, result_callback func(string)) *rtpp_req_udp {
     stime, _ := sippy_time.NewMonoTime()
     return &rtpp_req_udp{
         next_retr       : next_retr,
@@ -75,7 +74,6 @@ func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *Timeout, comman
         result_callback : result_callback,
         stime           : stime,
         retransmits     : 0,
-        session_lock    : session_lock,
     }
 }
 
@@ -137,7 +135,7 @@ func (*Rtp_proxy_client_udp) is_local() bool {
     return false
 }
 
-func (self *Rtp_proxy_client_udp) send_command(command string, result_callback func(string), session_lock sync.Locker) {
+func (self *Rtp_proxy_client_udp) send_command(command string, result_callback func(string)) {
     buf := make([]byte, 16)
     rand.Read(buf)
     cookie := fmt.Sprintf("%x", buf)
@@ -155,7 +153,7 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
     }
     command = cookie + " " + command
     timer := StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
-    preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback, session_lock)
+    preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback)
     self.worker.SendTo([]byte(command), self.hostport)
     self.lock.Lock()
     self.pending_requests[cookie] = preq
@@ -174,7 +172,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
         self.lock.Unlock()
         self.owner.GoOffline()
         if req.result_callback != nil {
-            sippy_utils.SafeCall(func() { req.result_callback("") }, req.session_lock, self.global_config.ErrorLogger())
+            sippy_utils.SafeCall(func() { req.result_callback("") }, nil/*lock*/, self.global_config.ErrorLogger())
         }
         return
     }
@@ -202,7 +200,7 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_net.
     }
     req.timer.Cancel()
     if req.result_callback != nil {
-        sippy_utils.SafeCall(func() { req.result_callback(strings.TrimSpace(result)) }, req.session_lock, self.global_config.ErrorLogger())
+        sippy_utils.SafeCall(func() { req.result_callback(strings.TrimSpace(result)) }, nil/*lock*/, self.global_config.ErrorLogger())
     }
     if req.retransmits == 0 {
         // When we had to do retransmit it is not possible to figure out whether

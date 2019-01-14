@@ -367,7 +367,7 @@ type RtpProxyClientOpts interface {
 }
 
 type RtpProxyClient interface {
-    SendCommand(string, func(string), sync.Locker)
+    SendCommand(string, func(string))
     SBindSupported() bool
     IsLocal() bool
     TNotSupported() bool

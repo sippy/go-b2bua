@@ -30,7 +30,6 @@ import (
     "bufio"
     "strconv"
     "strings"
-    "sync"
 
     "sippy/types"
 )
@@ -60,7 +59,7 @@ type Rtp_proxy_client_base struct {
 
 type rtp_proxy_transport interface {
     is_local() bool
-    send_command(string, func(string), sync.Locker)
+    send_command(string, func(string))
     shutdown()
 }
 
@@ -116,8 +115,8 @@ func (self *Rtp_proxy_client_base) Start() error {
     return nil
 }
 
-func (self *Rtp_proxy_client_base) SendCommand(cmd string, cb func(string), session_lock sync.Locker) {
-    self.transport.send_command(cmd, cb, session_lock)
+func (self *Rtp_proxy_client_base) SendCommand(cmd string, cb func(string)) {
+    self.transport.send_command(cmd, cb)
 }
 /*
     def reconnect(self, *args, **kwargs):
@@ -128,7 +127,7 @@ func (self *Rtp_proxy_client_base) version_check() {
     if self.shut_down {
         return
     }
-    self.transport.send_command("V", self.version_check_reply, nil)
+    self.transport.send_command("V", self.version_check_reply)
 }
 
 func (self *Rtp_proxy_client_base) version_check_reply(version string) {
@@ -149,7 +148,7 @@ func (self *Rtp_proxy_client_base) heartbeat() {
     if self.shut_down {
         return
     }
-    self.transport.send_command("Ib", self.heartbeat_reply, nil)
+    self.transport.send_command("Ib", self.heartbeat_reply)
 }
 
 func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
@@ -261,7 +260,7 @@ func newRtppCapsChecker(rtpc *Rtp_proxy_client_base) *rtppCapsChecker {
         attr := it.attr // For some reason the it.attr cannot be passed into the following
                         // function directly - the resulting value is always that of the
                         // last 'it.attr' value.
-        rtpc.transport.send_command("VF " + it.vers, func(res string) { self.caps_query_done(res, attr) }, nil)
+        rtpc.transport.send_command("VF " + it.vers, func(res string) { self.caps_query_done(res, attr) })
     }
     return self
 }

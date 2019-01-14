@@ -30,7 +30,6 @@ import (
     "fmt"
     "net"
     "strings"
-    "sync"
     "time"
 
     "sippy/conf"
@@ -47,7 +46,6 @@ const (
 type rtpp_req_stream struct {
     command         string
     result_callback func(string)
-    session_lock    sync.Locker
 }
 
 type _RTPPLWorker struct {
@@ -124,7 +122,7 @@ func (self *_RTPPLWorker) run() {
             rtpc_delay = -1
         }
         if req.result_callback != nil {
-            sippy_utils.SafeCall(func() { req.result_callback(data) }, req.session_lock, self.userv.global_config.ErrorLogger())
+            sippy_utils.SafeCall(func() { req.result_callback(data) }, nil/*lock*/, self.userv.global_config.ErrorLogger())
         }
         if rtpc_delay != -1 {
             self.userv.register_delay(rtpc_delay)
@@ -183,11 +181,11 @@ func (self *Rtp_proxy_client_stream) is_local() bool {
     return self._is_local
 }
 
-func (self *Rtp_proxy_client_stream) send_command(command string, result_callback func(string), session_lock sync.Locker) {
+func (self *Rtp_proxy_client_stream) send_command(command string, result_callback func(string)) {
     if command[len(command)-1] != '\n' {
         command += "\n"
     }
-    self.wi <- &rtpp_req_stream{command, result_callback, session_lock }
+    self.wi <- &rtpp_req_stream{ command, result_callback }
 }
 /*
     def reconnect(self, address, bind_address = nil):

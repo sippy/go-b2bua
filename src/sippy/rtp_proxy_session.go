@@ -175,7 +175,7 @@ func (self *Rtp_proxy_session) send_command(cmd string, cb func(string)) {
         new_cmd := &rtpp_cmd{ cmd, cb, rtp_proxy_client }
         if self.inflight_cmd == nil {
             self.inflight_cmd = new_cmd
-            rtp_proxy_client.SendCommand(cmd, self.cmd_done, nil)
+            rtp_proxy_client.SendCommand(cmd, self.cmd_done)
         } else {
             self.rtpp_wi <- new_cmd
         }
@@ -187,7 +187,7 @@ func (self *Rtp_proxy_session) cmd_done(res string) {
     done_cmd := self.inflight_cmd
     select {
         case self.inflight_cmd = <-self.rtpp_wi:
-            self.inflight_cmd.rtp_proxy_client.SendCommand(self.inflight_cmd.cmd, self.cmd_done, nil)
+            self.inflight_cmd.rtp_proxy_client.SendCommand(self.inflight_cmd.cmd, self.cmd_done)
         default:
             self.inflight_cmd = nil
     }
