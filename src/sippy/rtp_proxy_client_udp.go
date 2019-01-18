@@ -194,6 +194,7 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_net.
     cookie, result := arr[0], arr[1]
     self.lock.Lock()
     req, ok := self.pending_requests[cookie]
+    delete(self.pending_requests, cookie)
     self.lock.Unlock()
     if ! ok {
         return
