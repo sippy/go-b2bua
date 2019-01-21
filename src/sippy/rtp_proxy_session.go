@@ -245,7 +245,7 @@ func (self *Rtp_proxy_session) Delete() {
     self._rtp_proxy_client = nil
 }
 
-func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, cc_event sippy_types.CCEvent, result_callback func(sippy_types.MsgBody)) error {
+func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
     return self.caller._on_sdp_change(sdp_body, result_callback)
 }
 

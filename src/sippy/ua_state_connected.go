@@ -212,7 +212,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil
         }
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            err := self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            err := self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             if err != nil {
                 ev := NewCCEventFail(400, "Malformed SDP Body", event.GetRtime(), "")
                 ev.SetWarning(err.Error())
@@ -263,7 +263,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         self.ua.CancelExpireTimer()
         body := _event.GetBody()
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             return nil, nil
         }
         self.ua.StartCreditTimer(event.GetRtime())

@@ -71,7 +71,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         body := event.GetBody()
         if body != nil {
             if body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
-                self.ua.OnLocalSdpChange(body, event, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+                self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
                 return nil, nil
             }
         } else {
