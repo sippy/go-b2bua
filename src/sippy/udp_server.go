@@ -105,7 +105,7 @@ type asyncSender struct {
     sem     chan int
 }
 
-func NewAsyncSender(userv *udpServer) *asyncSender {
+func NewAsyncSender(userv *udpServer, n int) *asyncSender {
     self := &asyncSender{
         sem     : make(chan int, 2),
     }
@@ -123,16 +123,14 @@ LOOP:
             break LOOP
         }
 SEND_LOOP:
-        for wi != nil {
-            for i := 0; i < 20; i++ {
-                if _, err := userv.skt.WriteTo(wi.data, wi.address); err == nil {
-                    if wi.on_complete != nil {
-                        wi.on_complete()
-                    }
-                    break SEND_LOOP
+        for i := 0; i < 20; i++ {
+            if _, err := userv.skt.WriteTo(wi.data, wi.address); err == nil {
+                if wi.on_complete != nil {
+                    wi.on_complete()
                 }
+                break SEND_LOOP
             }
-            time.Sleep(time.Duration(0.01 * float64(time.Second)))
+            time.Sleep(10 * time.Millisecond)
         }
     }
     self.sem <- 1
@@ -172,7 +170,6 @@ func (self *asyncReceiver) run(userv *udpServer) {
 type udpServerOpts struct {
     laddress        *sippy_net.HostPort
     data_callback   sippy_net.DataPacketReceiver
-    shut_down       bool
     nworkers        int
 }
 
@@ -181,14 +178,12 @@ func NewUdpServerOpts(laddress *sippy_net.HostPort, data_callback sippy_net.Data
         laddress        : laddress,
         data_callback   : data_callback,
         nworkers        : runtime.NumCPU() * 2,
-        shut_down       : false,
     }
     return self
 }
 
 type udpServer struct {
     uopts           udpServerOpts
-    //skt             *net.UDPConn
     skt             net.PacketConn
     wi              chan *write_req
     wi_resolv       chan *resolv_req
@@ -267,10 +262,6 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
     if err != nil {
         return nil, err
     }
-    /*
-    skt, err := net.ListenUDP("udp", laddress)
-    if err != nil { return nil, err }
-    */
     self := &udpServer{
         uopts       : *uopts,
         skt         : skt,
@@ -281,7 +272,7 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*udpServer, e
         aresolvers  : make([]*asyncResolver, 0, uopts.nworkers),
     }
     for n := 0; n < uopts.nworkers; n++ {
-        self.asenders = append(self.asenders, NewAsyncSender(self))
+        self.asenders = append(self.asenders, NewAsyncSender(self, n))
         self.areceivers = append(self.areceivers, NewAsyncReciever(self, config.ErrorLogger()))
     }
     for n:= 0; n < uopts.nworkers; n++ {
@@ -331,7 +322,6 @@ func (self *udpServer) Shutdown() {
     for _, worker := range self.aresolvers { <-worker.sem }
     self.skt.Close()
 
-    self.uopts.shut_down = true // self.uopts.data_callback = None
     for _, worker := range self.areceivers { <-worker.sem }
     self.asenders = make([]*asyncSender, 0)
     self.areceivers = make([]*asyncReceiver, 0)
