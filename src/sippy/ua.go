@@ -189,7 +189,7 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
         return &sippy_types.Ua_context{
             Response : nil,
             CancelCB : self.state.Cancel,
-            NoAckCB  : self.me().Disconnect,
+            NoAckCB  : func(rtime *sippy_time.MonoTime) { self.me().Disconnect(rtime, "") },
         }
     } else {
         return nil
@@ -305,35 +305,35 @@ func (self *Ua) RecvEvent(event sippy_types.CCEvent) {
     self.emitPendingEvents()
 }
 
-func (self *Ua) Disconnect(rtime *sippy_time.MonoTime) {
+func (self *Ua) Disconnect(rtime *sippy_time.MonoTime, origin string) {
     if self.sip_tm == nil {
         return // we are already in a dead state
     }
     if rtime == nil {
         rtime, _ = sippy_time.NewMonoTime()
     }
-    self.equeue = append(self.equeue, NewCCEventDisconnect(nil, rtime, ""))
-    self.RecvEvent(NewCCEventDisconnect(nil, rtime, ""))
+    self.equeue = append(self.equeue, NewCCEventDisconnect(nil, rtime, origin))
+    self.RecvEvent(NewCCEventDisconnect(nil, rtime, origin))
 }
 
 func (self *Ua) expires() {
     self.expire_timer = nil
-    self.me().Disconnect(nil)
+    self.me().Disconnect(nil, "")
 }
 
 func (self *Ua) no_progress_expires() {
     self.no_progress_timer = nil
-    self.me().Disconnect(nil)
+    self.me().Disconnect(nil, "")
 }
 
 func (self *Ua) no_reply_expires() {
     self.no_reply_timer = nil
-    self.me().Disconnect(nil)
+    self.me().Disconnect(nil, "")
 }
 
 func (self *Ua) credit_expires(rtime *sippy_time.MonoTime) {
     self.credit_timer = nil
-    self.me().Disconnect(rtime)
+    self.me().Disconnect(rtime, "")
 }
 
 func (self *Ua) ChangeState(newstate sippy_types.UaState) {

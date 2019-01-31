@@ -228,7 +228,7 @@ type UA interface {
     ResetCreditTime(*sippy_time.MonoTime, map[int64]*sippy_time.MonoTime)
     ShouldUseRefer() bool
     GetState() UaState
-    Disconnect(*sippy_time.MonoTime)
+    Disconnect(*sippy_time.MonoTime, string)
     SetKaInterval(time.Duration)
     GetKaInterval() time.Duration
     OnDead()

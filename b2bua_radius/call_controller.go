@@ -361,7 +361,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
 }
 
 func (self *callController) disconnect(rtime *sippy_time.MonoTime) {
-    self.uaA.Disconnect(rtime)
+    self.uaA.Disconnect(rtime, "")
 }
 /*
     def oConn(self, ua, rtime, origin):

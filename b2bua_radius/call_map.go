@@ -352,7 +352,7 @@ func (self *callMap) recvCommand(data string) string {
             if cc.state == CCStateConnected {
                 cc.disconnect(ts)
             } else if cc.state == CCStateARComplete {
-                cc.uaO.Disconnect(ts)
+                cc.uaO.Disconnect(ts, "")
             }
         }
         return "OK\n"

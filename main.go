@@ -108,7 +108,7 @@ func (self *callController) oDead() {
 }
 
 func (self *callController) Shutdown() {
-    self.uaA.Disconnect(nil)
+    self.uaA.Disconnect(nil, "")
 }
 
 func (self *callController) String() string {
