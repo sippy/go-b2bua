@@ -155,7 +155,7 @@ func newSipViaBody(config sippy_conf.Config) *SipViaBody {
         rport_exists : true,
         sipver      : "SIP/2.0/UDP",
         host        : config.GetMyAddress(),
-        port        : config.GetMyPort(),
+        port        : config.DefaultPort(),
 
         received_exists : false,
         ttl_exists      : false,
@@ -175,9 +175,9 @@ func (self *SipVia) String() string {
 
 func (self *SipVia) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     if compact {
-        return self.CompactName() + ":" + self.LocalStringBody(hostport)
+        return self.CompactName() + ": " + self.LocalStringBody(hostport)
     }
-    return self.Name() + ":" + self.LocalStringBody(hostport)
+    return self.Name() + ": " + self.LocalStringBody(hostport)
 }
 
 func (self *SipVia) LocalStringBody(hostport *sippy_net.HostPort) string {
@@ -259,7 +259,7 @@ func (self *SipViaBody) GetBranch() string {
 
 func (self *SipViaBody) GetAddr(config sippy_conf.Config) (string, string) {
     if self.port == nil {
-        return self.host.String(), config.GetMyPort().String()
+        return self.host.String(), config.DefaultPort().String()
     } else {
         return self.host.String(), self.port.String()
     }

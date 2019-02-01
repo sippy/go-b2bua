@@ -28,23 +28,16 @@ package sippy
 
 import (
     "sippy/conf"
-    "sippy/time"
     "sippy/types"
 )
 
 type UaStateFailed struct {
     *uaStateGeneric
-    rtime   *sippy_time.MonoTime
-    origin  string
-    scode   int
 }
 
-func NewUaStateFailed(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, config sippy_conf.Config) *UaStateFailed {
+func NewUaStateFailed(ua sippy_types.UA, config sippy_conf.Config) *UaStateFailed {
     self := &UaStateFailed{
         uaStateGeneric  : newUaStateGeneric(ua, config),
-        rtime           : rtime,
-        origin          : origin,
-        scode           : scode,
     }
     ua.ResetOnLocalSdpChange()
     ua.ResetOnRemoteSdpChange()
@@ -52,9 +45,6 @@ func NewUaStateFailed(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin stri
 }
 
 func (self *UaStateFailed) OnActivation() {
-    if self.rtime != nil {
-        self.ua.FailCb(self.rtime, self.origin, self.scode)
-    }
     StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, self.config.ErrorLogger())
 }
 
@@ -64,5 +54,5 @@ func (self *UaStateFailed) String() string {
 
 func (self *UaStateFailed) goDead() {
     //print 'Time in Failed state expired, going to the Dead state'
-    self.ua.ChangeState(NewUaStateDead(self.ua, nil, "", self.config))
+    self.ua.ChangeState(NewUaStateDead(self.ua, self.config), nil)
 }

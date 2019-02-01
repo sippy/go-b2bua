@@ -53,6 +53,7 @@ type Config interface {
     SetMyAddress(*sippy_net.MyAddress)
     GetMyPort() *sippy_net.MyPort
     SetMyPort(*sippy_net.MyPort)
+    DefaultPort() *sippy_net.MyPort
 
     AutoConvertTelUrl() bool
     SetAutoConvertTelUrl(bool)
@@ -63,6 +64,7 @@ type Config interface {
 type config struct {
     sip_address     *sippy_net.MyAddress
     sip_port        *sippy_net.MyPort
+    default_port    *sippy_net.MyPort
     sip_logger      sippy_log.SipLogger
     error_logger    sippy_log.ErrorLogger
     ipv6_enabled    bool
@@ -91,6 +93,7 @@ func NewConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogge
         my_uaname   : "Sippy",
         allow_formats : make([]int, 0),
         autoconvert_tel_url : false,
+        default_port    : sippy_net.NewSystemPort("5060"),
     }
 }
 
@@ -174,4 +177,8 @@ func (self *config) GetSipTransportFactory() sippy_net.SipTransportFactory {
 
 func (self *config) SetSipTransportFactory(tfactory sippy_net.SipTransportFactory) {
     self.tfactory = tfactory
+}
+
+func (self *config) DefaultPort() *sippy_net.MyPort {
+    return self.default_port
 }

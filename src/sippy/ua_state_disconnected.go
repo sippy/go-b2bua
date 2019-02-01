@@ -28,25 +28,16 @@ package sippy
 
 import (
     "sippy/conf"
-    "sippy/time"
     "sippy/types"
 )
 
 type UaStateDisconnected struct {
     *uaStateGeneric
-    rtime   *sippy_time.MonoTime
-    origin  string
-    scode   int
-    inreq   sippy_types.SipRequest
 }
 
-func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, inreq sippy_types.SipRequest, config sippy_conf.Config) *UaStateDisconnected {
+func NewUaStateDisconnected(ua sippy_types.UA, config sippy_conf.Config) *UaStateDisconnected {
     self := &UaStateDisconnected{
         uaStateGeneric  : newUaStateGeneric(ua, config),
-        rtime           : rtime,
-        origin          : origin,
-        scode           : scode,
-        inreq           : inreq,
     }
     ua.ResetOnLocalSdpChange()
     ua.ResetOnRemoteSdpChange()
@@ -54,9 +45,6 @@ func NewUaStateDisconnected(ua sippy_types.UA, rtime *sippy_time.MonoTime, origi
 }
 
 func (self *UaStateDisconnected) OnActivation() {
-    if self.rtime != nil {
-        self.ua.DiscCb(self.rtime, self.origin, self.scode, self.inreq)
-    }
     StartTimeout(self.goDead, self.ua.GetSessionLock(), self.ua.GetGoDeadTimeout(), 1, self.config.ErrorLogger())
 }
 
@@ -64,17 +52,17 @@ func (self *UaStateDisconnected) String() string {
     return "Disconnected"
 }
 
-func (self *UaStateDisconnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
+func (self *UaStateDisconnected) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) (sippy_types.UaState, func()) {
     if req.GetMethod() == "BYE" {
         //print "BYE received in the Disconnected state"
         t.SendResponse(req.GenResponse(200, "OK", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
     } else {
         t.SendResponse(req.GenResponse(500, "Disconnected", nil, /*server*/ self.ua.GetLocalUA().AsSipServer()), false, nil)
     }
-    return nil
+    return nil, nil
 }
 
 func (self *UaStateDisconnected) goDead() {
     //print "Time in Disconnected state expired, going to the Dead state"
-    self.ua.ChangeState(NewUaStateDead(self.ua, nil, "", self.config))
+    self.ua.ChangeState(NewUaStateDead(self.ua, self.config), nil)
 }

@@ -28,28 +28,20 @@ package sippy
 
 import (
     "sippy/conf"
-    "sippy/time"
     "sippy/types"
 )
 
 type UaStateDead struct {
     *uaStateGeneric
-    rtime   *sippy_time.MonoTime
-    origin  string
 }
 
-func NewUaStateDead(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, config sippy_conf.Config) *UaStateDead {
+func NewUaStateDead(ua sippy_types.UA, config sippy_conf.Config) *UaStateDead {
     return &UaStateDead {
         uaStateGeneric  : newUaStateGeneric(ua, config),
-        rtime           : rtime,
-        origin          : origin,
     }
 }
 
 func (self *UaStateDead) OnActivation() {
-    if self.rtime != nil {
-        self.ua.DiscCb(self.rtime, self.origin, 0, nil)
-    }
     self.ua.OnDead()
     // Break cross-ref chain
     self.ua = nil

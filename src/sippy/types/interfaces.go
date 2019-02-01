@@ -234,7 +234,7 @@ type UA interface {
     OnDead()
     OnUacSetupComplete()
     GetGoDeadTimeout() time.Duration
-    ChangeState(UaState)
+    ChangeState(UaState, func())
     GetLastScode() int
     SetLastScode(int)
     HasNoReplyTimer() bool
@@ -328,9 +328,9 @@ type SipTransactionManager interface {
 }
 
 type UaState interface {
-    RecvEvent(CCEvent) (UaState, error)
-    RecvResponse(SipResponse, ClientTransaction) UaState
-    RecvRequest(SipRequest, ServerTransaction) UaState
+    RecvEvent(CCEvent) (UaState, func(), error)
+    RecvResponse(SipResponse, ClientTransaction) (UaState, func())
+    RecvRequest(SipRequest, ServerTransaction) (UaState, func())
     Cancel(*sippy_time.MonoTime, SipRequest)
     OnStateChange()
     String() string

@@ -45,7 +45,7 @@ func (self *test_call_map) RecvEvent(sippy_types.CCEvent, sippy_types.UA) {
 }
 
 func (self *test_call_map) disconnect() {
-    self.ua.Disconnect(nil)
+    self.ua.Disconnect(nil, "")
 }
 
 func (self *test_call_map) answer() {

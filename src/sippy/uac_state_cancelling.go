@@ -29,38 +29,28 @@ package sippy
 import (
     "sippy/conf"
     "sippy/headers"
-    "sippy/time"
     "sippy/types"
 )
 
 type UacStateCancelling struct {
     *uaStateGeneric
     te      *Timeout
-    rtime   *sippy_time.MonoTime
-    origin  string
-    scode   int
 }
 
-func NewUacStateCancelling(ua sippy_types.UA, rtime *sippy_time.MonoTime, origin string, scode int, config sippy_conf.Config) *UacStateCancelling {
+func NewUacStateCancelling(ua sippy_types.UA, config sippy_conf.Config) *UacStateCancelling {
     self := &UacStateCancelling{
         uaStateGeneric  : newUaStateGeneric(ua, config),
-        rtime           : rtime,
-        origin          : origin,
-        scode           : scode,
     }
     ua.ResetOnLocalSdpChange()
     ua.ResetOnRemoteSdpChange()
     // 300 provides good estimate on the amount of time during which
     // we can wait for receiving non-negative response to CANCELled
     // INVITE transaction.
-    self.te = StartTimeout(self.goIdle, self.ua.GetSessionLock(), 300.0, 1, self.config.ErrorLogger())
     return self
 }
 
 func (self *UacStateCancelling) OnActivation() {
-    if self.rtime != nil {
-        self.ua.DiscCb(self.rtime, self.origin, self.scode, nil)
-    }
+    self.te = StartTimeout(self.goIdle, self.ua.GetSessionLock(), 300.0, 1, self.config.ErrorLogger())
 }
 
 func (self *UacStateCancelling) String() string {
@@ -70,13 +60,13 @@ func (self *UacStateCancelling) String() string {
 func (self *UacStateCancelling) goIdle() {
     //print "Time in Cancelling state expired, going to the Dead state"
     self.te = nil
-    self.ua.ChangeState(NewUaStateDead(self.ua, nil, "", self.config))
+    self.ua.ChangeState(NewUaStateDead(self.ua, self.config), nil)
 }
 
-func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) sippy_types.UaState {
+func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) (sippy_types.UaState, func()) {
     code, _ := resp.GetSCode()
     if code < 200 {
-        return nil
+        return nil, nil
     }
     if self.te != nil {
         self.te.Cancel()
@@ -107,23 +97,18 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
         rUri, err = self.ua.GetRUri().GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateCancelling::RecvResponse: #1: " + err.Error())
-            return nil
+            return nil, nil
         }
         to_body, err = resp.GetTo().GetBody(self.config)
         rUri.SetTag(to_body.GetTag())
         req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateCancelling::RecvResponse: #2: " + err.Error())
-            return nil
+            return nil, nil
         }
         self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
-        return NewUaStateDisconnected(self.ua, nil, "", 0, nil, self.config)
+        return NewUaStateDisconnected(self.ua, self.config), nil
     }
-    return NewUaStateDead(self.ua, nil, "", self.config)
-}
-
-func (self *UacStateCancelling) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
-    //return nil, fmt.Errorf("wrong event %s in the Cancelling state", event.String())
-    return nil, nil
+    return NewUaStateDead(self.ua, self.config), nil
 }

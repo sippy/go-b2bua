@@ -46,22 +46,25 @@ func newUaStateGeneric(ua sippy_types.UA, config sippy_conf.Config) *uaStateGene
     }
 }
 
-func (self *uaStateGeneric) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) sippy_types.UaState {
-    return nil
-}
-
-func (self *uaStateGeneric) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) sippy_types.UaState {
-    return nil
-}
-
-func (self *uaStateGeneric) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *uaStateGeneric) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) (sippy_types.UaState, func()) {
     return nil, nil
+}
+
+func (self *uaStateGeneric) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) (sippy_types.UaState, func()) {
+    return nil, nil
+}
+
+func (self *uaStateGeneric) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, func(), error) {
+    return nil, nil, nil
 }
 
 func (self *uaStateGeneric) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
 }
 
 func (*uaStateGeneric) OnStateChange() {
+}
+
+func (*uaStateGeneric) OnActivation() {
 }
 
 func (*uaStateGeneric) RecvACK(sippy_types.SipRequest) {

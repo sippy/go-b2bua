@@ -47,14 +47,11 @@ func NewUacStateIdle(ua sippy_types.UA, config sippy_conf.Config) *UacStateIdle 
     }
 }
 
-func (self *UacStateIdle) OnActivation() {
-}
-
 func (self *UacStateIdle) String() string {
     return "Idle(UAC)"
 }
 
-func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, error) {
+func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, func(), error) {
     var err error
     var rUri *sippy_header.SipAddress
     var lUri *sippy_header.SipAddress
@@ -72,7 +69,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if body != nil {
             if body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
                 self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
-                return nil, nil
+                return nil, nil, nil
             }
         } else {
             self.ua.SetLateMedia(true)
@@ -86,14 +83,14 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         self.ua.SetRUri(sippy_header.NewSipTo(sippy_header.NewSipAddress("", self.ua.GetRTarget().GetCopy()), self.config))
         rUri, err = self.ua.GetRUri().GetBody(self.config)
         if err != nil {
-            return nil, err
+            return nil, nil, err
         }
         rUri.GetUrl().Port = nil
         self.ua.SetLUri(sippy_header.NewSipFrom(sippy_header.NewSipAddress(event.GetCallerName(), sippy_header.NewSipURL(event.GetCLI(), self.config.GetMyAddress(), self.config.GetMyPort(), false)), self.config))
         self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
         lUri, err = self.ua.GetLUri().GetBody(self.config)
         if err != nil {
-            return nil, err
+            return nil, nil, err
         }
         lUri.GetUrl().Port = nil
         lUri.SetTag(self.ua.GetLTag())
@@ -103,7 +100,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         contact, err = self.ua.GetLContact().GetBody(self.config)
         if err != nil {
-            return nil, err
+            return nil, nil, err
         }
         contact.GetUrl().Username = event.GetCLI()
         self.ua.SetRoutes(make([]*sippy_header.SipRoute, 0))
@@ -116,12 +113,12 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         self.ua.OnUacSetupComplete()
         req, err = self.ua.GenRequest("INVITE", body, /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
         if err != nil {
-            return nil, err
+            return nil, nil, err
         }
         self.ua.IncLCSeq()
         tr, err = self.ua.PrepTr(req)
         if err != nil {
-            return nil, err
+            return nil, nil, err
         }
         self.ua.SetClientTransaction(tr)
         self.ua.SipTM().BeginClientTransaction(req, tr)
@@ -145,12 +142,12 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         } else if self.ua.GetExMtime() != nil {
             self.ua.StartExpireTimer(self.ua.GetExMtime())
         }
-        return NewUacStateTrying(self.ua, self.config), nil
+        return NewUacStateTrying(self.ua, self.config), nil, nil
     case *CCEventFail:
     case *CCEventRedirect:
     case *CCEventDisconnect:
     default:
-        return nil, nil
+        return nil, nil, nil
     }
     if self.ua.GetSetupTs() != nil && ! _event.GetRtime().Before(self.ua.GetSetupTs()) {
         self.ua.SetDisconnectTs(_event.GetRtime())
@@ -158,5 +155,5 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         disconnect_ts, _ := sippy_time.NewMonoTime()
         self.ua.SetDisconnectTs(disconnect_ts)
     }
-    return NewUaStateDead(self.ua, _event.GetRtime(), _event.GetOrigin(), self.config), nil
+    return NewUaStateDead(self.ua, self.config), func() { self.ua.DiscCb(_event.GetRtime(), _event.GetOrigin(), 0, nil) }, nil
 }

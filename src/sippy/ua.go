@@ -175,14 +175,14 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     self.rCSeq = cseq_body.CSeq
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
-            self.ChangeState(NewUasStateIdle(self.me(), self.config))
+            self.ChangeState(NewUasStateIdle(self.me(), self.config), nil)
         } else {
             return nil
         }
     }
-    newstate := self.state.RecvRequest(req, t)
+    newstate, cb := self.state.RecvRequest(req, t)
     if newstate != nil {
-        self.me().ChangeState(newstate)
+        self.me().ChangeState(newstate, cb)
     }
     self.emitPendingEvents()
     if newstate != nil && req.GetMethod() == "INVITE" {
@@ -257,9 +257,9 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     if code >= 200 && cseq_found {
         delete(self.reqs, cseq_body.CSeq)
     }
-    newstate := self.state.RecvResponse(resp, tr)
+    newstate, cb := self.state.RecvResponse(resp, tr)
     if newstate != nil {
-        self.me().ChangeState(newstate)
+        self.me().ChangeState(newstate, cb)
     }
     self.emitPendingEvents()
 }
@@ -292,15 +292,15 @@ func (self *Ua) RecvEvent(event sippy_types.CCEvent) {
         default:
             return
         }
-        self.me().ChangeState(NewUacStateIdle(self.me(), self.config))
+        self.me().ChangeState(NewUacStateIdle(self.me(), self.config), nil)
     }
-    newstate, err := self.state.RecvEvent(event)
+    newstate, cb, err := self.state.RecvEvent(event)
     if err != nil {
         self.logError("UA::RecvEvent error #1: " + err.Error())
         return
     }
     if newstate != nil {
-        self.me().ChangeState(newstate)
+        self.me().ChangeState(newstate, cb)
     }
     self.emitPendingEvents()
 }
@@ -336,12 +336,17 @@ func (self *Ua) credit_expires(rtime *sippy_time.MonoTime) {
     self.me().Disconnect(rtime, "")
 }
 
-func (self *Ua) ChangeState(newstate sippy_types.UaState) {
+func (self *Ua) ChangeState(newstate sippy_types.UaState, cb func()) {
     if self.state != nil {
         self.state.OnStateChange()
     }
     self.state = newstate //.Newstate(self, self.config)
-    newstate.OnActivation()
+    if newstate != nil {
+        newstate.OnActivation()
+        if cb != nil {
+            cb()
+        }
+    }
 }
 
 func (self *Ua) EmitEvent(event sippy_types.CCEvent) {

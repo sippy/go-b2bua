@@ -27,8 +27,8 @@
 package sippy
 
 import (
+    "sippy/log"
     "sippy/headers"
-    "sippy/conf"
     "sippy/types"
 )
 
@@ -37,10 +37,10 @@ type keepaliveController struct {
     triedauth   bool
     ka_tr       sippy_types.ClientTransaction
     keepalives  int
-    config      sippy_conf.Config
+    logger      sippy_log.ErrorLogger
 }
 
-func newKeepaliveController(ua sippy_types.UA, config sippy_conf.Config) *keepaliveController {
+func newKeepaliveController(ua sippy_types.UA, logger sippy_log.ErrorLogger) *keepaliveController {
     if ua.GetKaInterval() <= 0 {
         return nil
     }
@@ -48,10 +48,13 @@ func newKeepaliveController(ua sippy_types.UA, config sippy_conf.Config) *keepal
         ua          : ua,
         triedauth   : false,
         keepalives  : 0,
-        config      : config,
+        logger      : logger,
     }
-    StartTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, self.config.ErrorLogger())
     return self
+}
+
+func (self *keepaliveController) Start() {
+    StartTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, self.logger)
 }
 
 func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
@@ -66,12 +69,12 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
     if code == 401 && resp.GetSipWWWAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
         challenge, err = resp.GetSipWWWAuthenticate().GetBody()
         if err != nil {
-            self.config.ErrorLogger().Error("error parsing 401 auth: " + err.Error())
+            self.logger.Error("error parsing 401 auth: " + err.Error())
             return
         }
         req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
         if err != nil {
-            self.config.ErrorLogger().Error("Cannot create INVITE: " + err.Error())
+            self.logger.Error("Cannot create INVITE: " + err.Error())
             return
         }
         self.ua.IncLCSeq()
@@ -85,12 +88,12 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
     if code == 407 && resp.GetSipProxyAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
         challenge, err = resp.GetSipProxyAuthenticate().GetBody()
         if err != nil {
-            self.config.ErrorLogger().Error("error parsing 407 auth: " + err.Error())
+            self.logger.Error("error parsing 407 auth: " + err.Error())
             return
         }
         req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
         if err != nil {
-            self.config.ErrorLogger().Error("Cannot create INVITE: " + err.Error())
+            self.logger.Error("Cannot create INVITE: " + err.Error())
             return
         }
         self.ua.IncLCSeq()
@@ -109,14 +112,14 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
     if code == 408 || code == 481 || code == 486 {
         if self.keepalives == 1 {
             //print "%s: Remote UAS at %s:%d does not support re-INVITES, disabling keep alives" % (self.ua.cId, self.ua.rAddr[0], self.ua.rAddr[1])
-            StartTimeout(func() { self.ua.Disconnect(nil, "") }, self.ua.GetSessionLock(), 600, 1, self.config.ErrorLogger())
+            StartTimeout(func() { self.ua.Disconnect(nil, "") }, self.ua.GetSessionLock(), 600, 1, self.logger)
             return
         }
         //print "%s: Received %d response to keep alive from %s:%d, disconnecting the call" % (self.ua.cId, code, self.ua.rAddr[0], self.ua.rAddr[1])
         self.ua.Disconnect(nil, "")
         return
     }
-    StartTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, self.config.ErrorLogger())
+    StartTimeout(self.keepAlive, self.ua.GetSessionLock(), self.ua.GetKaInterval(), 1, self.logger)
 }
 
 func (self *keepaliveController) keepAlive() {
@@ -128,7 +131,7 @@ func (self *keepaliveController) keepAlive() {
     }
     req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), "", "", nil)
     if err != nil {
-        self.config.ErrorLogger().Error("Cannot create INVITE: " + err.Error())
+        self.logger.Error("Cannot create INVITE: " + err.Error())
         return
     }
     self.ua.IncLCSeq()
@@ -136,5 +139,12 @@ func (self *keepaliveController) keepAlive() {
     self.ka_tr, err = self.ua.PrepTr(req)
     if err == nil {
         self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
+    }
+}
+
+func (self *keepaliveController) Stop() {
+    if ka_tr := self.ka_tr; ka_tr != nil {
+        ka_tr.Cancel()
+        self.ka_tr = nil
     }
 }

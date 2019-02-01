@@ -114,7 +114,7 @@ func (self *SipURL) convertTelUrl(url string, relaxedparser bool, config sippy_c
         self.Host = sippy_net.NewMyAddress("")
     } else {
         self.Host = config.GetMyAddress()
-        self.Port = config.GetMyPort()
+        self.Port = config.DefaultPort()
     }
     parts := strings.Split(url, ";")
     self.Username, _ = user_enc.Unescape(parts[0])
@@ -356,7 +356,7 @@ func (self *SipURL) GetAddr(config sippy_conf.Config) *sippy_net.HostPort {
     if self.Port != nil {
         return sippy_net.NewHostPort(self.Host.String(), self.Port.String())
     }
-    return sippy_net.NewHostPort(self.Host.String(), config.GetMyPort().String())
+    return sippy_net.NewHostPort(self.Host.String(), config.DefaultPort().String())
 }
 
 func (self *SipURL) SetUserparams(userparams []string) {
