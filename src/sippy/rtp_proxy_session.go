@@ -110,10 +110,10 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         return nil, err
     }
     if callee_origin != nil {
-        self.callee.origin = callee_origin.GetCopy()
         // New session means new RTP port so the SDP is now different and the SDP
         // version must be increased.
-        self.callee.origin.IncVersion()
+        callee_origin.IncVersion()
+        self.callee.origin = callee_origin
     } else {
         self.callee.origin, err = sippy_sdp.NewSdpOrigin(addr)
         if err != nil {
