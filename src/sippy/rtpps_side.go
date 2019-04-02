@@ -32,6 +32,7 @@ import (
     "strconv"
     "strings"
     "sync"
+    "sync/atomic"
 
     "sippy/net"
     "sippy/sdp"
@@ -167,7 +168,6 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
         }
     }
     if len(sects) == 0 {
-        sdp_body.SetNeedsUpdate(false)
         result_callback(sdp_body)
         return nil
     }
@@ -177,20 +177,20 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     if self.repacketize > 0 {
         options = fmt.Sprintf("z%d", self.repacketize)
     }
+    sections_left := int64(len(sects))
     for i, sect := range sects {
         sect_options := options
         if sect.GetCHeader().GetAType() == "IP6" {
             sect_options = "6" + options
         }
         self.update(sect.GetCHeader().GetAddr(), sect.GetMHeader().GetPort(),
-              func (res *rtpproxy_update_result) { self._sdp_change_finish(res, sdp_body, parsed_body, sect, sects, result_callback) },
+              func (res *rtpproxy_update_result) { self._sdp_change_finish(res, sdp_body, parsed_body, sect, &sections_left, result_callback) },
               sect_options, i, sect.GetCHeader().GetAType())
     }
     return nil
 }
 
-func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sects []*sippy_sdp.SdpMediaDescription, result_callback func(sippy_types.MsgBody)) {
-    sect.SetNeedsUpdate(false)
+func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sections_left *int64, result_callback func(sippy_types.MsgBody)) {
     if cb_args != nil {
         if self.after_sdp_change != nil {
             self.after_sdp_change(cb_args)
@@ -210,35 +210,31 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
             sect.AddHeader("a", fmt.Sprintf("ptime:%d", self.repacketize))
         }
     }
-    num := 0
-    for _, s := range sects {
-        if s.NeedsUpdate() {
-            num++
-        }
+    if atomic.AddInt64(sections_left, -1) > 0 {
+        // more work is in progress
+        return
     }
-    if num == 0 {
-        self.origin_lock.Lock()
-        if self.oh_remote != nil {
-            if parsed_body.GetOHeader() != nil {
-                if self.oh_remote.GetSessionId() != parsed_body.GetOHeader().GetSessionId() ||
-                        self.oh_remote.GetVersion() != parsed_body.GetOHeader().GetVersion() {
-                    // Please be aware that this code is not RFC-4566 compliant in case when
-                    // the session is reused for hunting through several call legs. In that
-                    // scenario the outgoing SDP should be compared with the previously sent
-                    // one.
-                    self.origin.IncVersion()
-                }
+    self.origin_lock.Lock()
+    if self.oh_remote != nil {
+        if parsed_body.GetOHeader() != nil {
+            if self.oh_remote.GetSessionId() != parsed_body.GetOHeader().GetSessionId() ||
+                    self.oh_remote.GetVersion() != parsed_body.GetOHeader().GetVersion() {
+                // Please be aware that this code is not RFC-4566 compliant in case when
+                // the session is reused for hunting through several call legs. In that
+                // scenario the outgoing SDP should be compared with the previously sent
+                // one.
+                self.origin.IncVersion()
             }
         }
-        self.oh_remote = parsed_body.GetOHeader().GetCopy()
-        parsed_body.SetOHeader(self.origin.GetCopy())
-        self.origin_lock.Unlock()
-        if self.owner.insert_nortpp {
-            parsed_body.AppendAHeader("nortpproxy=yes")
-        }
-        sdp_body.SetNeedsUpdate(false)
-        result_callback(sdp_body)
     }
+    self.oh_remote = parsed_body.GetOHeader().GetCopy()
+    parsed_body.SetOHeader(self.origin.GetCopy())
+    self.origin_lock.Unlock()
+    if self.owner.insert_nortpp {
+        parsed_body.AppendAHeader("nortpproxy=yes")
+    }
+    sdp_body.SetNeedsUpdate(false)
+    result_callback(sdp_body)
 }
 
 func (self *_rtpps_side) _stop_play(cb func(string), index int) {

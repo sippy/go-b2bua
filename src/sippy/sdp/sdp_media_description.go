@@ -40,7 +40,6 @@ type SdpMediaDescription struct {
     b_header *SdpGeneric
     k_header *SdpGeneric
     a_headers []string
-    needs_update bool
 }
 
 func (self *SdpMediaDescription) GetCopy() *SdpMediaDescription {
@@ -53,7 +52,6 @@ func (self *SdpMediaDescription) GetCopy() *SdpMediaDescription {
         b_header : self.b_header.GetCopy(),
         k_header : self.k_header.GetCopy(),
         a_headers : a_headers,
-        needs_update : true,
     }
 }
 
@@ -172,14 +170,6 @@ func (self *SdpMediaDescription) optimize_a() {
         new_a_headers = append(new_a_headers, ah)
     }
     self.a_headers = new_a_headers
-}
-
-func (self *SdpMediaDescription) NeedsUpdate() bool {
-    return self.needs_update
-}
-
-func (self *SdpMediaDescription) SetNeedsUpdate(needs_update bool) {
-    self.needs_update = needs_update
 }
 
 func (self *SdpMediaDescription) GetAHeaders() []string {
