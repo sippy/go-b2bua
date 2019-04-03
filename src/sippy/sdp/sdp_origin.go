@@ -75,7 +75,27 @@ func ParseSdpOrigin(body string) (*SdpOrigin, error) {
     }, nil
 }
 
-func NewSdpOrigin(address string) (*SdpOrigin, error) {
+func NewSdpOrigin() *SdpOrigin {
+    // RFC4566
+    // *******
+    // For privacy reasons, it is sometimes desirable to obfuscate the
+    // username and IP address of the session originator.  If this is a
+    // concern, an arbitrary <username> and private <unicast-address> MAY be
+    // chosen to populate the "o=" field, provided that these are selected
+    // in a manner that does not affect the global uniqueness of the field.
+    // *******
+    sid := atomic.AddInt64(&_sdp_session_id, 1)
+    return &SdpOrigin {
+        username        : "-",
+        session_id      : strconv.FormatInt(sid, 10),
+        network_type    : "IN",
+        address_type    : "IP4",
+        address         : "192.0.2.1", // 192.0.2.0/24 (TEST-NET-1)
+        version         : sid,
+    }
+}
+
+func NewSdpOriginWithAddress(address string) (*SdpOrigin, error) {
     ip := net.ParseIP(address)
     if ip == nil {
         return nil, errors.New("The address is not IP address: " + address)
@@ -91,8 +111,8 @@ func NewSdpOrigin(address string) (*SdpOrigin, error) {
         network_type    : "IN",
         address_type    : address_type,
         address         : address,
+        version         : sid,
     }
-    self.version = sid
     return self, nil
 }
 

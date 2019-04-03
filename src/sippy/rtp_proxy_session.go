@@ -77,7 +77,6 @@ func (self *rtpproxy_update_result) Address() string {
 }
 
 func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker, callee_origin *sippy_sdp.SdpOrigin) (*Rtp_proxy_session, error) {
-    var err error
     self := &Rtp_proxy_session{
         notify_socket   : notify_socket,
         notify_tag      : notify_tag,
@@ -96,29 +95,14 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     self.callee.owner = self
     self.caller.session_exists = false
     self.callee.session_exists = false
-    // RFC4566
-    // *******
-    // For privacy reasons, it is sometimes desirable to obfuscate the
-    // username and IP address of the session originator.  If this is a
-    // concern, an arbitrary <username> and private <unicast-address> MAY be
-    // chosen to populate the "o=" field, provided that these are selected
-    // in a manner that does not affect the global uniqueness of the field.
-    // *******
-    addr := "192.0.2.1" // 192.0.2.0/24 (TEST-NET-1)
-    self.caller.origin, err = sippy_sdp.NewSdpOrigin(addr)
-    if err != nil {
-        return nil, err
-    }
+    self.caller.origin = sippy_sdp.NewSdpOrigin()
     if callee_origin != nil {
         // New session means new RTP port so the SDP is now different and the SDP
         // version must be increased.
         callee_origin.IncVersion()
         self.callee.origin = callee_origin
     } else {
-        self.callee.origin, err = sippy_sdp.NewSdpOrigin(addr)
-        if err != nil {
-            return nil, err
-        }
+        self.callee.origin = sippy_sdp.NewSdpOrigin()
     }
     online_clients := []sippy_types.RtpProxyClient{}
     for _, cl := range rtp_proxy_clients {
