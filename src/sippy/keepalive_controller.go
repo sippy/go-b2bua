@@ -61,48 +61,46 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
     var err error
     var challenge *sippy_header.SipWWWAuthenticateBody
     var req sippy_types.SipRequest
+    var new_auth_fn sippy_header.NewSipXXXAuthorizationFunc
 
     if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
         return
     }
     code, _ := resp.GetSCode()
-    if code == 401 && resp.GetSipWWWAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
-        challenge, err = resp.GetSipWWWAuthenticate().GetBody()
-        if err != nil {
-            self.logger.Error("error parsing 401 auth: " + err.Error())
+    if self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
+        if code == 401 && resp.GetSipWWWAuthenticate() != nil {
+            challenge, err = resp.GetSipWWWAuthenticate().GetBody()
+            if err != nil {
+                self.logger.Error("error parsing 401 auth: " + err.Error())
+                return
+            }
+            new_auth_fn = func(realm, nonce, method, uri, username, password string) sippy_header.SipHeader {
+                return sippy_header.NewSipAuthorization(realm, nonce, method, uri, username, password)
+            }
+        } else if code == 407 && resp.GetSipProxyAuthenticate() != nil {
+            challenge, err = resp.GetSipProxyAuthenticate().GetBody()
+            if err != nil {
+                self.logger.Error("error parsing 407 auth: " + err.Error())
+                return
+            }
+            new_auth_fn = func(realm, nonce, method, uri, username, password string) sippy_header.SipHeader {
+                return sippy_header.NewSipProxyAuthorization(realm, nonce, method, uri, username, password)
+            }
+        }
+        if challenge != nil {
+            req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), new_auth_fn)
+            if err != nil {
+                self.logger.Error("Cannot create INVITE: " + err.Error())
+                return
+            }
+            self.ua.IncLCSeq()
+            self.ka_tr, err = self.ua.PrepTr(req)
+            if err == nil {
+                self.triedauth = true
+            }
+            self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
             return
         }
-        req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), nil)
-        if err != nil {
-            self.logger.Error("Cannot create INVITE: " + err.Error())
-            return
-        }
-        self.ua.IncLCSeq()
-        self.ka_tr, err = self.ua.PrepTr(req)
-        if err == nil {
-            self.triedauth = true
-        }
-        self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
-        return
-    }
-    if code == 407 && resp.GetSipProxyAuthenticate() != nil && self.ua.GetUsername() != "" && self.ua.GetPassword() != "" && ! self.triedauth {
-        challenge, err = resp.GetSipProxyAuthenticate().GetBody()
-        if err != nil {
-            self.logger.Error("error parsing 407 auth: " + err.Error())
-            return
-        }
-        req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
-        if err != nil {
-            self.logger.Error("Cannot create INVITE: " + err.Error())
-            return
-        }
-        self.ua.IncLCSeq()
-        self.ka_tr, err = self.ua.PrepTr(req)
-        if err == nil {
-            self.triedauth = true
-        }
-        self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
-        return
     }
     if code < 200 {
         return

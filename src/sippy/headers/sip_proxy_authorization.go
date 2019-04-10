@@ -32,7 +32,7 @@ type SipProxyAuthorization struct {
 
 var _sip_proxy_authorization_name normalName = newNormalName("Proxy-Authorization")
 
-func NewSipProxyAuthorization(realm, nonce, method, uri, username, password string) SipHeader {
+func NewSipProxyAuthorization(realm, nonce, method, uri, username, password string) *SipProxyAuthorization {
     super := NewSipAuthorization(realm, nonce, method, uri, username, password)
     super.normalName = _sip_proxy_authorization_name
     return &SipProxyAuthorization{

@@ -201,6 +201,7 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     var challenge *sippy_header.SipWWWAuthenticateBody
     var req sippy_types.SipRequest
     var cseq_body *sippy_header.SipCSeqBody
+    var new_auth_fn sippy_header.NewSipXXXAuthorizationFunc
 
     if self.state == nil {
         return
@@ -212,47 +213,41 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     }
     self.update_ua(resp)
     code, _ := resp.GetSCode()
-    //cseq, method := resp.GetCSeq().CSeq, resp.GetCSeq().Method
     orig_req, cseq_found := self.reqs[cseq_body.CSeq]
-    if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found && code == 401 && resp.GetSipWWWAuthenticate() != nil &&
-      self.username != "" && self.password != "" && orig_req.sip_authorization == nil {
-        challenge, err = resp.GetSipWWWAuthenticate().GetBody()
-        if err != nil {
-            self.logError("UA::RecvResponse: cannot parse WWW-Authenticate: " + err.Error())
+    if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found && self.username != "" && self.password != "" {
+        if code == 401 && resp.GetSipWWWAuthenticate() != nil && orig_req.sip_authorization == nil {
+            challenge, err = resp.GetSipWWWAuthenticate().GetBody()
+            if err != nil {
+                self.logError("UA::RecvResponse: cannot parse WWW-Authenticate: " + err.Error())
+                return
+            }
+            new_auth_fn = func(realm, nonce, method, uri, username, password string) sippy_header.SipHeader {
+                return sippy_header.NewSipAuthorization(realm, nonce, method, uri, username, password)
+            }
+        } else if code == 407 && resp.GetSipProxyAuthenticate() != nil && orig_req.sip_proxy_authorization == nil {
+            challenge, err = resp.GetSipProxyAuthenticate().GetBody()
+            if err != nil {
+                self.logError("UA::RecvResponse: cannot parse Proxy-Authenticate: " + err.Error())
+                return
+            }
+            new_auth_fn = func(realm, nonce, method, uri, username, password string) sippy_header.SipHeader {
+                return sippy_header.NewSipProxyAuthorization(realm, nonce, method, uri, username, password)
+            }
+        }
+        if challenge != nil {
+            req, err = self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), new_auth_fn)
+            if err != nil {
+                self.logError("UA::RecvResponse: cannot create INVITE: " + err.Error())
+                return
+            }
+            self.lCSeq += 1
+            self.tr, err = self.me().PrepTr(req)
+            if err == nil {
+                self.sip_tm.BeginClientTransaction(req, self.tr)
+                delete(self.reqs, cseq_body.CSeq)
+            }
             return
         }
-        req, err = self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), /*SipXXXAuthorization*/ nil)
-        if err != nil {
-            self.logError("UA::RecvResponse: cannot create INVITE(1): " + err.Error())
-            return
-        }
-        self.lCSeq += 1
-        self.tr, err = self.me().PrepTr(req)
-        if err == nil {
-            self.sip_tm.BeginClientTransaction(req, self.tr)
-            delete(self.reqs, cseq_body.CSeq)
-        }
-        return
-    }
-    if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found && code == 407 && resp.GetSipProxyAuthenticate() != nil &&
-      self.username != "" && self.password != "" && orig_req.GetSipProxyAuthorization() == nil {
-        challenge, err = resp.GetSipProxyAuthenticate().GetBody()
-        if err != nil {
-            self.logError("UA::RecvResponse: cannot parse Proxy-Authenticate: " + err.Error())
-            return
-        }
-        req, err = self.me().GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), sippy_header.NewSipProxyAuthorization)
-        if err != nil {
-            self.logError("UA::RecvResponse: cannot create INVITE(2): " + err.Error())
-            return
-        }
-        self.lCSeq += 1
-        self.tr, err = self.me().PrepTr(req)
-        if err == nil {
-            self.sip_tm.BeginClientTransaction(req, self.tr)
-            delete(self.reqs, cseq_body.CSeq)
-        }
-        return
     }
     if code >= 200 && cseq_found {
         delete(self.reqs, cseq_body.CSeq)
@@ -387,8 +382,8 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string
         return nil, err
     }
     if nonce != "" && realm != "" && self.username != "" && self.password != "" {
-        auth := SipXXXAuthorization(/*realm*/ realm, /*nonce*/ nonce, /*method*/ method, /*uri*/ self.rTarget.String(),
-          /*username*/ self.username, /*password*/ self.password)
+        auth := SipXXXAuthorization(realm, nonce, method, /*uri*/ self.rTarget.String(),
+          self.username, self.password)
         req.AppendHeader(auth)
     }
     if self.extra_headers != nil {
