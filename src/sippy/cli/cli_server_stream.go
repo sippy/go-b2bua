@@ -1,5 +1,6 @@
+//
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2019 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -26,27 +27,49 @@
 package sippy_cli
 
 import (
+    "bufio"
     "net"
-    "os"
 
     "sippy/log"
+    "sippy/utils"
 )
 
-func NewCli_server_local(command_cb func(string) string, address string, logger sippy_log.ErrorLogger) (*Cli_server_stream, error) {
-    if _, err := os.Stat(address); err == nil {
-        err = os.Remove(address)
-        if err != nil { return nil, err }
-    }
-    addr, err := net.ResolveUnixAddr("unix", address)
-    if err != nil { return nil, err }
+type Cli_server_stream struct {
+    command_cb      func(string) string
+    listener        net.Listener
+    logger          sippy_log.ErrorLogger
+}
 
-    listener, err := net.ListenUnix("unix", addr)
-    if err != nil { return nil, err }
+func (self *Cli_server_stream) Start() {
+    go self.run()
+}
 
-    self := &Cli_server_stream{
-        command_cb  : command_cb,
-        listener    : listener,
-        logger      : logger,
+func (self *Cli_server_stream) run() {
+    for {
+        conn, err := self.listener.Accept()
+        if err != nil {
+            break
+        }
+        go sippy_utils.SafeCall(func() { self.handle_request(conn) }, nil, self.logger)
     }
-    return self, nil
+}
+
+func (self *Cli_server_stream) handle_request(conn net.Conn) {
+    defer conn.Close()
+    reader := bufio.NewReader(conn)
+    for {
+        line, err := reader.ReadString('\n')
+        if err != nil {
+            break
+        }
+        res := self.command_cb(line)
+        _, err = conn.Write([]byte(res))
+        if err != nil {
+            break
+        }
+    }
+}
+
+func (self *Cli_server_stream) Shutdown() {
+    self.listener.Close()
 }

@@ -27,20 +27,12 @@
 package sippy_cli
 
 import (
-    "bufio"
     "net"
 
     "sippy/log"
-    "sippy/utils"
 )
 
-type Cli_server_tcp struct {
-    command_cb      func(string) string
-    listener        net.Listener
-    logger          sippy_log.ErrorLogger
-}
-
-func NewCli_server_tcp(command_cb func(string) string, address string, logger sippy_log.ErrorLogger) (*Cli_server_tcp, error) {
+func NewCli_server_tcp(command_cb func(string) string, address string, logger sippy_log.ErrorLogger) (*Cli_server_stream, error) {
 
     tcpaddr, err := net.ResolveTCPAddr("tcp", address)
     if err != nil {
@@ -52,45 +44,10 @@ func NewCli_server_tcp(command_cb func(string) string, address string, logger si
         return nil, err
     }
 
-    self := &Cli_server_tcp{
+    self := &Cli_server_stream{
         command_cb  : command_cb,
         listener    : listener,
         logger      : logger,
     }
     return self, nil
 }
-
-func (self *Cli_server_tcp) Start() {
-    go self.run()
-}
-
-func (self *Cli_server_tcp) run() {
-    for {
-        conn, err := self.listener.Accept()
-        if err != nil {
-            break
-        }
-        go sippy_utils.SafeCall(func() { self.handle_request(conn) }, nil, self.logger)
-    }
-}
-
-func (self *Cli_server_tcp) handle_request(conn net.Conn) {
-    defer conn.Close()
-    reader := bufio.NewReader(conn)
-    for {
-        line, err := reader.ReadString('\n')
-        if err != nil {
-            break
-        }
-        res := self.command_cb(line)
-        _, err = conn.Write([]byte(res))
-        if err != nil {
-            break
-        }
-    }
-}
-/*
-func (self *Cli_server_tcp) shutdown() {
-    self.listener.Close()
-}
-*/
