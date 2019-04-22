@@ -1,3 +1,4 @@
+//
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
 // Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
 //
@@ -25,37 +26,71 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package sippy_cli
 
+import (
+    "bufio"
+    "net"
+
+    "sippy/log"
+    "sippy/utils"
+)
+
+type Cli_server_tcp struct {
+    command_cb      func(string) string
+    listener        net.Listener
+    logger          sippy_log.ErrorLogger
+}
+
+func NewCli_server_tcp(command_cb func(string) string, address string, logger sippy_log.ErrorLogger) (*Cli_server_tcp, error) {
+
+    tcpaddr, err := net.ResolveTCPAddr("tcp", address)
+    if err != nil {
+        return nil, err
+    }
+
+    listener, err := net.ListenTCP("tcp", tcpaddr)
+    if err != nil {
+        return nil, err
+    }
+
+    self := &Cli_server_tcp{
+        command_cb  : command_cb,
+        listener    : listener,
+        logger      : logger,
+    }
+    return self, nil
+}
+
+func (self *Cli_server_tcp) Start() {
+    go self.run()
+}
+
+func (self *Cli_server_tcp) run() {
+    for {
+        conn, err := self.listener.Accept()
+        if err != nil {
+            break
+        }
+        go sippy_utils.SafeCall(func() { self.handle_request(conn) }, nil, self.logger)
+    }
+}
+
+func (self *Cli_server_tcp) handle_request(conn net.Conn) {
+    defer conn.Close()
+    reader := bufio.NewReader(conn)
+    for {
+        line, err := reader.ReadString('\n')
+        if err != nil {
+            break
+        }
+        res := self.command_cb(line)
+        _, err = conn.Write([]byte(res))
+        if err != nil {
+            break
+        }
+    }
+}
 /*
-from twisted.internet.protocol import Factory
-from twisted.internet import reactor
-from Cli_session import Cli_session
-
-class Cli_server_tcp(Factory):
-    command_cb = nil
-    lport = nil
-    accept_list = nil
-
-    def __init__(self, command_cb, address):
-        self.command_cb = command_cb
-        self.protocol = Cli_session
-        self.lport = reactor.listenTCP(address[1], self, interface = address[0])
-
-    def buildProtocol(self, addr):
-        if self.accept_list != nil and addr.host not in self.accept_list:
-            return nil
-        p = Factory.buildProtocol(self, addr)
-        p.command_cb = self.command_cb
-        p.raddr = addr
-        return p
-
-    def shutdown(self):
-        self.lport.stopListening()
-
-if __name__ == '__main__':
-    def callback(clm, cmd):
-        print cmd
-        return False
-    laddr = ('127.0.0.1', 12345)
-    f = Cli_server_tcp(callback, laddr)
-    reactor.run()
+func (self *Cli_server_tcp) shutdown() {
+    self.listener.Close()
+}
 */
