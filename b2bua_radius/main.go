@@ -30,6 +30,7 @@ import (
     "strings"
 
     "sippy"
+    "sippy/cli"
     "sippy/net"
     "sippy/types"
 )
@@ -185,7 +186,7 @@ func main() {
     if strings.HasPrefix(cmdfile, "unix:") {
         cmdfile = cmdfile[5:]
     }
-    cli_server, err := NewCli_server_local(global_cmap.recvCommand, cmdfile, global_config.ErrorLogger())
+    cli_server, err := sippy_cli.NewCli_server_local(global_cmap.recvCommand, cmdfile, global_config.ErrorLogger())
     if err != nil {
         println("Cannot initialize Cli_server: " + err.Error())
         return
