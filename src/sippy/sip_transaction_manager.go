@@ -290,9 +290,6 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     var tids []*sippy_header.TID
     var via0 *sippy_header.SipViaBody
 
-    if self.call_map == nil {
-        return
-    }
     req, err = ParseSipRequest(data, rtime, self.config)
     if err != nil {
         switch errt := err.(type) {
@@ -508,6 +505,14 @@ func (self *sipTransactionManager) new_server_transaction(server sippy_net.Trans
         t.UpgradeToSessionLock(ua.GetSessionLock())
         sippy_utils.SafeCall(func() { rval = ua.RecvRequest(req, t) }, nil, self.config.ErrorLogger())
     } else {
+        if self.call_map == nil {
+            self.rcache_put(checksum, &sipTMRetransmitO{
+                                userv : nil,
+                                data  : nil,
+                                address : nil,
+                            })
+            return
+        }
         var req_receiver sippy_types.RequestReceiver
         var resp sippy_types.SipResponse
         sippy_utils.SafeCall(func () { ua, req_receiver, resp = self.call_map.OnNewDialog(req, t) }, nil, self.config.ErrorLogger())
