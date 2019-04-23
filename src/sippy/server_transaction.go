@@ -81,7 +81,7 @@ func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sipp
         branch          : branch,
         expires         : expires,
     }
-    self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, nil, nil, needack, sip_tm.config.ErrorLogger())
+    self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, nil, nil, needack)
     return self, nil
 }
 
@@ -146,14 +146,15 @@ func (self *serverTransaction) startTeD() {
 }
 
 func (self *serverTransaction) timerD() {
-    if self.sip_tm == nil {
+    sip_tm := self.sip_tm
+    if sip_tm == nil {
         return
     }
     //print("timerD", t, t.GetTID())
     if self.noack_cb != nil && self.state != CONFIRMED {
         self.noack_cb(nil)
     }
-    self.sip_tm.tserver_del(self.tid)
+    sip_tm.tserver_del(self.tid)
     self.cleanup()
 }
 
@@ -175,14 +176,15 @@ func (self *serverTransaction) timerE() {
 // Timer to retransmit the last provisional reply every
 // 2 seconds
 func (self *serverTransaction) timerF() {
-    if self.sip_tm == nil {
+    sip_tm := self.sip_tm
+    if sip_tm == nil {
         return
     }
     //print("timerF", t.GetTID())
     self.cancelTeF()
-    if self.state == RINGING && self.sip_tm.provisional_retr > 0 {
-        self.sip_tm.transmitData(self.userv, self.data, self.address, /*checksum*/ "", self.tid.CallId, 0)
-        self.startTeF(self.sip_tm.provisional_retr)
+    if self.state == RINGING && sip_tm.provisional_retr > 0 {
+        sip_tm.transmitData(self.userv, self.data, self.address, /*checksum*/ "", self.tid.CallId, 0)
+        self.startTeF(sip_tm.provisional_retr)
     }
 }
 
@@ -205,7 +207,8 @@ func (self *serverTransaction) doCancel(rtime *sippy_time.MonoTime, req sippy_ty
 }
 
 func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, checksum string) {
-    if self.sip_tm == nil {
+    sip_tm := self.sip_tm
+    if sip_tm == nil {
         return
     }
     //println("existing transaction")
@@ -213,7 +216,7 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         // Duplicate received, check that we have sent any response on this
         // request already
         if self.data != nil && len(self.data) > 0 {
-            self.sip_tm.transmitData(self.userv, self.data, self.address, checksum, self.tid.CallId, 0)
+            sip_tm.transmitData(self.userv, self.data, self.address, checksum, self.tid.CallId, 0)
         }
         return
     }
@@ -223,10 +226,10 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         resp := req.GenResponse(200, "OK", /*body*/ nil, self.server)
         via0, err := resp.GetVias()[0].GetBody()
         if err != nil {
-            self.sip_tm.config.ErrorLogger().Debug("error parsing Via: " + err.Error())
+            self.logger.Debug("error parsing Via: " + err.Error())
             return
         }
-        self.sip_tm.transmitMsg(self.userv, resp, via0.GetTAddr(self.sip_tm.config), checksum, self.tid.CallId)
+        sip_tm.transmitMsg(self.userv, resp, via0.GetTAddr(sip_tm.config), checksum, self.tid.CallId)
         if self.state == TRYING || self.state == RINGING {
             self.doCancel(req.GetRtime(), req)
         }
@@ -238,8 +241,8 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
             self.ack_cb(req)
         }
         // We have done with the transaction, no need to wait for timeout
-        self.sip_tm.tserver_del(self.tid)
-        self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
+        sip_tm.tserver_del(self.tid)
+        sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
         self.cleanup()
     }
 }
@@ -252,35 +255,36 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
     var via0 *sippy_header.SipViaBody
     var err error
 
-    if self.sip_tm == nil {
+    sip_tm := self.sip_tm
+    if sip_tm == nil {
         return
     }
     if self.state != TRYING && self.state != RINGING && ! retrans {
-        self.sip_tm.logError("BUG: attempt to send reply on already finished transaction!!!")
+        self.logger.Error("BUG: attempt to send reply on already finished transaction!!!")
     }
     if resp.GetSCodeNum() > 100 {
-        to, err := resp.GetTo().GetBody(self.sip_tm.config)
+        to, err := resp.GetTo().GetBody(sip_tm.config)
         if err != nil {
-            self.sip_tm.config.ErrorLogger().Debug("error parsing To: " + err.Error())
+            self.logger.Debug("error parsing To: " + err.Error())
             return
         }
         if to.GetTag() == "" {
             to.GenTag()
         }
     }
-    self.sip_tm.beforeResponseSent(resp)
+    sip_tm.beforeResponseSent(resp)
     self.data = []byte(resp.LocalStr(self.userv.GetLAddress(), /*compact*/ false))
     via0, err = resp.GetVias()[0].GetBody()
     if err != nil {
-        self.sip_tm.config.ErrorLogger().Debug("error parsing Via: " + err.Error())
+        self.logger.Debug("error parsing Via: " + err.Error())
         return
     }
-    self.address = via0.GetTAddr(self.sip_tm.config)
+    self.address = via0.GetTAddr(sip_tm.config)
     need_cleanup := false
     if resp.GetSCodeNum() < 200 {
         self.state = RINGING
-        if self.sip_tm.provisional_retr > 0 && resp.GetSCodeNum() > 100 {
-            self.startTeF(self.sip_tm.provisional_retr)
+        if sip_tm.provisional_retr > 0 && resp.GetSCodeNum() > 100 {
+            self.startTeF(sip_tm.provisional_retr)
         }
     } else {
         self.state = COMPLETED
@@ -297,15 +301,15 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
                 // could differ as well.
                 tid := self.tid
                 if tid != nil {
-                    to, err := resp.GetTo().GetBody(self.sip_tm.config)
+                    to, err := resp.GetTo().GetBody(sip_tm.config)
                     if err != nil {
-                        self.sip_tm.config.ErrorLogger().Debug("error parsing To: " + err.Error())
+                        self.logger.Debug("error parsing To: " + err.Error())
                         return
                     }
                     old_tid := *tid // copy
                     tid.Branch = ""
                     tid.ToTag = to.GetTag()
-                    self.sip_tm.tserver_replace(&old_tid, tid, self)
+                    sip_tm.tserver_replace(&old_tid, tid, self)
                 }
             }
             // Install retransmit timer if necessary
@@ -313,14 +317,14 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
             self.startTeA()
         } else {
             // We have done with the transaction
-            self.sip_tm.tserver_del(self.tid)
+            sip_tm.tserver_del(self.tid)
             need_cleanup = true
         }
     }
     if self.before_response_sent != nil {
         self.before_response_sent(resp)
     }
-    self.sip_tm.transmitData(self.userv, self.data, self.address, self.checksum, self.tid.CallId, lossemul)
+    sip_tm.transmitData(self.userv, self.data, self.address, self.checksum, self.tid.CallId, lossemul)
     if need_cleanup {
         self.cleanup()
     }

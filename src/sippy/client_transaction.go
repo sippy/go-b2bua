@@ -95,7 +95,7 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         before_request_sent : req_out_cb,
         ack_rparams_present : false,
     }
-    self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack, sip_tm.config.ErrorLogger())
+    self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack)
     return self, nil
 }
 
@@ -112,9 +112,9 @@ func (self *clientTransaction) cleanup() {
     self.baseTransaction.cleanup()
     self.ack = nil
     self.resp_receiver = nil
-    if self.teB != nil { self.teB.Cancel(); self.teB = nil }
-    if self.teC != nil { self.teC.Cancel(); self.teC = nil }
-    if self.teG != nil { self.teG.Cancel(); self.teG = nil }
+    if teB := self.teB; teB != nil { teB.Cancel(); self.teB = nil }
+    if teC := self.teC; teC != nil { teC.Cancel(); self.teC = nil }
+    if teG := self.teG; teG != nil { teG.Cancel(); self.teG = nil }
     self.r408 = nil
     self.cancel = nil
 }
@@ -124,8 +124,8 @@ func (self *clientTransaction) SetOutboundProxy(outbound_proxy *sippy_net.HostPo
 }
 
 func (self *clientTransaction) startTeC() {
-    if self.teC != nil {
-        self.teC.Cancel()
+    if teC := self.teC; teC != nil {
+        teC.Cancel()
     }
     self.teC = StartTimeout(self.timerC, self.lock, 32 * time.Second, 1, self.logger)
 }
@@ -149,11 +149,10 @@ func (self *clientTransaction) timerB() {
 }
 
 func (self *clientTransaction) timerC() {
-    if self.sip_tm == nil {
-        return
+    if sip_tm := self.sip_tm; sip_tm != nil {
+        sip_tm.tclient_del(self.tid)
+        self.cleanup()
     }
-    self.sip_tm.tclient_del(self.tid)
-    self.cleanup()
 }
 
 func (self *clientTransaction) timerG() {
@@ -167,21 +166,22 @@ func (self *clientTransaction) timerG() {
 }
 
 func (self *clientTransaction) cancelTeB() {
-    if self.teB != nil {
-        self.teB.Cancel()
+    if teB := self.teB; teB != nil {
+        teB.Cancel()
         self.teB = nil
     }
 }
 
 func (self *clientTransaction) startTeB(timeout time.Duration) {
-    if self.teB != nil {
-        self.teB.Cancel()
+    if teB := self.teB; teB != nil {
+        teB.Cancel()
     }
     self.teB = StartTimeout(self.timerB, self.lock, timeout, 1, self.logger)
 }
 
 func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, checksum string) {
-    if self.sip_tm == nil {
+    sip_tm := self.sip_tm
+    if sip_tm == nil {
         return
     }
     // In those two states upper level already notified, only do ACK retransmit
@@ -195,30 +195,30 @@ func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, ch
     }
     self.cancelTeB()
     if resp.GetSCodeNum() < 200 {
-        self.process_provisional_response(checksum, resp)
+        self.process_provisional_response(checksum, resp, sip_tm)
     } else {
-        self.process_final_response(checksum, resp)
+        self.process_final_response(checksum, resp, sip_tm)
     }
 }
 
-func (self *clientTransaction) process_provisional_response(checksum string, resp sippy_types.SipResponse) {
+func (self *clientTransaction) process_provisional_response(checksum string, resp sippy_types.SipResponse, sip_tm *sipTransactionManager) {
     // Privisional response - leave everything as is, except that
     // change state and reload timeout timer
     if self.state == TRYING {
         self.state = RINGING
         if self.cancelPending {
-            self.sip_tm.BeginNewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
+            sip_tm.BeginNewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
             self.cancelPending = false
         }
     }
     self.startTeB(self.expires)
-    self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
+    sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
     if self.resp_receiver != nil {
         self.resp_receiver.RecvResponse(resp, self)
     }
 }
 
-func (self *clientTransaction) process_final_response(checksum string, resp sippy_types.SipResponse) {
+func (self *clientTransaction) process_final_response(checksum string, resp sippy_types.SipResponse, sip_tm *sipTransactionManager) {
     // Final response - notify upper layer and remove transaction
     if self.resp_receiver != nil {
         self.resp_receiver.RecvResponse(resp, self)
@@ -226,16 +226,16 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
     if self.needack {
         // Prepare and send ACK if necessary
         fcode := resp.GetSCodeNum()
-        to_body, err := resp.GetTo().GetBody(self.sip_tm.config)
+        to_body, err := resp.GetTo().GetBody(sip_tm.config)
         if err != nil {
-            self.sip_tm.config.ErrorLogger().Debug(err.Error())
+            self.logger.Debug(err.Error())
             return
         }
         tag := to_body.GetTag()
         if tag != "" {
-            to_body, err = self.ack.GetTo().GetBody(self.sip_tm.config)
+            to_body, err = self.ack.GetTo().GetBody(sip_tm.config)
             if err != nil {
-                self.sip_tm.config.ErrorLogger().Debug(err.Error())
+                self.logger.Debug(err.Error())
                 return
             }
             to_body.SetTag(tag)
@@ -246,9 +246,9 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             // Some hairy code ahead
             if len(resp.GetContacts()) > 0 {
                 var contact *sippy_header.SipAddress
-                contact, err = resp.GetContacts()[0].GetBody(self.sip_tm.config)
+                contact, err = resp.GetContacts()[0].GetBody(sip_tm.config)
                 if err != nil {
-                    self.sip_tm.config.ErrorLogger().Debug(err.Error())
+                    self.logger.Debug(err.Error())
                     return
                 }
                 rTarget = contact.GetUrl().GetCopy()
@@ -264,9 +264,9 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                 }
                 if len(routes) > 0 {
                     var r0 *sippy_header.SipAddress
-                    r0, err = routes[0].GetBody(self.sip_tm.config)
+                    r0, err = routes[0].GetBody(sip_tm.config)
                     if err != nil {
-                        self.sip_tm.config.ErrorLogger().Debug(err.Error())
+                        self.logger.Debug(err.Error())
                         return
                     }
                     if ! r0.GetUrl().Lr {
@@ -275,13 +275,13 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
                         }
                         rTarget = r0.GetUrl()
                         routes = routes[1:]
-                        rAddr = rTarget.GetAddr(self.sip_tm.config)
+                        rAddr = rTarget.GetAddr(sip_tm.config)
                     } else {
-                        rAddr = r0.GetUrl().GetAddr(self.sip_tm.config)
+                        rAddr = r0.GetUrl().GetAddr(sip_tm.config)
                     }
                 } else if rTarget != nil {
 
-                    rAddr = rTarget.GetAddr(self.sip_tm.config)
+                    rAddr = rTarget.GetAddr(sip_tm.config)
                 }
                 if rTarget != nil {
                     self.ack.SetRURI(rTarget)
@@ -298,7 +298,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
         if fcode >= 200 && fcode < 300 {
             var via0 *sippy_header.SipViaBody
             if via0, err = self.ack.GetVias()[0].GetBody(); err != nil {
-                self.sip_tm.config.ErrorLogger().Debug("error parsing via: " + err.Error())
+                self.logger.Debug("error parsing via: " + err.Error())
                 return
             }
             via0.GenBranch()
@@ -308,24 +308,25 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
         }
         if ! self.uack {
             self.BeforeRequestSent(self.ack)
-            self.sip_tm.transmitMsg(self.userv, self.ack, rAddr, checksum, self.tid.CallId)
+            sip_tm.transmitMsg(self.userv, self.ack, rAddr, checksum, self.tid.CallId)
         } else {
             self.state = UACK
             self.ack_rAddr = rAddr
             self.ack_checksum = checksum
-            self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
+            sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
             self.teG = StartTimeout(self.timerG, self.lock, 64 * time.Second, 1, self.logger)
             return
         }
     } else {
-        self.sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
+        sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
     }
-    self.sip_tm.tclient_del(self.tid)
+    sip_tm.tclient_del(self.tid)
     self.cleanup()
 }
 
 func (self *clientTransaction) Cancel(extra_headers ...sippy_header.SipHeader) {
-    if self.sip_tm == nil {
+    sip_tm := self.sip_tm
+    if sip_tm == nil {
         return
     }
     // If we got at least one provisional reply then (state == RINGING)
@@ -338,7 +339,7 @@ func (self *clientTransaction) Cancel(extra_headers ...sippy_header.SipHeader) {
                 self.cancel.AppendHeader(h)
             }
         }
-        self.sip_tm.BeginNewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
+        sip_tm.BeginNewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
     }
 }
 
@@ -351,13 +352,15 @@ func (self *clientTransaction) Unlock() {
 }
 
 func (self *clientTransaction) SendACK() {
-    if self.teG != nil {
-        self.teG.Cancel()
+    if teG := self.teG; teG != nil {
+        teG.Cancel()
         self.teG = nil
     }
     self.BeforeRequestSent(self.ack)
-    self.sip_tm.transmitMsg(self.userv, self.ack, self.ack_rAddr, self.ack_checksum, self.tid.CallId)
-    self.sip_tm.tclient_del(self.tid)
+    if sip_tm := self.sip_tm; sip_tm != nil {
+        sip_tm.transmitMsg(self.userv, self.ack, self.ack_rAddr, self.ack_checksum, self.tid.CallId)
+        sip_tm.tclient_del(self.tid)
+    }
     self.cleanup()
 }
 
@@ -376,8 +379,8 @@ func (self *clientTransaction) BeforeRequestSent(req sippy_types.SipRequest) {
 }
 
 func (self *clientTransaction) TransmitData() {
-    if self.sip_tm != nil {
-        self.sip_tm.transmitDataWithCb(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id =*/ self.tid.CallId, 0, self.on_send_complete)
+    if sip_tm := self.sip_tm; sip_tm != nil {
+        sip_tm.transmitDataWithCb(self.userv, self.data, self.address, /*cachesum*/ "", /*call_id =*/ self.tid.CallId, 0, self.on_send_complete)
     }
 }
 
