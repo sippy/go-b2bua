@@ -408,7 +408,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
 
     self.tclient_lock.Lock()
     for _, tid = range tids {
-        if _, ok := self.tclient[*tid]; ok {
+        if t, ok := self.tclient[*tid]; ok {
             var via0 *sippy_header.SipViaBody
 
             self.tclient_lock.Unlock()
@@ -424,10 +424,14 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
         }
     }
     self.tclient_lock.Unlock()
-    if req.GetMethod() != "ACK" {
-        tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
-    } else {
+    switch req.GetMethod() {
+    case "ACK":
         tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/)
+    case "PRACK":
+        tid = self.rtid2tid[req.getRTId()]
+        err = nil
+    default:
+        tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
     }
     if err != nil {
         self.logBadMessage("cannot get transaction ID: " + err.Error(), data)
@@ -438,14 +442,27 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     if ok {
         self.tserver_lock.Unlock()
         sippy_utils.SafeCall(func() { t.IncomingRequest(req, checksum) }, t, self.config.ErrorLogger())
-    } else if req.GetMethod() == "ACK" {
+        return
+    }
+    switch req.GetMethod() {
+    case "ACK":
         self.tserver_lock.Unlock()
         // Some ACK that doesn't match any existing transaction.
         // Drop and forget it - upper layer is unlikely to be interested
         // to seeing this anyway.
         //println("unmatched ACK transaction - ignoring")
         self.rcache_set_call_id(checksum, tid.CallId)
-    } else if req.GetMethod() == "CANCEL" {
+    case "PRACK":
+        // Some ACK that doesn't match any existing transaction.
+        // Drop and forget it - upper layer is unlikely to be interested
+        // to seeing this anyway.
+        //print(datetime.now(), 'unmatched PRACK transaction - 481\'ing')
+        //print(datetime.now(), 'rtid: %s, tid: %s, self.tserver: %s' % (str(rtid), str(tid), \
+        //  str(self.tserver)))
+        //sys.stdout.flush()
+        resp = msg.genResponse(481, "Huh?")
+        self.transmitMsg(server, resp, resp.GetVias()[0].GetTAddr(self.config), checksum)
+    case "CANCEL":
         var via0 *sippy_header.SipViaBody
 
         self.tserver_lock.Unlock()
@@ -456,7 +473,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
             return
         }
         self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
-    } else {
+    default:
         self.new_server_transaction(server, req, tid, checksum)
     }
 }
@@ -608,7 +625,7 @@ func (self *sipTransactionManager) SendResponseWithLossEmul(resp sippy_types.Sip
 }
 
 func (self *sipTransactionManager) transmitMsg(userv sippy_net.Transport, msg sippy_types.SipMsg, address *sippy_net.HostPort, cachesum string, call_id string) {
-    data := msg.LocalStr(userv.GetLAddress(), false /* compact */)
+    data := msg.LocalStr(userv.GetLAddress(), false /*compact*/)
     self.transmitData(userv, []byte(data), address, cachesum, call_id, 0)
 }
 
@@ -683,4 +700,24 @@ func (self *sipTransactionManager) beforeResponseSent(resp sippy_types.SipRespon
 
 func (self *sipTransactionManager) SetBeforeResponseSent(cb func(sippy_types.SipResponse)) {
     self.before_response_sent = cb
+}
+
+func (self *sipTransactionManager) rtid_replace(ik *sippy_header.RTID, old_tid, new_tid *sippy_header.TID) {
+    if saved_tid, ok := self.rtid2tid[*ik]; ok && *saved_tid == *old_tid {
+        self.rtid2tid_lock.Lock()
+        defer self.rtid2tid_lock.Unlock()
+        self.rtid2tid[*ik] = new_tid
+    }
+}
+
+func (self *sipTransactionManager) rtid_del(key *sippy_header.RTID) {
+    self.rtid2tid_lock.Lock()
+    defer self.rtid2tid_lock.Unlock()
+    delete(self.rtid2tid, *key)
+}
+
+func (self *sipTransactionManager) rtid_put(key *sippy_header.RTID, value *sippy_header.TID) {
+    self.rtid2tid_lock.Lock()
+    defer self.rtid2tid_lock.Unlock()
+    self.rtid2tid[*key] = value
 }

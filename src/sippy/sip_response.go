@@ -138,3 +138,11 @@ func (self *sipResponse) GetSCodeReason() string {
 func (self *sipResponse) SetSCodeReason(reason string) {
     self.reason = reason
 }
+
+func (self *sipResponse) GetRTId() *sippy_header.RTID {
+    rseq := self.GetSipRSeq().StringBody()
+    cseq := self.GetSipCSeq()
+    call_id := self.GetSipCallID()
+    from_tag := self.GetSipFrom().GetTag()
+    return sippy_header.NewRTID(call_id, from_tag, rseq, cseq.CSeq, cseq.CSeqMethod)
+}

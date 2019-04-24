@@ -175,6 +175,7 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     self.rCSeq = cseq_body.CSeq
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
+            t.init_prack(req)
             self.ChangeState(NewUasStateIdle(self.me(), self.config), nil)
         } else {
             return nil

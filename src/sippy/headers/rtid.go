@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2019 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2019 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -30,27 +30,24 @@ import (
     "fmt"
 )
 
-type TID struct {
+type RTID struct {
     CallId      string
-    CSeq        string
-    CSeqMethod  string
     FromTag     string
-    ToTag       string
-    Branch      string
+    RSeq        string
+    CSeq        string
+    Method      string
 }
 
-func NewTID(call_id, cseq, cseq_method, from_tag, to_tag, via_branch string) *TID {
-    self := &TID{
+func NewRTID(call_id, from_tag, rseq, cseq, method string) *RTID {
+    return &RTID{
         CallId      : call_id,
-        CSeq        : cseq,
-        CSeqMethod  : cseq_method,
         FromTag     : from_tag,
-        ToTag       : to_tag,
-        Branch      : via_branch,
+        RSeq        : rseq,
+        CSeq        : cseq,
+        Method      : method,
     }
-    return self
 }
 
-func (self *TID) String() string {
-    return fmt.Sprintf("callid: '%s', cseq: '%s', cseq_method: '%s', from_tag: '%s', to_tag: '%s', branch: '%s'", self.CallId, self.CSeq, self.CSeqMethod, self.FromTag, self.ToTag, self.Branch)
+func (self *RTID) String() string {
+    return fmt.Sprintf("callid: '%s', cseq: '%s', method: '%s', from_tag: '%s', '%s', rseq: '%s'", self.CallId, self.CSeq, self.Method, self.FromTag, self.RSeq)
 }

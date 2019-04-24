@@ -55,6 +55,7 @@ type SipMsg interface {
     GetSipServer() *sippy_header.SipServer
     LocalStr(hostport *sippy_net.HostPort, compact bool) string
     GetCSeq() *sippy_header.SipCSeq
+    GetRSeq() *sippy_header.SipRSeq
     GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error)
     GetTo() *sippy_header.SipTo
     GetReason() *sippy_header.SipReason
@@ -83,6 +84,7 @@ type SipMsg interface {
     GetSL() string
     GetMaxForwards() *sippy_header.SipMaxForwards
     SetMaxForwards(*sippy_header.SipMaxForwards)
+    GetRTId() *sippy_header.RTID
 }
 
 type SipRequest interface {

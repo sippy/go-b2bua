@@ -48,6 +48,7 @@ type sipMsg struct {
     to                  *sippy_header.SipTo
     from                *sippy_header.SipFrom
     cseq                *sippy_header.SipCSeq
+    rseq                *sippy_header.SipRSeq
     content_length      *sippy_header.SipContentLength
     content_type        *sippy_header.SipContentType
     call_id             *sippy_header.SipCallId
@@ -164,6 +165,8 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     switch t := hdr.(type) {
     case *sippy_header.SipCSeq:
         self.cseq = t
+    case *sippy_header.SipRSeq:
+        self.rseq = t
     case *sippy_header.SipCallId:
         self.call_id = t
     case *sippy_header.SipFrom:
@@ -361,18 +364,6 @@ func (self *sipMsg) GetSource() *sippy_net.HostPort {
     return self.source
 }
 
-func new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch string) *sippy_header.TID {
-    self := &sippy_header.TID{
-        CallId      : call_id,
-        CSeq        : cseq,
-        CSeqMethod  : cseq_method,
-        FromTag     : from_tag,
-        ToTag       : to_tag,
-        Branch      : via_branch,
-    }
-    return self
-}
-
 func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error) {
     var call_id, cseq, cseq_method, from_tag, to_tag, via_branch string
     var cseq_hf *sippy_header.SipCSeqBody
@@ -416,7 +407,7 @@ func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error) {
         }
         to_tag = to_hf.GetTag()
     }
-    return new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch), nil
+    return sippy_header.NewTID(call_id, cseq, cseq_method, from_tag, to_tag, via_branch), nil
 }
 
 func (self *sipMsg) getTIds() ([]*sippy_header.TID, error) {
@@ -447,7 +438,7 @@ func (self *sipMsg) getTIds() ([]*sippy_header.TID, error) {
         if via_hf, err = via.GetBody(); err != nil {
             return nil, err
         }
-        ret = append(ret, new_tid(call_id, cseq, method, ftag, via_hf.GetBranch(), ""))
+        ret = append(ret, sippy_header.NewTID(call_id, cseq, method, ftag, via_hf.GetBranch(), ""))
     }
     return ret, nil
 }
@@ -486,6 +477,10 @@ func (self *sipMsg) GetSipUserAgent() *sippy_header.SipUserAgent {
 
 func (self *sipMsg) GetCSeq() *sippy_header.SipCSeq {
     return self.cseq
+}
+
+func (self *sipMsg) GetRSeq() *sippy_header.SipRSeq {
+    return self.rseq
 }
 
 func (self *sipMsg) GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate {

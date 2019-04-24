@@ -53,6 +53,10 @@ type serverTransaction struct {
     expires         time.Duration
     ack_cb          func(sippy_types.SipRequest)
     before_response_sent func(sippy_types.SipResponse)
+    prov_inflight   map[sippy_header.RTID]*Timeout
+    prov_inflight_lock sync.Mutex
+    pr_rel          bool
+    rseq            *sippy_header.SipRSeq
 }
 
 func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sippy_header.TID, userv sippy_net.Transport, sip_tm *sipTransactionManager) (sippy_types.ServerTransaction, error) {
@@ -80,6 +84,8 @@ func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sipp
         r487            : r487,
         branch          : branch,
         expires         : expires,
+        prov_inflight   : make(map[sippy_header.RTID]*Timeout),
+        rseq            : sippy_header.NewSipRSeq(),
     }
     self.baseTransaction = newBaseTransaction(self, tid, userv, sip_tm, nil, nil, needack)
     return self, nil
@@ -212,15 +218,14 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         return
     }
     //println("existing transaction")
-    if req.GetMethod() == self.method {
+    switch req.GetMethod() {
+    case self.method:
         // Duplicate received, check that we have sent any response on this
         // request already
         if self.data != nil && len(self.data) > 0 {
             sip_tm.transmitData(self.userv, self.data, self.address, checksum, self.tid.CallId, 0)
         }
-        return
-    }
-    if req.GetMethod() == "CANCEL" {
+    case "CANCEL":
         // RFC3261 says that we have to reply 200 OK in all cases if
         // there is such transaction
         resp := req.GenResponse(200, "OK", /*body*/ nil, self.server)
@@ -233,17 +238,40 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         if self.state == TRYING || self.state == RINGING {
             self.doCancel(req.GetRtime(), req)
         }
-    } else if req.GetMethod() == "ACK" && self.state == COMPLETED {
-        self.state = CONFIRMED
-        self.cancelTeA()
-        self.cancelTeD()
-        if self.ack_cb != nil {
-            self.ack_cb(req)
+    case "ACK":
+        if self.state == COMPLETED {
+            self.state = CONFIRMED
+            self.cancelTeA()
+            self.cancelTeD()
+            if self.ack_cb != nil {
+                self.ack_cb(req)
+            }
+            // We have done with the transaction, no need to wait for timeout
+            sip_tm.tserver_del(self.tid)
+            sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
+            self.cleanup()
         }
-        // We have done with the transaction, no need to wait for timeout
-        sip_tm.tserver_del(self.tid)
-        sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
-        self.cleanup()
+    case "PRACK":
+        var resp sippy_types.SipResponse
+        rskey := req.GetRTId()
+        self.prov_inflight_lock.Lock()
+        if rert_t, ok := self.prov_inflight[*rskey]; ok {
+            rert_t.Cancel()
+            delete(self.prov_inflight, *rskey)
+            self.prov_inflight_lock.Unlock()
+            sip_tm.rtid_del(rskey)
+            resp = req.GenResponse(200, "OK", nil /*body*/, nil /*server*/)
+        } else {
+            self.prov_inflight_lock.Unlock()
+            //print('rskey: %s, prov_inflight: %s' % (str(rskey), str(self.prov_inflight)))
+            resp = req.GenResponse(481, "Huh?", nil /*body*/, nil /*server*/)
+        }
+        via0, err := resp.GetVias()[0].GetBody()
+        if err != nil {
+            self.logger.Debug("error parsing Via: " + err.Error())
+            return
+        }
+        sip_tm.transmitMsg(self.userv, resp, via0.GetTAddr(sip_tm.config), checksum, self.tid.CallId)
     }
 }
 
@@ -262,7 +290,8 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
     if self.state != TRYING && self.state != RINGING && ! retrans {
         self.logger.Error("BUG: attempt to send reply on already finished transaction!!!")
     }
-    if resp.GetSCodeNum() > 100 {
+    scode := resp.GetSCodeNum()
+    if scode > 100 {
         to, err := resp.GetTo().GetBody(sip_tm.config)
         if err != nil {
             self.logger.Debug("error parsing To: " + err.Error())
@@ -272,6 +301,15 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
             to.GenTag()
         }
     }
+    var rseq *sippy_header.SipRSeq
+    if self.pr_rel && scode > 100 && scode < 200 {
+        rseq = self.rseq.GetCopy()
+        self.rseq.IncNum()
+        resp.AppendHeader(rseq)
+        tid, err := resp.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
+        rtid := resp.GetRTId()
+        sip_tm.rtid_put(rtid, tid)
+    }
     sip_tm.beforeResponseSent(resp)
     self.data = []byte(resp.LocalStr(self.userv.GetLAddress(), /*compact*/ false))
     via0, err = resp.GetVias()[0].GetBody()
@@ -280,6 +318,17 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
         return
     }
     self.address = via0.GetTAddr(sip_tm.config)
+    if rseq != nil {
+        rskey := resp.GetRTId()
+        if lossemul > 0 {
+            lossemul -= 1
+        }
+        timeout := 500 * time.Millisecond
+        rert_t := StartTimeout(func() { self.retrUasResponse(timeout, rskey, lossemul) }, self, timeout, 1, self.logger)
+        self.prov_inflight_lock.Lock()
+        self.prov_inflight[*rskey] = rert_t
+        self.prov_inflight_lock.Unlock()
+    }
     need_cleanup := false
     if resp.GetSCodeNum() < 200 {
         self.state = RINGING
@@ -309,7 +358,12 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
                     old_tid := *tid // copy
                     tid.Branch = ""
                     tid.ToTag = to.GetTag()
+                    self.prov_inflight_lock.Lock()
+                    for ik, _ := range self.prov_inflight {
+                        sip_tm.rtid_replace(&ik, &old_tid, tid)
+                    }
                     sip_tm.tserver_replace(&old_tid, tid, self)
+                    self.prov_inflight_lock.Unlock()
                 }
             }
             // Install retransmit timer if necessary
@@ -364,4 +418,28 @@ func (self *serverTransaction) SetServer(server *sippy_header.SipServer) {
 
 func (self *serverTransaction) SetBeforeResponseSent(cb func(resp sippy_types.SipResponse)) {
     self.before_response_sent = cb
+}
+
+func (self *serverTransaction) retrUasResponse(last_timeout time.Duration, rskey *sippy_header.RTID, lossemul int) {
+    if last_timeout > 16 {
+        self.prov_inflight_lock.Lock()
+        delete(self.prov_inflight, *rskey)
+        self.prov_inflight_lock.Unlock()
+        if sip_tm := self.sip_tm; sip_tm != nil {
+            sip_tm.rtid_del(rskey)
+        }
+        return
+    }
+    if sip_tm := self.sip_tm; sip_tm != nil {
+        if lossemul == 0 {
+            sip_tm.transmitData(self.userv, self.data, self.address, "" /*checksum*/, self.tid.CallId, 0 /*lossemul*/)
+        } else {
+            lossemul -= 1
+        }
+    }
+    last_timeout *= 2
+    rert_t := StartTimeout(func() { self.retrUasResponse(last_timeout, rskey, lossemul) }, self, last_timeout, 1, self.logger)
+    self.prov_inflight_lock.Lock()
+    self.prov_inflight[*rskey] = rert_t
+    self.prov_inflight_lock.Unlock()
 }

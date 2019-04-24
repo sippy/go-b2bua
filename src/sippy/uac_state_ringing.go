@@ -58,6 +58,16 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         self.ua.SetLastScode(code)
     }
     if code < 200 {
+        if rseq := resp.GetSipRSeq(); rseq != nil {
+            tag := resp.GetTo().GetTag()
+            self.ua.rUri.setTag(tag)
+            cseq = resp.GetCSeq()
+            req = self.ua.genRequest("PRACK")
+            self.ua.lCSeq += 1
+            rack := NewSipRAck(rseq.number, cseq.cseq, cseq.method)
+            req.appendHeader(rack)
+            self.ua.SipTM().NewTransaction(req, /*laddress*/ self.ua.source_address, /*compact*/ self.ua.compact_sip)
+        }
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(resp.GetRtime())
         }

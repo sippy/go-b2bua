@@ -74,6 +74,16 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             self.ua.StartExpireTimer(self.ua.GetExMtime())
         }
     }
+    if rseq := resp.GetRSeq(); rseq != nil {
+        tag = resp.GetTo().GetTag()
+        self.ua.rUri.setTag(tag)
+        cseq = resp.GetCSeq()
+        req = self.ua.genRequest("PRACK")
+        self.ua.lCSeq += 1
+        rack = sippy_header.NewSipRAck(rseq.number, cseq.cseq, cseq.method)
+        req.appendHeader(rack)
+        self.ua.SipTM().NewTransaction(req, /*laddress*/ self.ua.source_address, /*compact*/ self.ua.compact_sip)
+    }
     if code < 200 {
         event := NewCCEventRing(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         if body != nil {

@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2019 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2019 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -27,30 +27,48 @@
 package sippy_header
 
 import (
-    "fmt"
+    "sippy/net"
 )
 
-type TID struct {
-    CallId      string
-    CSeq        string
-    CSeqMethod  string
-    FromTag     string
-    ToTag       string
-    Branch      string
+type SipRSeq struct {
+    normalName
+    SipNumericHF
 }
 
-func NewTID(call_id, cseq, cseq_method, from_tag, to_tag, via_branch string) *TID {
-    self := &TID{
-        CallId      : call_id,
-        CSeq        : cseq,
-        CSeqMethod  : cseq_method,
-        FromTag     : from_tag,
-        ToTag       : to_tag,
-        Branch      : via_branch,
+var _sip_rseq_name normalName = newNormalName("RSeq")
+
+func NewSipRSeq() *SipRSeq {
+    return &SipRSeq{
+        normalName  : _sip_rseq_name,
+        SipNumericHF : newSipNumericHF(1),
     }
-    return self
 }
 
-func (self *TID) String() string {
-    return fmt.Sprintf("callid: '%s', cseq: '%s', cseq_method: '%s', from_tag: '%s', to_tag: '%s', branch: '%s'", self.CallId, self.CSeq, self.CSeqMethod, self.FromTag, self.ToTag, self.Branch)
+func CreateSipRSeq(body string) []SipHeader {
+    return []SipHeader{ &SipRSeq{
+        normalName      : _sip_rseq_name,
+        SipNumericHF    : createSipNumericHF(body),
+    } }
+}
+
+func (self *SipRSeq) String() string {
+    return self.Name() + ": " + self.StringBody()
+}
+
+func (self *SipRSeq) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
+    return self.String()
+}
+
+func (self *SipRSeq) GetCopy() *SipRSeq {
+    tmp := *self
+    return &tmp
+}
+
+func (self *SipRSeq) GetCopyAsIface() SipHeader {
+    return self.GetCopy()
+}
+
+func (self *SipRSeq) IncNum() {
+    self.parse()
+    self.Number++
 }

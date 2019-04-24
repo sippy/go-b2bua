@@ -240,3 +240,10 @@ func (self *sipRequest) GetExpires() *sippy_header.SipExpires {
 func (self *sipRequest) GetNated() bool {
     return self.nated
 }
+
+func (self *sipRequest) GetRTId() *sippy_header.RTID {
+    rseq := self.GetSipRAck().GetRSeq()
+    call_id := self.GetSipCallID()
+    from_tag := self.GetFrom().GetTag()
+    return sippy_header.NewTID(call_id, from_tag, rseq.rseq, rseq.cseq, rseq.method)
+}
