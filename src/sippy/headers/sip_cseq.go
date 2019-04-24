@@ -100,6 +100,10 @@ func (self *SipCSeq) GetBody() (*SipCSeqBody, error) {
 
 func (self *SipCSeq) GetCopy() *SipCSeq {
     tmp := *self
+    if self.body != nil {
+        body := *self.body
+        tmp.body = &body
+    }
     return &tmp
 }
 
