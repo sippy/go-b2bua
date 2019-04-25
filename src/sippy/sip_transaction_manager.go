@@ -61,6 +61,8 @@ type sipTransactionManager struct {
     pass_t_to_cb    bool
     provisional_retr time.Duration
     before_response_sent func(sippy_types.SipResponse)
+    rtid2tid        map[sippy_header.RTID]*sippy_header.TID
+    rtid2tid_lock   sync.Mutex
 }
 
 type sipTMRetransmitO struct {
@@ -86,6 +88,7 @@ func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.Cal
         req_consumers   : make(map[string][]sippy_types.UA),
         pass_t_to_cb    : false,
         provisional_retr : 0,
+        rtid2tid        : make(map[sippy_header.RTID]*sippy_header.TID),
     }
     self.l4r, err = NewLocal4Remote(config, self.handleIncoming)
     if err != nil {
@@ -428,8 +431,11 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     case "ACK":
         tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/)
     case "PRACK":
-        tid = self.rtid2tid[req.getRTId()]
-        err = nil
+        if rtid, err := req.GetRTId(); err == nil {
+            self.rtid2tid_lock.Lock()
+            tid = self.rtid2tid[*rtid]
+            self.rtid2tid_lock.Unlock()
+        }
     default:
         tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
     }
@@ -460,14 +466,19 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
         //print(datetime.now(), 'rtid: %s, tid: %s, self.tserver: %s' % (str(rtid), str(tid), \
         //  str(self.tserver)))
         //sys.stdout.flush()
-        resp = msg.genResponse(481, "Huh?")
-        self.transmitMsg(server, resp, resp.GetVias()[0].GetTAddr(self.config), checksum)
+        via0, err := req.GetVias()[0].GetBody()
+        if err != nil {
+            self.logBadMessage("Cannot parse Via: " + err.Error(), data)
+            return
+        }
+        resp := req.GenResponse(481, "Huh?", /*body*/ nil, /*server*/ nil)
+        self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
     case "CANCEL":
         var via0 *sippy_header.SipViaBody
 
         self.tserver_lock.Unlock()
         resp := req.GenResponse(481, "Call Leg/Transaction Does Not Exist", /*body*/ nil, /*server*/ nil)
-        via0, err = resp.GetVias()[0].GetBody()
+        via0, err = req.GetVias()[0].GetBody()
         if err != nil {
             self.logBadMessage("Cannot parse Via: " + err.Error(), data)
             return

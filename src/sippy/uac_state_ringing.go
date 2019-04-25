@@ -58,15 +58,33 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         self.ua.SetLastScode(code)
     }
     if code < 200 {
-        if rseq := resp.GetSipRSeq(); rseq != nil {
-            tag := resp.GetTo().GetTag()
-            self.ua.rUri.setTag(tag)
-            cseq = resp.GetCSeq()
-            req = self.ua.genRequest("PRACK")
-            self.ua.lCSeq += 1
-            rack := NewSipRAck(rseq.number, cseq.cseq, cseq.method)
-            req.appendHeader(rack)
-            self.ua.SipTM().NewTransaction(req, /*laddress*/ self.ua.source_address, /*compact*/ self.ua.compact_sip)
+        if rseq := resp.GetRSeq(); rseq != nil {
+            to_body, err := resp.GetTo().GetBody(self.config)
+            if err != nil {
+                self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #6: " + err.Error())
+                return nil, nil
+            }
+            tag := to_body.GetTag()
+            rUri, err := self.ua.GetRUri().GetBody(self.config)
+            if err != nil {
+                self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #7: " + err.Error())
+                return nil, nil
+            }
+            rUri.SetTag(tag)
+            cseq, err := resp.GetCSeq().GetBody()
+            if err != nil {
+                self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #8: " + err.Error())
+                return nil, nil
+            }
+            req, err := self.ua.GenRequest("PRACK", nil, "", "", nil)
+            if err != nil {
+                self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #9: " + err.Error())
+                return nil, nil
+            }
+            self.ua.IncLCSeq()
+            rack := sippy_header.NewSipRAck(rseq.Number, cseq.CSeq, cseq.Method)
+            req.AppendHeader(rack)
+            self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         }
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(resp.GetRtime())
