@@ -193,7 +193,11 @@ func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, ch
     }
     code := resp.GetSCodeNum()
     if code > 100 && code < 200 && resp.GetRSeq() != nil {
-        rskey := resp.GetRTId()
+        rskey, err := resp.GetRTId()
+        if err != nil {
+            self.logger.Error("Cannot get rtid: " + err.Error())
+            return
+        }
         if _, ok := self.seen_rseqs[*rskey]; ok {
             sip_tm.rcache_put(checksum, &sipTMRetransmitO{
                                 userv : nil,

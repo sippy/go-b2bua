@@ -253,7 +253,11 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         }
     case "PRACK":
         var resp sippy_types.SipResponse
-        rskey := req.GetRTId()
+        rskey, err := req.GetRTId()
+        if err != nil {
+            self.logger.Debug("Cannot get rtid: " + err.Error())
+            return
+        }
         self.prov_inflight_lock.Lock()
         if rert_t, ok := self.prov_inflight[*rskey]; ok {
             rert_t.Cancel()
@@ -304,10 +308,23 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
     var rseq *sippy_header.SipRSeq
     if self.pr_rel && scode > 100 && scode < 200 {
         rseq = self.rseq.GetCopy()
-        self.rseq.IncNum()
+        rseq_body, err := self.rseq.GetBody()
+        if err != nil {
+            self.logger.Debug("error parsing RSeq: " + err.Error())
+            return
+        }
+        rseq_body.Number++
         resp.AppendHeader(rseq)
         tid, err := resp.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
-        rtid := resp.GetRTId()
+        if err != nil {
+            self.logger.Debug("Cannot get tid: " + err.Error())
+            return
+        }
+        rtid, err := resp.GetRTId()
+        if err != nil {
+            self.logger.Debug("Cannot get rtid: " + err.Error())
+            return
+        }
         sip_tm.rtid_put(rtid, tid)
     }
     sip_tm.beforeResponseSent(resp)
@@ -319,7 +336,11 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
     }
     self.address = via0.GetTAddr(sip_tm.config)
     if rseq != nil {
-        rskey := resp.GetRTId()
+        rskey, err := resp.GetRTId()
+        if err != nil {
+            self.logger.Debug("Cannot get rtid: " + err.Error())
+            return
+        }
         if lossemul > 0 {
             lossemul -= 1
         }

@@ -49,6 +49,7 @@ type sipMsg struct {
     from                *sippy_header.SipFrom
     cseq                *sippy_header.SipCSeq
     rseq                *sippy_header.SipRSeq
+    rack                *sippy_header.SipRAck
     content_length      *sippy_header.SipContentLength
     content_type        *sippy_header.SipContentType
     call_id             *sippy_header.SipCallId
@@ -167,6 +168,8 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.cseq = t
     case *sippy_header.SipRSeq:
         self.rseq = t
+    case *sippy_header.SipRAck:
+        self.rack = t
     case *sippy_header.SipCallId:
         self.call_id = t
     case *sippy_header.SipFrom:
@@ -481,6 +484,10 @@ func (self *sipMsg) GetCSeq() *sippy_header.SipCSeq {
 
 func (self *sipMsg) GetRSeq() *sippy_header.SipRSeq {
     return self.rseq
+}
+
+func (self *sipMsg) GetSipRAck() *sippy_header.SipRAck {
+    return self.rack
 }
 
 func (self *sipMsg) GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate {

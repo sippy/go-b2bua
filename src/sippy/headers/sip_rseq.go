@@ -67,8 +67,3 @@ func (self *SipRSeq) GetCopy() *SipRSeq {
 func (self *SipRSeq) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
-
-func (self *SipRSeq) IncNum() {
-    self.parse()
-    self.Number++
-}

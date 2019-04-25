@@ -36,6 +36,7 @@ import (
 var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader) {
     "cseq"              : sippy_header.CreateSipCSeq,
     "rseq"              : sippy_header.CreateSipRSeq,
+    "rack"              : sippy_header.CreateSipRAck,
     "call-id"           : sippy_header.CreateSipCallId,
     "i"                 : sippy_header.CreateSipCallId,
     "from"              : sippy_header.CreateSipFrom,

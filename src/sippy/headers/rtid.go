@@ -33,12 +33,12 @@ import (
 type RTID struct {
     CallId      string
     FromTag     string
-    RSeq        string
-    CSeq        string
+    RSeq        int
+    CSeq        int
     Method      string
 }
 
-func NewRTID(call_id, from_tag, rseq, cseq, method string) *RTID {
+func NewRTID(call_id, from_tag string, rseq, cseq int, method string) *RTID {
     return &RTID{
         CallId      : call_id,
         FromTag     : from_tag,

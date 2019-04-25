@@ -241,9 +241,19 @@ func (self *sipRequest) GetNated() bool {
     return self.nated
 }
 
-func (self *sipRequest) GetRTId() *sippy_header.RTID {
-    rseq := self.GetSipRAck().GetRSeq()
-    call_id := self.GetSipCallID()
-    from_tag := self.GetFrom().GetTag()
-    return sippy_header.NewTID(call_id, from_tag, rseq.rseq, rseq.cseq, rseq.method)
+func (self *sipRequest) GetRTId() (*sippy_header.RTID, error) {
+    if self.rack == nil {
+        return nil, errors.New("No RAck field present")
+    }
+    rack, err := self.rack.GetBody()
+    if err != nil {
+        return nil, errors.New("Error parsing RSeq: " + err.Error())
+    }
+    call_id := self.call_id.StringBody()
+    from_body, err := self.GetFrom().GetBody(self.config)
+    if err != nil {
+        return nil, errors.New("Error parsing From: " + err.Error())
+    }
+    from_tag := from_body.GetTag()
+    return sippy_header.NewRTID(call_id, from_tag, rack.RSeq, rack.CSeq, rack.Method), nil
 }
