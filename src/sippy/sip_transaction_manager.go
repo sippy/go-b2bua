@@ -478,7 +478,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
 
         self.tserver_lock.Unlock()
         resp := req.GenResponse(481, "Call Leg/Transaction Does Not Exist", /*body*/ nil, /*server*/ nil)
-        via0, err = req.GetVias()[0].GetBody()
+        via0, err = resp.GetVias()[0].GetBody()
         if err != nil {
             self.logBadMessage("Cannot parse Via: " + err.Error(), data)
             return

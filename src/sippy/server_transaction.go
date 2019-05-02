@@ -442,7 +442,7 @@ func (self *serverTransaction) SetBeforeResponseSent(cb func(resp sippy_types.Si
 }
 
 func (self *serverTransaction) retrUasResponse(last_timeout time.Duration, rskey *sippy_header.RTID, lossemul int) {
-    if last_timeout > 16 {
+    if last_timeout > 16 * time.Second {
         self.prov_inflight_lock.Lock()
         delete(self.prov_inflight, *rskey)
         self.prov_inflight_lock.Unlock()
