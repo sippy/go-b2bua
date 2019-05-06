@@ -411,7 +411,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
 
     self.tclient_lock.Lock()
     for _, tid = range tids {
-        if t, ok := self.tclient[*tid]; ok {
+        if _, ok := self.tclient[*tid]; ok {
             var via0 *sippy_header.SipViaBody
 
             self.tclient_lock.Unlock()

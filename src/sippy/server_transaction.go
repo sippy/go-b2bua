@@ -464,3 +464,18 @@ func (self *serverTransaction) retrUasResponse(last_timeout time.Duration, rskey
     self.prov_inflight[*rskey] = rert_t
     self.prov_inflight_lock.Unlock()
 }
+
+func (self *serverTransaction) Setup100rel(req sippy_types.SipRequest) {
+    for _, require := range req.GetSipRequire() {
+        if require.HasTag("100rel") {
+            self.pr_rel = true
+            return
+        }
+    }
+    for _, supported := range req.GetSipSupported() {
+        if supported.HasTag("100rel") {
+            self.pr_rel = true
+            return
+        }
+    }
+}

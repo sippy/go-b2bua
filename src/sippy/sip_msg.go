@@ -72,6 +72,8 @@ type sipMsg struct {
     sip_user_agent      *sippy_header.SipUserAgent
     sip_cisco_guid      *sippy_header.SipCiscoGUID
     sip_h323_conf_id    *sippy_header.SipH323ConfId
+    sip_require         []*sippy_header.SipRequire
+    sip_supported       []*sippy_header.SipSupported
     config              sippy_conf.Config
 }
 
@@ -84,6 +86,8 @@ func NewSipMsg(rtime *sippy_time.MonoTime, config sippy_conf.Config) *sipMsg {
         record_routes   : make([]*sippy_header.SipRecordRoute, 0),
         routes          : make([]*sippy_header.SipRoute, 0),
         also            : make([]*sippy_header.SipAlso, 0),
+        sip_require     : make([]*sippy_header.SipRequire, 0),
+        sip_supported   : make([]*sippy_header.SipSupported, 0),
         rtime           : rtime,
         config          : config,
     }
@@ -222,6 +226,10 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.reason_hf  = t
     case *sippy_header.SipWarning:
         self.sip_warning = t
+    case *sippy_header.SipRequire:
+        self.sip_require = append(self.sip_require, t)
+    case *sippy_header.SipSupported:
+        self.sip_supported = append(self.sip_supported, t)
     case nil:
         return
     }
@@ -624,4 +632,12 @@ func (self *sipMsg) GetMaxForwards() *sippy_header.SipMaxForwards {
 
 func (self *sipMsg) SetMaxForwards(maxforwards *sippy_header.SipMaxForwards) {
     self.maxforwards = maxforwards
+}
+
+func (self *sipMsg) GetSipRequire() []*sippy_header.SipRequire {
+    return self.sip_require
+}
+
+func (self *sipMsg) GetSipSupported() []*sippy_header.SipSupported {
+    return self.sip_supported
 }

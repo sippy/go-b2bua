@@ -86,6 +86,8 @@ type SipMsg interface {
     GetMaxForwards() *sippy_header.SipMaxForwards
     SetMaxForwards(*sippy_header.SipMaxForwards)
     GetRTId() (*sippy_header.RTID, error)
+    GetSipRequire() []*sippy_header.SipRequire
+    GetSipSupported() []*sippy_header.SipSupported
 }
 
 type SipRequest interface {
@@ -316,6 +318,7 @@ type ServerTransaction interface {
     UpgradeToSessionLock(sync.Locker)
     SetServer(*sippy_header.SipServer)
     SetBeforeResponseSent(func(SipResponse))
+    Setup100rel(SipRequest)
 }
 
 type SipTransactionManager interface {
