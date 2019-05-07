@@ -439,6 +439,10 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     default:
         tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
     }
+    if tid == nil {
+        self.logBadMessage("cannot get transaction ID: ", data)
+        return
+    }
     if err != nil {
         self.logBadMessage("cannot get transaction ID: " + err.Error(), data)
         return
