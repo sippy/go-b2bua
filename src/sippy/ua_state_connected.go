@@ -167,7 +167,6 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             if err != nil {
                 return nil, nil, err
             }
-            self.ua.IncLCSeq()
             also := sippy_header.NewSipReferTo(redirect)
             req.AppendHeader(also)
             lUri, err = self.ua.GetLUri().GetBody(self.config)
@@ -182,7 +181,6 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             if err != nil {
                 return nil, nil, err
             }
-            self.ua.IncLCSeq()
             if redirect != nil {
                 also := sippy_header.NewSipAlso(redirect)
                 req.AppendHeader(also)
@@ -232,7 +230,6 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         if err != nil {
             return nil, nil, err
         }
-        self.ua.IncLCSeq()
         self.ua.SetLSDP(body)
         tr, err = self.ua.PrepTr(req)
         if err != nil {
@@ -249,7 +246,6 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil, err
         }
         req.SetBody(body)
-        self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         return nil, nil, nil
     }

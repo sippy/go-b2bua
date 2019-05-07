@@ -93,7 +93,6 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
                 self.logger.Error("Cannot create INVITE: " + err.Error())
                 return
             }
-            self.ua.IncLCSeq()
             self.ka_tr, err = self.ua.PrepTr(req)
             if err == nil {
                 self.triedauth = true
@@ -132,7 +131,6 @@ func (self *keepaliveController) keepAlive() {
         self.logger.Error("Cannot create INVITE: " + err.Error())
         return
     }
-    self.ua.IncLCSeq()
     self.triedauth = false
     self.ka_tr, err = self.ua.PrepTr(req)
     if err == nil {

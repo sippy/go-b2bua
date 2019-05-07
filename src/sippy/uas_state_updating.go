@@ -126,7 +126,6 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         if err != nil {
             return nil, nil, err
         }
-        self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
@@ -142,7 +141,6 @@ func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_typ
         self.config.ErrorLogger().Error("UasStateUpdating::Cancel: #1: " + err.Error())
         return
     }
-    self.ua.IncLCSeq()
     self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
     self.ua.CancelCreditTimer()
     self.ua.SetDisconnectTs(rtime)

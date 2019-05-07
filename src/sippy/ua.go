@@ -394,6 +394,7 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string
         req.appendHeaders(extra_headers)
     }
     self.reqs[self.lCSeq] = req
+    self.lCSeq++
     return req, nil
 }
 
@@ -700,10 +701,6 @@ func (self *Ua) GetRSDP() sippy_types.MsgBody {
 
 func (self *Ua) SetRSDP(sdp sippy_types.MsgBody) {
     self.rSDP = sdp
-}
-
-func (self *Ua) IncLCSeq() {
-    self.lCSeq += 1
 }
 
 func (self *Ua) GetSourceAddress() *sippy_net.HostPort {
