@@ -176,7 +176,7 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
             t.Setup100rel(req)
-            self.ChangeState(NewUasStateIdle(self.me(), self.config), nil)
+            self.me().ChangeState(NewUasStateIdle(self.me(), self.config), nil)
         } else {
             return nil
         }
