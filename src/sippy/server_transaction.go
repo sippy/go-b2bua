@@ -315,6 +315,7 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
         }
         rseq_body.Number++
         resp.AppendHeader(rseq)
+        resp.AppendHeader(sippy_header.CreateSipRequire("100rel")[0])
         tid, err := resp.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
         if err != nil {
             self.logger.Debug("Cannot get tid: " + err.Error())
