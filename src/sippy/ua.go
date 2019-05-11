@@ -175,7 +175,8 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     self.rCSeq = cseq_body.CSeq
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
-            self.ChangeState(NewUasStateIdle(self.me(), self.config), nil)
+            t.Setup100rel(req)
+            self.me().ChangeState(NewUasStateIdle(self.me(), self.config), nil)
         } else {
             return nil
         }
@@ -393,6 +394,7 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string
         req.appendHeaders(extra_headers)
     }
     self.reqs[self.lCSeq] = req
+    self.lCSeq++
     return req, nil
 }
 
@@ -699,10 +701,6 @@ func (self *Ua) GetRSDP() sippy_types.MsgBody {
 
 func (self *Ua) SetRSDP(sdp sippy_types.MsgBody) {
     self.rSDP = sdp
-}
-
-func (self *Ua) IncLCSeq() {
-    self.lCSeq += 1
 }
 
 func (self *Ua) GetSourceAddress() *sippy_net.HostPort {

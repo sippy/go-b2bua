@@ -56,6 +56,7 @@ type clientTransaction struct {
     ack_rTarget     *sippy_header.SipURL
     ack_routes      []*sippy_header.SipRoute
     on_send_complete func()
+    seen_rseqs      map[sippy_header.RTID]bool
 }
 
 func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_net.Transport, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_net.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
@@ -94,6 +95,7 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         uack            : false,
         before_request_sent : req_out_cb,
         ack_rparams_present : false,
+        seen_rseqs      : make(map[sippy_header.RTID]bool),
     }
     self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack)
     return self, nil
@@ -189,12 +191,29 @@ func (self *clientTransaction) IncomingResponse(resp sippy_types.SipResponse, ch
     if self.state == TERMINATED {
         return
     }
+    code := resp.GetSCodeNum()
+    if code > 100 && code < 200 && resp.GetRSeq() != nil {
+        rskey, err := resp.GetRTId()
+        if err != nil {
+            self.logger.Error("Cannot get rtid: " + err.Error())
+            return
+        }
+        if _, ok := self.seen_rseqs[*rskey]; ok {
+            sip_tm.rcache_put(checksum, &sipTMRetransmitO{
+                                userv : nil,
+                                data  : nil,
+                                address : nil,
+                            })
+            return
+        }
+        self.seen_rseqs[*rskey] = true
+    }
     if self.state == TRYING {
         // Stop timers
         self.cancelTeA()
     }
     self.cancelTeB()
-    if resp.GetSCodeNum() < 200 {
+    if code < 200 {
         self.process_provisional_response(checksum, resp, sip_tm)
     } else {
         self.process_final_response(checksum, resp, sip_tm)
@@ -225,7 +244,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
     }
     if self.needack {
         // Prepare and send ACK if necessary
-        fcode := resp.GetSCodeNum()
+        code := resp.GetSCodeNum()
         to_body, err := resp.GetTo().GetBody(sip_tm.config)
         if err != nil {
             self.logger.Debug(err.Error())
@@ -242,7 +261,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
         }
         var rAddr *sippy_net.HostPort
         var rTarget *sippy_header.SipURL
-        if resp.GetSCodeNum() >= 200 && resp.GetSCodeNum() < 300 {
+        if code >= 200 && code < 300 {
             // Some hairy code ahead
             if len(resp.GetContacts()) > 0 {
                 var contact *sippy_header.SipAddress
@@ -295,7 +314,7 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             }
             self.ack.SetRoutes(routes)
         }
-        if fcode >= 200 && fcode < 300 {
+        if code >= 200 && code < 300 {
             var via0 *sippy_header.SipViaBody
             if via0, err = self.ack.GetVias()[0].GetBody(); err != nil {
                 self.logger.Debug("error parsing via: " + err.Error())

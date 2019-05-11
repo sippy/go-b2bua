@@ -61,6 +61,8 @@ type sipTransactionManager struct {
     pass_t_to_cb    bool
     provisional_retr time.Duration
     before_response_sent func(sippy_types.SipResponse)
+    rtid2tid        map[sippy_header.RTID]*sippy_header.TID
+    rtid2tid_lock   sync.Mutex
 }
 
 type sipTMRetransmitO struct {
@@ -86,6 +88,7 @@ func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.Cal
         req_consumers   : make(map[string][]sippy_types.UA),
         pass_t_to_cb    : false,
         provisional_retr : 0,
+        rtid2tid        : make(map[sippy_header.RTID]*sippy_header.TID),
     }
     self.l4r, err = NewLocal4Remote(config, self.handleIncoming)
     if err != nil {
@@ -424,10 +427,21 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
         }
     }
     self.tclient_lock.Unlock()
-    if req.GetMethod() != "ACK" {
-        tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
-    } else {
+    switch req.GetMethod() {
+    case "ACK":
         tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/)
+    case "PRACK":
+        if rtid, err := req.GetRTId(); err == nil {
+            self.rtid2tid_lock.Lock()
+            tid = self.rtid2tid[*rtid]
+            self.rtid2tid_lock.Unlock()
+        }
+    default:
+        tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
+    }
+    if tid == nil {
+        self.logBadMessage("cannot get transaction ID: ", data)
+        return
     }
     if err != nil {
         self.logBadMessage("cannot get transaction ID: " + err.Error(), data)
@@ -438,14 +452,32 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     if ok {
         self.tserver_lock.Unlock()
         sippy_utils.SafeCall(func() { t.IncomingRequest(req, checksum) }, t, self.config.ErrorLogger())
-    } else if req.GetMethod() == "ACK" {
+        return
+    }
+    switch req.GetMethod() {
+    case "ACK":
         self.tserver_lock.Unlock()
         // Some ACK that doesn't match any existing transaction.
         // Drop and forget it - upper layer is unlikely to be interested
         // to seeing this anyway.
         //println("unmatched ACK transaction - ignoring")
         self.rcache_set_call_id(checksum, tid.CallId)
-    } else if req.GetMethod() == "CANCEL" {
+    case "PRACK":
+        // Some ACK that doesn't match any existing transaction.
+        // Drop and forget it - upper layer is unlikely to be interested
+        // to seeing this anyway.
+        //print(datetime.now(), 'unmatched PRACK transaction - 481\'ing')
+        //print(datetime.now(), 'rtid: %s, tid: %s, self.tserver: %s' % (str(rtid), str(tid), \
+        //  str(self.tserver)))
+        //sys.stdout.flush()
+        via0, err := req.GetVias()[0].GetBody()
+        if err != nil {
+            self.logBadMessage("Cannot parse Via: " + err.Error(), data)
+            return
+        }
+        resp := req.GenResponse(481, "Huh?", /*body*/ nil, /*server*/ nil)
+        self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
+    case "CANCEL":
         var via0 *sippy_header.SipViaBody
 
         self.tserver_lock.Unlock()
@@ -456,7 +488,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
             return
         }
         self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
-    } else {
+    default:
         self.new_server_transaction(server, req, tid, checksum)
     }
 }
@@ -608,7 +640,7 @@ func (self *sipTransactionManager) SendResponseWithLossEmul(resp sippy_types.Sip
 }
 
 func (self *sipTransactionManager) transmitMsg(userv sippy_net.Transport, msg sippy_types.SipMsg, address *sippy_net.HostPort, cachesum string, call_id string) {
-    data := msg.LocalStr(userv.GetLAddress(), false /* compact */)
+    data := msg.LocalStr(userv.GetLAddress(), false /*compact*/)
     self.transmitData(userv, []byte(data), address, cachesum, call_id, 0)
 }
 
@@ -683,4 +715,24 @@ func (self *sipTransactionManager) beforeResponseSent(resp sippy_types.SipRespon
 
 func (self *sipTransactionManager) SetBeforeResponseSent(cb func(sippy_types.SipResponse)) {
     self.before_response_sent = cb
+}
+
+func (self *sipTransactionManager) rtid_replace(ik *sippy_header.RTID, old_tid, new_tid *sippy_header.TID) {
+    if saved_tid, ok := self.rtid2tid[*ik]; ok && *saved_tid == *old_tid {
+        self.rtid2tid_lock.Lock()
+        defer self.rtid2tid_lock.Unlock()
+        self.rtid2tid[*ik] = new_tid
+    }
+}
+
+func (self *sipTransactionManager) rtid_del(key *sippy_header.RTID) {
+    self.rtid2tid_lock.Lock()
+    defer self.rtid2tid_lock.Unlock()
+    delete(self.rtid2tid, *key)
+}
+
+func (self *sipTransactionManager) rtid_put(key *sippy_header.RTID, value *sippy_header.TID) {
+    self.rtid2tid_lock.Lock()
+    defer self.rtid2tid_lock.Unlock()
+    self.rtid2tid[*key] = value
 }

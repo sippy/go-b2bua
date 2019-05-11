@@ -106,7 +106,6 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
             self.config.ErrorLogger().Error("UacStateCancelling::RecvResponse: #2: " + err.Error())
             return nil, nil
         }
-        self.ua.IncLCSeq()
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         return NewUaStateDisconnected(self.ua, self.config), nil
     }

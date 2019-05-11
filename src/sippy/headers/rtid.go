@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2019 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2019 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,26 +24,30 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_header
 
 import (
-    "sippy/types"
+    "fmt"
 )
 
-type redirectController struct {
-    ua      sippy_types.UA
+type RTID struct {
+    CallId      string
+    FromTag     string
+    RSeq        int
+    CSeq        int
+    Method      string
 }
 
-func newRedirectController(ua sippy_types.UA) *redirectController {
-    return &redirectController{
-        ua : ua,
+func NewRTID(call_id, from_tag string, rseq, cseq int, method string) *RTID {
+    return &RTID{
+        CallId      : call_id,
+        FromTag     : from_tag,
+        RSeq        : rseq,
+        CSeq        : cseq,
+        Method      : method,
     }
 }
 
-func (self *redirectController) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) {
-    req, err := self.ua.GenRequest("BYE", nil, "", "", nil)
-    if err != nil {
-        return
-    }
-    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+func (self *RTID) String() string {
+    return fmt.Sprintf("callid: '%s', cseq: '%s', method: '%s', from_tag: '%s', '%s', rseq: '%s'", self.CallId, self.CSeq, self.Method, self.FromTag, self.RSeq)
 }

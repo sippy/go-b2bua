@@ -138,3 +138,24 @@ func (self *sipResponse) GetSCodeReason() string {
 func (self *sipResponse) SetSCodeReason(reason string) {
     self.reason = reason
 }
+
+func (self *sipResponse) GetRTId() (*sippy_header.RTID, error) {
+    if self.rseq == nil {
+        return nil, errors.New("No RSeq present")
+    }
+    rseq, err := self.rseq.GetBody()
+    if err != nil {
+        return nil, errors.New("Error parsing RSeq: " + err.Error())
+    }
+    cseq, err := self.cseq.GetBody()
+    if err != nil {
+        return nil, errors.New("Error parsing CSeq: " + err.Error())
+    }
+    call_id := self.call_id.StringBody()
+    from_body, err := self.from.GetBody(self.config)
+    if err != nil {
+        return nil, errors.New("Error parsing From: " + err.Error())
+    }
+    from_tag := from_body.GetTag()
+    return sippy_header.NewRTID(call_id, from_tag, rseq.Number, cseq.CSeq, cseq.Method), nil
+}

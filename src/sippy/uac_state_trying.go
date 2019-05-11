@@ -74,6 +74,33 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             self.ua.StartExpireTimer(self.ua.GetExMtime())
         }
     }
+    if rseq := resp.GetRSeq(); rseq != nil {
+        to_body, err := resp.GetTo().GetBody(self.config)
+        if err != nil {
+            self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #7: " + err.Error())
+            return nil, nil
+        }
+        tag := to_body.GetTag()
+        rUri, err := self.ua.GetRUri().GetBody(self.config)
+        if err != nil {
+            self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #8: " + err.Error())
+            return nil, nil
+        }
+        rUri.SetTag(tag)
+        cseq, err := resp.GetCSeq().GetBody()
+        if err != nil {
+            self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #9: " + err.Error())
+            return nil, nil
+        }
+        req, err := self.ua.GenRequest("PRACK", nil, "", "", nil)
+        if err != nil {
+            self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #10: " + err.Error())
+            return nil, nil
+        }
+        rack := sippy_header.NewSipRAck(rseq.Number, cseq.CSeq, cseq.Method)
+        req.AppendHeader(rack)
+        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+    }
     if code < 200 {
         event := NewCCEventRing(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         if body != nil {
@@ -116,7 +143,6 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
                 self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #2: " + err.Error())
                 return nil, nil
             }
-            self.ua.IncLCSeq()
             self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime()) {
                 self.ua.SetDisconnectTs(resp.GetRtime())

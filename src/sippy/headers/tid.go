@@ -39,6 +39,18 @@ type TID struct {
     Branch      string
 }
 
+func NewTID(call_id, cseq, cseq_method, from_tag, to_tag, via_branch string) *TID {
+    self := &TID{
+        CallId      : call_id,
+        CSeq        : cseq,
+        CSeqMethod  : cseq_method,
+        FromTag     : from_tag,
+        ToTag       : to_tag,
+        Branch      : via_branch,
+    }
+    return self
+}
+
 func (self *TID) String() string {
     return fmt.Sprintf("callid: '%s', cseq: '%s', cseq_method: '%s', from_tag: '%s', to_tag: '%s', branch: '%s'", self.CallId, self.CSeq, self.CSeqMethod, self.FromTag, self.ToTag, self.Branch)
 }

@@ -48,6 +48,8 @@ type sipMsg struct {
     to                  *sippy_header.SipTo
     from                *sippy_header.SipFrom
     cseq                *sippy_header.SipCSeq
+    rseq                *sippy_header.SipRSeq
+    rack                *sippy_header.SipRAck
     content_length      *sippy_header.SipContentLength
     content_type        *sippy_header.SipContentType
     call_id             *sippy_header.SipCallId
@@ -70,6 +72,8 @@ type sipMsg struct {
     sip_user_agent      *sippy_header.SipUserAgent
     sip_cisco_guid      *sippy_header.SipCiscoGUID
     sip_h323_conf_id    *sippy_header.SipH323ConfId
+    sip_require         []*sippy_header.SipRequire
+    sip_supported       []*sippy_header.SipSupported
     config              sippy_conf.Config
 }
 
@@ -82,6 +86,8 @@ func NewSipMsg(rtime *sippy_time.MonoTime, config sippy_conf.Config) *sipMsg {
         record_routes   : make([]*sippy_header.SipRecordRoute, 0),
         routes          : make([]*sippy_header.SipRoute, 0),
         also            : make([]*sippy_header.SipAlso, 0),
+        sip_require     : make([]*sippy_header.SipRequire, 0),
+        sip_supported   : make([]*sippy_header.SipSupported, 0),
         rtime           : rtime,
         config          : config,
     }
@@ -164,6 +170,10 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     switch t := hdr.(type) {
     case *sippy_header.SipCSeq:
         self.cseq = t
+    case *sippy_header.SipRSeq:
+        self.rseq = t
+    case *sippy_header.SipRAck:
+        self.rack = t
     case *sippy_header.SipCallId:
         self.call_id = t
     case *sippy_header.SipFrom:
@@ -216,6 +226,10 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.reason_hf  = t
     case *sippy_header.SipWarning:
         self.sip_warning = t
+    case *sippy_header.SipRequire:
+        self.sip_require = append(self.sip_require, t)
+    case *sippy_header.SipSupported:
+        self.sip_supported = append(self.sip_supported, t)
     case nil:
         return
     }
@@ -361,18 +375,6 @@ func (self *sipMsg) GetSource() *sippy_net.HostPort {
     return self.source
 }
 
-func new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch string) *sippy_header.TID {
-    self := &sippy_header.TID{
-        CallId      : call_id,
-        CSeq        : cseq,
-        CSeqMethod  : cseq_method,
-        FromTag     : from_tag,
-        ToTag       : to_tag,
-        Branch      : via_branch,
-    }
-    return self
-}
-
 func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error) {
     var call_id, cseq, cseq_method, from_tag, to_tag, via_branch string
     var cseq_hf *sippy_header.SipCSeqBody
@@ -416,7 +418,7 @@ func (self *sipMsg) GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error) {
         }
         to_tag = to_hf.GetTag()
     }
-    return new_tid(call_id, cseq, cseq_method, from_tag, to_tag, via_branch), nil
+    return sippy_header.NewTID(call_id, cseq, cseq_method, from_tag, to_tag, via_branch), nil
 }
 
 func (self *sipMsg) getTIds() ([]*sippy_header.TID, error) {
@@ -447,7 +449,7 @@ func (self *sipMsg) getTIds() ([]*sippy_header.TID, error) {
         if via_hf, err = via.GetBody(); err != nil {
             return nil, err
         }
-        ret = append(ret, new_tid(call_id, cseq, method, ftag, via_hf.GetBranch(), ""))
+        ret = append(ret, sippy_header.NewTID(call_id, cseq, method, ftag, via_hf.GetBranch(), ""))
     }
     return ret, nil
 }
@@ -486,6 +488,14 @@ func (self *sipMsg) GetSipUserAgent() *sippy_header.SipUserAgent {
 
 func (self *sipMsg) GetCSeq() *sippy_header.SipCSeq {
     return self.cseq
+}
+
+func (self *sipMsg) GetRSeq() *sippy_header.SipRSeq {
+    return self.rseq
+}
+
+func (self *sipMsg) GetSipRAck() *sippy_header.SipRAck {
+    return self.rack
 }
 
 func (self *sipMsg) GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate {
@@ -622,4 +632,12 @@ func (self *sipMsg) GetMaxForwards() *sippy_header.SipMaxForwards {
 
 func (self *sipMsg) SetMaxForwards(maxforwards *sippy_header.SipMaxForwards) {
     self.maxforwards = maxforwards
+}
+
+func (self *sipMsg) GetSipRequire() []*sippy_header.SipRequire {
+    return self.sip_require
+}
+
+func (self *sipMsg) GetSipSupported() []*sippy_header.SipSupported {
+    return self.sip_supported
 }

@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2019 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2019 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,26 +24,46 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_header
 
 import (
-    "sippy/types"
+    "sippy/net"
 )
 
-type redirectController struct {
-    ua      sippy_types.UA
+type SipRSeq struct {
+    normalName
+    SipNumericHF
 }
 
-func newRedirectController(ua sippy_types.UA) *redirectController {
-    return &redirectController{
-        ua : ua,
+var _sip_rseq_name normalName = newNormalName("RSeq")
+
+func NewSipRSeq() *SipRSeq {
+    return &SipRSeq{
+        normalName  : _sip_rseq_name,
+        SipNumericHF : newSipNumericHF(1),
     }
 }
 
-func (self *redirectController) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) {
-    req, err := self.ua.GenRequest("BYE", nil, "", "", nil)
-    if err != nil {
-        return
-    }
-    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+func CreateSipRSeq(body string) []SipHeader {
+    return []SipHeader{ &SipRSeq{
+        normalName      : _sip_rseq_name,
+        SipNumericHF    : createSipNumericHF(body),
+    } }
+}
+
+func (self *SipRSeq) String() string {
+    return self.Name() + ": " + self.StringBody()
+}
+
+func (self *SipRSeq) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
+    return self.String()
+}
+
+func (self *SipRSeq) GetCopy() *SipRSeq {
+    tmp := *self
+    return &tmp
+}
+
+func (self *SipRSeq) GetCopyAsIface() SipHeader {
+    return self.GetCopy()
 }

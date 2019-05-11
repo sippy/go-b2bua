@@ -55,6 +55,8 @@ type SipMsg interface {
     GetSipServer() *sippy_header.SipServer
     LocalStr(hostport *sippy_net.HostPort, compact bool) string
     GetCSeq() *sippy_header.SipCSeq
+    GetRSeq() *sippy_header.SipRSeq
+    GetSipRAck() *sippy_header.SipRAck
     GetTId(wCSM, wBRN, wTTG bool) (*sippy_header.TID, error)
     GetTo() *sippy_header.SipTo
     GetReason() *sippy_header.SipReason
@@ -83,6 +85,9 @@ type SipMsg interface {
     GetSL() string
     GetMaxForwards() *sippy_header.SipMaxForwards
     SetMaxForwards(*sippy_header.SipMaxForwards)
+    GetRTId() (*sippy_header.RTID, error)
+    GetSipRequire() []*sippy_header.SipRequire
+    GetSipSupported() []*sippy_header.SipSupported
 }
 
 type SipRequest interface {
@@ -187,7 +192,6 @@ type UA interface {
     GetRSDP() MsgBody
     SetRSDP(MsgBody)
     GenRequest(method string, body MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (SipRequest, error)
-    IncLCSeq()
     GetSourceAddress() *sippy_net.HostPort
     SetSourceAddress(*sippy_net.HostPort)
     GetClientTransaction() ClientTransaction
@@ -313,6 +317,7 @@ type ServerTransaction interface {
     UpgradeToSessionLock(sync.Locker)
     SetServer(*sippy_header.SipServer)
     SetBeforeResponseSent(func(SipResponse))
+    Setup100rel(SipRequest)
 }
 
 type SipTransactionManager interface {

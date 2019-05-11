@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2019 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2019 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,26 +24,42 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_header
 
 import (
-    "sippy/types"
+    "sippy/net"
 )
 
-type redirectController struct {
-    ua      sippy_types.UA
+type SipSupported struct {
+    normalName
+    tagListHF
 }
 
-func newRedirectController(ua sippy_types.UA) *redirectController {
-    return &redirectController{
-        ua : ua,
+var _sip_supported_name normalName = newNormalName("Supported")
+
+func CreateSipSupported(body string) []SipHeader {
+    return []SipHeader{
+        &SipSupported{
+            normalName  : _sip_supported_name,
+            tagListHF   : *createTagListHF(body),
+        },
     }
 }
 
-func (self *redirectController) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) {
-    req, err := self.ua.GenRequest("BYE", nil, "", "", nil)
-    if err != nil {
-        return
-    }
-    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+func (self *SipSupported) GetCopyAsIface() SipHeader {
+    return self.GetCopy()
+}
+
+func (self *SipSupported) GetCopy() *SipSupported {
+    tmp := *self
+    tmp.tagListHF = *self.tagListHF.getCopy()
+    return &tmp
+}
+
+func (self *SipSupported) LocalStr(*sippy_net.HostPort, bool) string {
+    return self.String()
+}
+
+func (self *SipSupported) String() string {
+    return self.Name() + ": " + self.StringBody()
 }

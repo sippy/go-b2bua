@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2019 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2019 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,26 +24,42 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_header
 
 import (
-    "sippy/types"
+    "sippy/net"
 )
 
-type redirectController struct {
-    ua      sippy_types.UA
+type SipRequire struct {
+    normalName
+    tagListHF
 }
 
-func newRedirectController(ua sippy_types.UA) *redirectController {
-    return &redirectController{
-        ua : ua,
+var _sip_require_name normalName = newNormalName("Require")
+
+func CreateSipRequire(body string) []SipHeader {
+    return []SipHeader{
+        &SipRequire{
+            normalName  : _sip_require_name,
+            tagListHF   : *createTagListHF(body),
+        },
     }
 }
 
-func (self *redirectController) RecvResponse(resp sippy_types.SipResponse, t sippy_types.ClientTransaction) {
-    req, err := self.ua.GenRequest("BYE", nil, "", "", nil)
-    if err != nil {
-        return
-    }
-    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+func (self *SipRequire) GetCopyAsIface() SipHeader {
+    return self.GetCopy()
+}
+
+func (self *SipRequire) GetCopy() *SipRequire {
+    tmp := *self
+    tmp.tagListHF = *self.tagListHF.getCopy()
+    return &tmp
+}
+
+func (self *SipRequire) LocalStr(*sippy_net.HostPort, bool) string {
+    return self.String()
+}
+
+func (self *SipRequire) String() string {
+    return self.Name() + ": " + self.StringBody()
 }
