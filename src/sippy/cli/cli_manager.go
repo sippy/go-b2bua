@@ -39,6 +39,7 @@ import (
 type CLIManagerIface interface {
     Close()
     Send(string)
+    RemoteAddr() net.Addr
 }
 
 type CLIConnectionManager struct {
