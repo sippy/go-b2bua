@@ -248,7 +248,7 @@ func (self *callMap) GClector() {
     }
 }
 
-func (self *callMap) recvCommand(clim *sippy_cli.CLIManager, data string) {
+func (self *callMap) recvCommand(clim sippy_cli.CLIManagerIface, data string) {
     args := strings.Split(strings.TrimSpace(data), " ")
     cmd := strings.ToLower(args[0])
     args = args[1:]

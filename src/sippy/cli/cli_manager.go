@@ -36,16 +36,21 @@ import (
     "sippy/log"
 )
 
+type CLIManagerIface interface {
+    Close()
+    Send(string)
+}
+
 type CLIConnectionManager struct {
     tcp         bool
     sock        net.Listener
-    command_cb  func(clim *CLIManager, cmd string)
+    command_cb  func(clim CLIManagerIface, cmd string)
     accept_list map[string]bool
     accept_list_lock sync.RWMutex
     logger      sippy_log.ErrorLogger
 }
 
-func NewCLIConnectionManagerUnix(command_cb func(clim *CLIManager, cmd string), address string, uid, gid int, logger sippy_log.ErrorLogger) (*CLIConnectionManager, error) {
+func NewCLIConnectionManagerUnix(command_cb func(clim CLIManagerIface, cmd string), address string, uid, gid int, logger sippy_log.ErrorLogger) (*CLIConnectionManager, error) {
     addr, err := net.ResolveUnixAddr("unix", address)
     if err != nil {
         return nil, err
@@ -70,7 +75,7 @@ func NewCLIConnectionManagerUnix(command_cb func(clim *CLIManager, cmd string), 
     }, nil
 }
 
-func NewCLIConnectionManagerTcp(command_cb func(clim *CLIManager, cmd string), address string, logger sippy_log.ErrorLogger) (*CLIConnectionManager, error) {
+func NewCLIConnectionManagerTcp(command_cb func(clim CLIManagerIface, cmd string), address string, logger sippy_log.ErrorLogger) (*CLIConnectionManager, error) {
     addr, err := net.ResolveTCPAddr("tcp", address)
     if err != nil {
         return nil, err
@@ -160,11 +165,11 @@ func (self *CLIConnectionManager) AcceptListAppend(ip string) {
 
 type CLIManager struct {
     sock        net.Conn
-    command_cb  func(*CLIManager, string)
+    command_cb  func(CLIManagerIface, string)
     wbuffer     string
 }
 
-func NewCLIManager(sock net.Conn, command_cb func(*CLIManager, string)) *CLIManager {
+func NewCLIManager(sock net.Conn, command_cb func(CLIManagerIface, string)) *CLIManager {
     return &CLIManager{
         sock        : sock,
         command_cb  : command_cb,
