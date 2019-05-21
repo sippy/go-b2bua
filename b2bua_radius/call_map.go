@@ -37,6 +37,7 @@ import (
     "syscall"
     "time"
 
+    "sippy/cli"
     "sippy/headers"
     "sippy/time"
     "sippy/types"
@@ -247,13 +248,14 @@ func (self *callMap) GClector() {
     }
 }
 
-func (self *callMap) recvCommand(data string) string {
+func (self *callMap) recvCommand(clim *sippy_cli.CLIManager, data string) {
     args := strings.Split(strings.TrimSpace(data), " ")
     cmd := strings.ToLower(args[0])
     args = args[1:]
     switch cmd {
     case "q":
-        return ""
+        clim.Close()
+        return
     case "l":
         res := "In-memory calls:\n"
         total := 0
@@ -277,7 +279,8 @@ func (self *callMap) recvCommand(data string) string {
             total += 1
             cc.lock.Unlock()
         }
-        return res + fmt.Sprintf("Total: %d\n", total)
+        clim.Send(res + fmt.Sprintf("Total: %d\n", total))
+        return
 /*
     case "lt":
         res = "In-memory server transactions:\n"
@@ -310,11 +313,13 @@ func (self *callMap) recvCommand(data string) string {
 */
     case "d":
         if len(args) != 1 {
-            return "ERROR: syntax error: d <call-id>\n"
+            clim.Send("ERROR: syntax error: d <call-id>\n")
+            return
         }
         if args[0] == "*" {
             self.discAll(0)
-            return "OK\n"
+            clim.Send("OK\n")
+            return
         }
         dlist := []*callController{}
         self.ccmap_lock.Lock()
@@ -326,25 +331,30 @@ func (self *callMap) recvCommand(data string) string {
         }
         self.ccmap_lock.Unlock()
         if len(dlist) == 0 {
-            return fmt.Sprintf("ERROR: no call with id of %s has been found\n", args[0])
+            clim.Send(fmt.Sprintf("ERROR: no call with id of %s has been found\n", args[0]))
+            return
         }
         for _, cc := range dlist {
             cc.disconnect(nil)
         }
-        return "OK\n"
+        clim.Send("OK\n")
+        return
     case "r":
         if len(args) != 1 {
-            return "ERROR: syntax error: r [<id>]\n"
+            clim.Send("ERROR: syntax error: r [<id>]\n")
+            return
         }
         idx, err := strconv.ParseInt(args[0], 10, 64)
         if err != nil {
-            return "ERROR: non-integer argument: " + args[0] + "\n"
+            clim.Send("ERROR: non-integer argument: " + args[0] + "\n")
+            return
         }
         self.ccmap_lock.Lock()
         cc, ok := self.ccmap[idx]
         self.ccmap_lock.Unlock()
         if ! ok {
-            return fmt.Sprintf("ERROR: no call with id of %d has been found\n", idx)
+            clim.Send(fmt.Sprintf("ERROR: no call with id of %d has been found\n", idx))
+            return
         }
         if cc.proxied {
             ts, _ := sippy_time.NewMonoTime()
@@ -355,9 +365,10 @@ func (self *callMap) recvCommand(data string) string {
                 cc.uaO.Disconnect(ts, "")
             }
         }
-        return "OK\n"
+        clim.Send("OK\n")
+        return
     default:
-        return "ERROR: unknown command\n"
+        clim.Send("ERROR: unknown command\n")
     }
 }
 
