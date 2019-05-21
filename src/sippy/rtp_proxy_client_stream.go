@@ -75,13 +75,13 @@ func (self *_RTPPLWorker) send_raw(command string, stime *sippy_time.MonoTime) (
     var s net.Conn
     for {
         if retries > _RTPPLWorker_MAX_RETRIES {
-            return "", 0, fmt.Errorf("Error sending to the rtpproxy on " + self.userv.address.String() + ": " + err.Error())
+            return "", 0, fmt.Errorf("Error sending to the rtpproxy on " + self.userv._address.String() + ": " + err.Error())
         }
         retries++
         if s != nil {
             s.Close()
         }
-        s, err = net.Dial(self.userv.address.Network(), self.userv.address.String())
+        s, err = net.Dial(self.userv._address.Network(), self.userv._address.String())
         if err != nil {
             time.Sleep(100 * time.Millisecond)
             continue
@@ -134,7 +134,7 @@ func (self *_RTPPLWorker) run() {
 
 type Rtp_proxy_client_stream struct {
     owner       sippy_types.RtpProxyClient
-    address     net.Addr
+    _address    net.Addr
     nworkers    int
     workers     []*_RTPPLWorker
     delay_flt   sippy_math.RecFilter
@@ -157,7 +157,7 @@ func newRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config 
     }
     self := &Rtp_proxy_client_stream{
         owner       : owner,
-        address     : address,
+        _address    : address,
         nworkers    : nworkers,
         workers     : make([]*_RTPPLWorker, nworkers),
         delay_flt   : sippy_math.NewRecFilter(0.95, 0.25),
@@ -179,6 +179,10 @@ func newRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config 
 
 func (self *Rtp_proxy_client_stream) is_local() bool {
     return self._is_local
+}
+
+func (self *Rtp_proxy_client_stream) address() net.Addr {
+    return self._address
 }
 
 func (self *Rtp_proxy_client_stream) send_command(command string, result_callback func(string)) {

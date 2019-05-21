@@ -43,7 +43,7 @@ import (
 )
 
 type Rtp_proxy_client_udp struct {
-    address             net.Addr
+    _address            net.Addr
     uopts               *udpServerOpts
     pending_requests    map[string]*rtpp_req_udp
     global_config       sippy_conf.Config
@@ -99,12 +99,12 @@ func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sip
 
     self := &Rtp_proxy_client_udp{
         owner               : owner,
-        address             : address,
+        _address            : address,
         pending_requests    : make(map[string]*rtpp_req_udp),
         global_config       : global_config,
         delay_flt           : sippy_math.NewRecFilter(0.95, 0.25),
     }
-    self.hostport, err = sippy_net.NewHostPortFromAddr(self.address)
+    self.hostport, err = sippy_net.NewHostPortFromAddr(self._address)
     if err != nil {
         return nil, err
     }
@@ -133,6 +133,10 @@ func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sip
 
 func (*Rtp_proxy_client_udp) is_local() bool {
     return false
+}
+
+func (self *Rtp_proxy_client_udp) address() net.Addr {
+    return self._address
 }
 
 func (self *Rtp_proxy_client_udp) send_command(command string, result_callback func(string)) {

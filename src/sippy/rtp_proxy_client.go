@@ -28,6 +28,7 @@ package sippy
 
 import (
     "bufio"
+    "net"
     "strconv"
     "strings"
 
@@ -58,6 +59,7 @@ type Rtp_proxy_client_base struct {
 }
 
 type rtp_proxy_transport interface {
+    address() net.Addr
     is_local() bool
     send_command(string, func(string))
     shutdown()
@@ -88,6 +90,10 @@ func (self *Rtp_proxy_client_base) me() sippy_types.RtpProxyClient {
         return self.heir
     }
     return self
+}
+
+func (self *Rtp_proxy_client_base) Address() net.Addr {
+    return self.transport.address()
 }
 
 func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, opts *rtpProxyClientOpts) *Rtp_proxy_client_base {
