@@ -30,6 +30,7 @@ import (
     "fmt"
     "net"
     "os"
+    "sync"
     "syscall"
 
     "sippy/log"
@@ -39,7 +40,8 @@ type CLIConnectionManager struct {
     tcp         bool
     sock        net.Listener
     command_cb  func(clim *CLIManager, cmd string)
-    accept_list map[string]int
+    accept_list map[string]bool
+    accept_list_lock sync.RWMutex
     logger      sippy_log.ErrorLogger
 }
 
@@ -108,6 +110,8 @@ func (self CLIConnectionManager) handle_accept(conn net.Conn) {
         conn.Close()
         return
     }
+    self.accept_list_lock.RLock()
+    defer self.accept_list_lock.RUnlock()
     if self.tcp && self.accept_list != nil {
         if _, ok := self.accept_list[raddr]; ! ok {
             conn.Close()
@@ -116,6 +120,42 @@ func (self CLIConnectionManager) handle_accept(conn net.Conn) {
     }
     cm := NewCLIManager(conn, self.command_cb)
     go cm.run()
+}
+
+func (self *CLIConnectionManager) Shutdown() {
+    self.sock.Close()
+}
+
+func (self *CLIConnectionManager) GetAcceptList() []string {
+    self.accept_list_lock.RLock()
+    defer self.accept_list_lock.RUnlock()
+    if self.accept_list != nil {
+        ret := make([]string, 0, len(self.accept_list))
+        for addr, _ := range self.accept_list {
+            ret = append(ret, addr)
+        }
+        return ret
+    }
+    return nil
+}
+
+func (self *CLIConnectionManager) SetAcceptList(acl []string) {
+    accept_list := make(map[string]bool)
+    for _, addr := range acl {
+        accept_list[addr] = true
+    }
+    self.accept_list_lock.Lock()
+    self.accept_list = accept_list
+    self.accept_list_lock.Unlock()
+}
+
+func (self *CLIConnectionManager) AcceptListAppend(ip string) {
+    self.accept_list_lock.Lock()
+    if self.accept_list == nil {
+        self.accept_list = make(map[string]bool)
+    }
+    self.accept_list[ip] = true
+    self.accept_list_lock.Unlock()
 }
 
 type CLIManager struct {
@@ -158,7 +198,7 @@ func (self *CLIManager) Send(data string) {
 func (self *CLIManager) Close() {
     self.sock.Close()
 }
-/*
-    def shutdown(self):
-        return self.close()
-*/
+
+func (self *CLIManager) RemoteAddr() net.Addr {
+    return self.sock.RemoteAddr()
+}
