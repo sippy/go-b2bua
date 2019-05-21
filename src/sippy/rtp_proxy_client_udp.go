@@ -48,7 +48,7 @@ type Rtp_proxy_client_udp struct {
     pending_requests    map[string]*rtpp_req_udp
     global_config       sippy_conf.Config
     delay_flt           sippy_math.RecFilter
-    worker              *udpServer
+    worker              *UdpServer
     hostport            *sippy_net.HostPort
     lock                sync.Mutex
     owner               sippy_types.RtpProxyClient

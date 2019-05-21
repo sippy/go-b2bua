@@ -35,9 +35,10 @@ import (
 )
 
 type Cli_server_stream struct {
-    command_cb      func(string) string
+    command_cb      func(string, net.Conn) string
     listener        net.Listener
     logger          sippy_log.ErrorLogger
+    check_acl_cb    func(net.Conn) bool
 }
 
 func (self *Cli_server_stream) Start() {
@@ -49,6 +50,11 @@ func (self *Cli_server_stream) run() {
         conn, err := self.listener.Accept()
         if err != nil {
             break
+        }
+        if self.check_acl_cb != nil {
+            if ! self.check_acl_cb(conn) {
+                continue
+            }
         }
         go sippy_utils.SafeCall(func() { self.handle_request(conn) }, nil, self.logger)
     }
@@ -62,10 +68,12 @@ func (self *Cli_server_stream) handle_request(conn net.Conn) {
         if err != nil {
             break
         }
-        res := self.command_cb(line)
-        _, err = conn.Write([]byte(res))
-        if err != nil {
-            break
+        res := self.command_cb(line, conn)
+        if res != "" {
+            _, err = conn.Write([]byte(res))
+            if err != nil {
+                break
+            }
         }
     }
 }

@@ -44,7 +44,7 @@ func NewCli_server_local(command_cb func(string) string, address string, logger 
     if err != nil { return nil, err }
 
     self := &Cli_server_stream{
-        command_cb  : command_cb,
+        command_cb  : func(s string, c net.Conn) string { return command_cb(s) },
         listener    : listener,
         logger      : logger,
     }

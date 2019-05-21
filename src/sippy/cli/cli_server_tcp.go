@@ -32,7 +32,12 @@ import (
     "sippy/log"
 )
 
-func NewCli_server_tcp(command_cb func(string) string, address string, logger sippy_log.ErrorLogger) (*Cli_server_stream, error) {
+type Cli_server_tcp struct {
+    Cli_server_stream
+    accept_list     []string
+}
+
+func NewCli_server_tcp(command_cb func(string, net.Conn) string, address string, logger sippy_log.ErrorLogger) (*Cli_server_tcp, error) {
 
     tcpaddr, err := net.ResolveTCPAddr("tcp", address)
     if err != nil {
@@ -44,10 +49,41 @@ func NewCli_server_tcp(command_cb func(string) string, address string, logger si
         return nil, err
     }
 
-    self := &Cli_server_stream{
-        command_cb  : command_cb,
-        listener    : listener,
-        logger      : logger,
+    self := &Cli_server_tcp{
+        Cli_server_stream : Cli_server_stream{
+            command_cb  : command_cb,
+            listener    : listener,
+            logger      : logger,
+        },
+        accept_list     : nil,
     }
+    self.check_acl_cb = self.check_acl
     return self, nil
+}
+
+func (self *Cli_server_tcp) check_acl(conn net.Conn) bool {
+    if self.accept_list == nil {
+        return true
+    }
+    raddr := net.ParseIP(conn.RemoteAddr().String())
+    if raddr != nil {
+        for _, addr := range self.accept_list {
+            if raddr.String() == addr {
+                return true
+            }
+        }
+    }
+    return false
+}
+
+func (self *Cli_server_tcp) SetAcceptList(acl []string) {
+    self.accept_list = acl
+}
+
+func (self *Cli_server_tcp) GetAcceptList() []string {
+    return self.accept_list
+}
+
+func (self *Cli_server_tcp) AcceptListAdd(ip string) {
+    self.accept_list = append(self.accept_list, ip)
 }
