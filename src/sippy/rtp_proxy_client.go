@@ -73,6 +73,10 @@ func (self *Rtp_proxy_client_base) IsOnline() bool {
     return self.online
 }
 
+func (self *Rtp_proxy_client_base) WdntSupported() bool {
+    return self.wdnt_supported
+}
+
 func (self *Rtp_proxy_client_base) SBindSupported() bool {
     return self.sbind_supported
 }

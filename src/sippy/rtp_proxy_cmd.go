@@ -51,16 +51,16 @@ func extract_to_next_token(s string, match string, invert bool) (string, string)
 }
 
 type UpdateLookupOpts struct {
-    destination_ip  string
-    local_ip        string
-    codecs          []string
-    otherparams     string
-    remote_ip       string
-    remote_port     string
-    from_tag        string
-    to_tag          string
-    notify_socket   string
-    notify_tag      string
+    DestinationIP   string
+    LocalIP         string
+    Codecs          []string
+    Otherparams     string
+    RemoteIP        string
+    RemotePort      string
+    FromTag         string
+    ToTag           string
+    NotifySocket    string
+    NotifyTag       string
 }
 
 func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
@@ -69,20 +69,20 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
         return nil, errors.New("The lookup opts must have at least three arguments")
     }
     self := &UpdateLookupOpts{
-        remote_ip       : arr[0],
-        remote_port     : arr[1],
+        RemoteIP        : arr[0],
+        RemotePort      : arr[1],
     }
     arr = sippy_utils.FieldsN(arr[2], 2)
-    self.from_tag = arr[0]
+    self.FromTag = arr[0]
     if len(arr) > 1 {
         arr2 := sippy_utils.FieldsN(arr[1], 3)
         switch len(arr2) {
         case 1:
-            self.to_tag = arr2[0]
+            self.ToTag = arr2[0]
         case 2:
-            self.notify_socket, self.notify_tag = arr2[0], arr2[1]
+            self.NotifySocket, self.NotifyTag = arr2[0], arr2[1]
         default:
-            self.to_tag, self.notify_socket, self.notify_tag = arr2[0], arr2[1], arr2[2]
+            self.ToTag, self.NotifySocket, self.NotifyTag = arr2[0], arr2[1], arr2[2]
         }
     }
     for len(s) > 0 {
@@ -91,7 +91,7 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
             val, s = extract_to_next_token(s[1:], "1234567890.", false)
             val = strings.TrimSpace(val)
             if len(val) > 0 {
-                self.destination_ip = val
+                self.DestinationIP = val
             }
         }
         switch s[0] {
@@ -99,18 +99,18 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
             val, s = extract_to_next_token(s[1:], "1234567890.", false)
             val = strings.TrimSpace(val)
             if len(val) > 0 {
-                self.local_ip = val
+                self.LocalIP = val
             }
         case 'c':
             val, s = extract_to_next_token(s[1:], "1234567890,", false)
             val = strings.TrimSpace(val)
             if len(val) > 0 {
-                self.codecs = strings.Split(val, ",")
+                self.Codecs = strings.Split(val, ",")
             }
         default:
             val, s = extract_to_next_token(s, "cR", true)
             if len(val) > 0 {
-                self.otherparams += val
+                self.Otherparams += val
             }
         }
     }
@@ -119,52 +119,52 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
 
 func (self *UpdateLookupOpts) getstr(call_id string/*, swaptags bool*/) string {
     s := ""
-    if self.destination_ip != "" {
-        s += "R" + self.destination_ip
+    if self.DestinationIP != "" {
+        s += "R" + self.DestinationIP
     }
-    if self.local_ip != "" {
-        s += "L" + self.local_ip
+    if self.LocalIP != "" {
+        s += "L" + self.LocalIP
     }
-    if self.codecs != nil {
-        s += "c" + strings.Join(self.codecs, ",")
+    if self.Codecs != nil {
+        s += "c" + strings.Join(self.Codecs, ",")
     }
-    s += self.otherparams
+    s += self.Otherparams
     s += " " + call_id
-    if self.remote_ip != "" {
-        s += " " + self.remote_ip
+    if self.RemoteIP != "" {
+        s += " " + self.RemoteIP
     }
-    if self.remote_port != "" {
-        s += " " + self.remote_port
+    if self.RemotePort != "" {
+        s += " " + self.RemotePort
     }
     /*
-    from_tag, to_tag := self.from_tag, self.to_tag
+    from_tag, to_tag := self.FromTag, self.to_tag
     if swaptags {
         if self.to_tag == "" {
             return "", errors.New('UpdateLookupOpts::getstr(swaptags = True): to_tag is not set')
         }
-        to_tag, from_tag = self.from_tag, self.to_tag
+        to_tag, from_tag = self.FromTag, self.to_tag
     }
     */
-    if self.from_tag != "" {
-        s += " " + self.from_tag
+    if self.FromTag != "" {
+        s += " " + self.FromTag
     }
-    if self.to_tag != "" {
-        s += " " + self.to_tag
+    if self.ToTag != "" {
+        s += " " + self.ToTag
     }
-    if self.notify_socket != "" {
-        s += " " + self.notify_socket
+    if self.NotifySocket != "" {
+        s += " " + self.NotifySocket
     }
-    if self.notify_tag != "" {
-        s += " " + self.notify_tag
+    if self.NotifyTag != "" {
+        s += " " + self.NotifyTag
     }
     return s
 }
 
 type Rtp_proxy_cmd struct {
     Type            byte
-    ul_opts         *UpdateLookupOpts
+    ULOpts          *UpdateLookupOpts
     command_opts    string
-    call_id         string
+    CallId          string
     args            string
     //nretr = None
 }
@@ -187,12 +187,12 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
         if len(arr) != 3 {
             return nil, errors.New("The command must have at least three parts")
         }
-        command_opts, self.call_id, args = arr[0], arr[1], arr[2]
+        command_opts, self.CallId, args = arr[0], arr[1], arr[2]
         switch self.Type {
         case 'U': fallthrough
         case 'L':
             var err error
-            self.ul_opts, err = NewUpdateLookupOpts(command_opts[1:], args)
+            self.ULOpts, err = NewUpdateLookupOpts(command_opts[1:], args)
             if err != nil {
                 return nil, err
             }
@@ -217,20 +217,24 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
     return self, nil
 }
 
+func (self *Rtp_proxy_cmd) String() string {
+    s := string([]byte{ self.Type })
+    if self.ULOpts != nil {
+        s += self.ULOpts.getstr(self.CallId)
+    } else {
+        if self.command_opts != "" {
+            s += self.command_opts
+        }
+        if self.CallId != "" {
+            s += " " + self.CallId
+        }
+    }
+    if self.args != "" {
+        s += " " + self.args
+    }
+    return s
+}
 /*
-    def __str__(self):
-        s = self.type
-        if self.ul_opts != None:
-            s += self.ul_opts.getstr(self.call_id)
-        else:
-            if self.command_opts != None:
-                s += self.command_opts
-            if self.call_id != None:
-                s = '%s %s' % (s, self.call_id)
-        if self.args != None:
-            s = '%s %s' % (s, self.args)
-        return s
-
 class Rtpp_stats(object):
     spookyprefix = ''
     verbose = False
