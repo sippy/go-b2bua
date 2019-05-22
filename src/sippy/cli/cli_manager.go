@@ -110,18 +110,21 @@ func (self *CLIConnectionManager) run() {
 }
 
 func (self CLIConnectionManager) handle_accept(conn net.Conn) {
-    raddr, _, err := net.SplitHostPort(conn.RemoteAddr().String())
-    if err != nil {
-        // Not reached
-        conn.Close()
-        return
-    }
-    self.accept_list_lock.RLock()
-    defer self.accept_list_lock.RUnlock()
-    if self.tcp && self.accept_list != nil {
-        if _, ok := self.accept_list[raddr]; ! ok {
+    if self.tcp {
+        raddr, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+        if err != nil {
+            self.logger.Error("SplitHostPort failed. Possible bug: " + err.Error())
+            // Not reached
             conn.Close()
             return
+        }
+        self.accept_list_lock.RLock()
+        defer self.accept_list_lock.RUnlock()
+        if self.accept_list != nil {
+            if _, ok := self.accept_list[raddr]; ! ok {
+                conn.Close()
+                return
+            }
         }
     }
     cm := NewCLIManager(conn, self.command_cb)
