@@ -161,7 +161,7 @@ func (self *UpdateLookupOpts) getstr(call_id string/*, swaptags bool*/) string {
 }
 
 type Rtp_proxy_cmd struct {
-    _type           byte
+    Type            byte
     ul_opts         *UpdateLookupOpts
     command_opts    string
     call_id         string
@@ -171,9 +171,9 @@ type Rtp_proxy_cmd struct {
 
 func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
     self := &Rtp_proxy_cmd{
-        _type       : strings.ToUpper(cmd[:1])[0],
+        Type    : strings.ToUpper(cmd[:1])[0],
     }
-    switch self._type {
+    switch self.Type {
     case 'U': fallthrough
     case 'L': fallthrough
     case 'D': fallthrough
@@ -188,7 +188,7 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
             return nil, errors.New("The command must have at least three parts")
         }
         command_opts, self.call_id, args = arr[0], arr[1], arr[2]
-        switch self._type {
+        switch self.Type {
         case 'U': fallthrough
         case 'L':
             var err error
