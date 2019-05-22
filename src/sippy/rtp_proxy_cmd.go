@@ -117,7 +117,7 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
     return self, nil
 }
 
-func (self *UpdateLookupOpts) getstr(call_id string/*, swaptags bool*/) string {
+func (self *UpdateLookupOpts) Getstr(call_id string/*, swaptags bool*/) string {
     s := ""
     if self.DestinationIP != "" {
         s += "R" + self.DestinationIP
@@ -140,7 +140,7 @@ func (self *UpdateLookupOpts) getstr(call_id string/*, swaptags bool*/) string {
     from_tag, to_tag := self.FromTag, self.to_tag
     if swaptags {
         if self.to_tag == "" {
-            return "", errors.New('UpdateLookupOpts::getstr(swaptags = True): to_tag is not set')
+            return "", errors.New('UpdateLookupOpts::Getstr(swaptags = True): to_tag is not set')
         }
         to_tag, from_tag = self.FromTag, self.to_tag
     }
@@ -220,7 +220,7 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
 func (self *Rtp_proxy_cmd) String() string {
     s := string([]byte{ self.Type })
     if self.ULOpts != nil {
-        s += self.ULOpts.getstr(self.CallId)
+        s += self.ULOpts.Getstr(self.CallId)
     } else {
         if self.command_opts != "" {
             s += self.command_opts
