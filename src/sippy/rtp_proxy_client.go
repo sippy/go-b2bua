@@ -32,6 +32,7 @@ import (
     "strconv"
     "strings"
 
+    "sippy/net"
     "sippy/types"
 )
 
@@ -64,6 +65,7 @@ type rtp_proxy_transport interface {
     is_local() bool
     send_command(string, func(string))
     shutdown()
+    reconnect(net.Addr, *sippy_net.HostPort)
 }
 
 func (self *Rtp_proxy_client_base) IsLocal() bool {
@@ -129,10 +131,10 @@ func (self *Rtp_proxy_client_base) Start() error {
 func (self *Rtp_proxy_client_base) SendCommand(cmd string, cb func(string)) {
     self.transport.send_command(cmd, cb)
 }
-/*
-    def reconnect(self, *args, **kwargs):
-        self.rtpp_class.reconnect(self, *args, **kwargs)
-*/
+
+func (self *Rtp_proxy_client_base) Reconnect(addr net.Addr, bind_addr *sippy_net.HostPort) {
+    self.transport.reconnect(addr, bind_addr)
+}
 
 func (self *Rtp_proxy_client_base) version_check() {
     if self.shut_down {

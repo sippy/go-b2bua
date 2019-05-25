@@ -34,6 +34,7 @@ import (
 
     "sippy/conf"
     "sippy/math"
+    "sippy/net"
     "sippy/time"
     "sippy/types"
     "sippy/utils"
@@ -191,15 +192,17 @@ func (self *Rtp_proxy_client_stream) send_command(command string, result_callbac
     }
     self.wi <- &rtpp_req_stream{ command, result_callback }
 }
-/*
-    def reconnect(self, address, bind_address = nil):
-        self.shutdown()
-        self.address = address
-        self.workers = []
-        for i in range(0, self.nworkers):
-            self.workers.append(_RTPPLWorker(self))
-        self.delay_flt = recfilter(0.95, 0.25)
-*/
+
+func (self *Rtp_proxy_client_stream) reconnect(address net.Addr, bind_addr *sippy_net.HostPort) {
+    self.shutdown()
+    self._address = address
+    self.workers = make([]*_RTPPLWorker, self.nworkers)
+    for i := 0; i < self.nworkers; i++ {
+        self.workers[i] = newRTPPLWorker(self)
+    }
+    self.delay_flt = sippy_math.NewRecFilter(0.95, 0.25)
+}
+
 func (self *Rtp_proxy_client_stream) shutdown() {
     self.wi <- nil
     for _, rworker := range self.workers {

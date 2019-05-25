@@ -219,15 +219,17 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_net.
         //print "Rtp_proxy_client_udp.process_reply(): delay %f" % (rtime - stime)
     }
 }
-/*
-    def reconnect(self, address, bind_address = nil):
-        self.address = address
-        if bind_address != self.uopts.laddress:
-            self.uopts.laddress = bind_address
-            self.worker.shutdown()
-            self.worker = Udp_server(self.global_config, self.uopts)
-            self.delay_flt = recfilter(0.95, 0.25)
-*/
+
+func (self *Rtp_proxy_client_udp) reconnect(address net.Addr, bind_address *sippy_net.HostPort) {
+    self._address = address
+    if bind_address.String() != self.uopts.laddress.String() {
+        self.uopts.laddress = bind_address
+        self.worker.Shutdown()
+        self.worker, _ = NewUdpServer(self.global_config, self.uopts)
+        self.delay_flt = sippy_math.NewRecFilter(0.95, 0.25)
+    }
+}
+
 func (self *Rtp_proxy_client_udp) shutdown() {
     self.worker.Shutdown()
     self.worker = nil

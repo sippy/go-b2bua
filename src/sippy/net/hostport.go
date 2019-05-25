@@ -147,6 +147,9 @@ func (self *HostPort) ParseIP() net.IP {
 }
 
 func (self *HostPort) String() string {
+    if self == nil {
+        return "nil"
+    }
     return self.Host.String() + ":" + self.Port.String()
 }
 
