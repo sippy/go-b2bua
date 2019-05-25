@@ -33,6 +33,7 @@ import (
 
     "sippy/conf"
     "sippy/log"
+    "sippy/net"
     "sippy/types"
 )
 
@@ -41,20 +42,22 @@ type rtpProxyClientOpts struct {
     nworkers            *int
     hrtb_retr_ival      time.Duration
     hrtb_ival           time.Duration
-    rtpp_class func(sippy_types.RtpProxyClient, sippy_conf.Config, net.Addr) (rtp_proxy_transport, error)
+    rtpp_class func(sippy_types.RtpProxyClient, sippy_conf.Config, net.Addr, *sippy_net.HostPort) (rtp_proxy_transport, error)
     rtppaddr            net.Addr
     config              sippy_conf.Config
     logger              sippy_log.ErrorLogger
     proxy_address       string
+    bind_address        *sippy_net.HostPort
 }
 
-func NewRtpProxyClientOpts(spath string, config sippy_conf.Config, logger sippy_log.ErrorLogger) (*rtpProxyClientOpts, error) {
+func NewRtpProxyClientOpts(spath string, bind_address *sippy_net.HostPort, config sippy_conf.Config, logger sippy_log.ErrorLogger) (*rtpProxyClientOpts, error) {
     self := &rtpProxyClientOpts{
         hrtb_retr_ival      : 60 * time.Second,
         hrtb_ival           : 10 * time.Second,
         no_version_check    : false,
         logger              : logger,
         config              : config,
+        bind_address        : bind_address,
     }
     var err error
 

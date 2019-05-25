@@ -93,9 +93,8 @@ func getnretrans(first_retr, timeout float64) (int64, error) {
     return n, nil
 }
 
-func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
+func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, bind_address *sippy_net.HostPort) (rtp_proxy_transport, error) {
     var err error
-    var laddress *sippy_net.HostPort
 
     self := &Rtp_proxy_client_udp{
         owner               : owner,
@@ -108,20 +107,22 @@ func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sip
     if err != nil {
         return nil, err
     }
-    if self.hostport.Host.String()[0] == '[' {
-        if self.hostport.Host.String() == "[::1]" {
-            laddress = sippy_net.NewHostPort("[::1]", "0")
+    if bind_address == nil {
+        if self.hostport.Host.String()[0] == '[' {
+            if self.hostport.Host.String() == "[::1]" {
+                bind_address = sippy_net.NewHostPort("[::1]", "0")
+            } else {
+                bind_address = sippy_net.NewHostPort("[::]", "0")
+            }
         } else {
-            laddress = sippy_net.NewHostPort("[::]", "0")
-        }
-    } else {
-        if strings.HasPrefix(self.hostport.Host.String(), "127.") {
-            laddress = sippy_net.NewHostPort("127.0.0.1", "0")
-        } else {
-            laddress = sippy_net.NewHostPort("0.0.0.0", "0")
+            if strings.HasPrefix(self.hostport.Host.String(), "127.") {
+                bind_address = sippy_net.NewHostPort("127.0.0.1", "0")
+            } else {
+                bind_address = sippy_net.NewHostPort("0.0.0.0", "0")
+            }
         }
     }
-    self.uopts = NewUdpServerOpts(laddress, self.process_reply)
+    self.uopts = NewUdpServerOpts(bind_address, self.process_reply)
     //self.uopts.ploss_out_rate = self.ploss_out_rate
     //self.uopts.pdelay_out_max = self.pdelay_out_max
     if owner.GetOpts().GetNWorkers() != nil {
@@ -222,6 +223,7 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_net.
 
 func (self *Rtp_proxy_client_udp) reconnect(address net.Addr, bind_address *sippy_net.HostPort) {
     self._address = address
+    self.hostport, _ = sippy_net.NewHostPortFromAddr(self._address)
     if bind_address.String() != self.uopts.laddress.String() {
         self.uopts.laddress = bind_address
         self.worker.Shutdown()

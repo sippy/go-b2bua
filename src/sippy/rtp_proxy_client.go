@@ -115,7 +115,7 @@ func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, opts *rtpProxyCli
 func (self *Rtp_proxy_client_base) Start() error {
     var err error
 
-    self.transport, err = self.opts.rtpp_class(self.me(), self.opts.config, self.opts.rtppaddr)
+    self.transport, err = self.opts.rtpp_class(self.me(), self.opts.config, self.opts.rtppaddr, self.opts.bind_address)
     if err != nil {
         return err
     }

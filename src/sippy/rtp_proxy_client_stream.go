@@ -144,7 +144,7 @@ type Rtp_proxy_client_stream struct {
     global_config sippy_conf.Config
 }
 
-func newRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr) (rtp_proxy_transport, error) {
+func newRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, bind_address *sippy_net.HostPort) (rtp_proxy_transport, error) {
     var err error
     if address == nil {
         address, err = net.ResolveUnixAddr("unix", "/var/run/rtpproxy.sock")

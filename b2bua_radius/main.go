@@ -139,7 +139,7 @@ func main() {
 */
     global_rtp_proxy_clients = make([]sippy_types.RtpProxyClient, len(global_config.rtp_proxy_clients))
     for i, address := range global_config.rtp_proxy_clients {
-        opts, err := sippy.NewRtpProxyClientOpts(address, global_config, global_config.ErrorLogger())
+        opts, err := sippy.NewRtpProxyClientOpts(address, nil /*bind_address*/, global_config, global_config.ErrorLogger())
         if err != nil {
             println("Cannot initialize rtpproxy client: " + err.Error())
             return

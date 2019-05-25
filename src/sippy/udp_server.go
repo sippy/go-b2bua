@@ -215,8 +215,6 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, e
 
     if uopts.laddress != nil {
         laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
-    } else {
-        laddress, err = net.ResolveUDPAddr("udp", "127.0.0.1:0")
     }
     if err != nil { return nil, err }
     ip4 := laddress.IP.To4()
@@ -226,35 +224,37 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, e
     }
     s, err := syscall.Socket(proto, syscall.SOCK_DGRAM, 0)
     if err != nil { return nil, err }
-    if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-        syscall.Close(s)
-        return nil, err
-    }
-    if C.SO_REUSEPORT_EXISTS == 1 {
-        if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, C.SO_REUSEPORT, 1); err != nil {
+    if laddress != nil {
+        if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
             syscall.Close(s)
             return nil, err
         }
-    }
-    var sockaddr syscall.Sockaddr
-    if ip4 != nil {
-        sockaddr = &syscall.SockaddrInet4{
-            Port : laddress.Port,
-            Addr : [4]byte{ ip4[0], ip4[1], ip4[2], ip4[3] },
+        if C.SO_REUSEPORT_EXISTS == 1 {
+            if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, C.SO_REUSEPORT, 1); err != nil {
+                syscall.Close(s)
+                return nil, err
+            }
         }
-    } else {
-        sa6 := &syscall.SockaddrInet6{
-            Port : laddress.Port,
-            ZoneId : zoneToUint32(laddress.Zone),
+        var sockaddr syscall.Sockaddr
+        if ip4 != nil {
+            sockaddr = &syscall.SockaddrInet4{
+                Port : laddress.Port,
+                Addr : [4]byte{ ip4[0], ip4[1], ip4[2], ip4[3] },
+            }
+        } else {
+            sa6 := &syscall.SockaddrInet6{
+                Port : laddress.Port,
+                ZoneId : zoneToUint32(laddress.Zone),
+            }
+            for i := 0; i < 16; i++ {
+                sa6.Addr[i] = laddress.IP[i]
+            }
+            sockaddr = sa6
         }
-        for i := 0; i < 16; i++ {
-            sa6.Addr[i] = laddress.IP[i]
+        if err := syscall.Bind(s, sockaddr); err != nil {
+            syscall.Close(s)
+            return nil, err
         }
-        sockaddr = sa6
-    }
-    if err := syscall.Bind(s, sockaddr); err != nil {
-        syscall.Close(s)
-        return nil, err
     }
     f := os.NewFile(uintptr(s), "")
     skt, err := net.FilePacketConn(f)
