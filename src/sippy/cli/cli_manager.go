@@ -167,6 +167,15 @@ func (self *CLIConnectionManager) AcceptListAppend(ip string) {
     self.accept_list_lock.Unlock()
 }
 
+func (self *CLIConnectionManager) AcceptListRemove(ip string) {
+    self.accept_list_lock.Lock()
+    if self.accept_list != nil {
+        delete(self.accept_list, ip)
+    }
+    self.accept_list_lock.Unlock()
+
+}
+
 type CLIManager struct {
     sock        net.Conn
     command_cb  func(CLIManagerIface, string)
