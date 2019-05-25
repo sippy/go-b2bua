@@ -233,6 +233,26 @@ func (self *Rtp_proxy_client_base) UpdateActive(active_sessions, sessions_create
     self.ptransmitted = ptransmitted
 }
 
+func (self *Rtp_proxy_client_base) GetActiveSessions() int64 {
+    return self.active_sessions
+}
+
+func (self *Rtp_proxy_client_base) GetActiveStreams() int64 {
+    return self.active_streams
+}
+
+func (self *Rtp_proxy_client_base) GetPReceived() int64 {
+    return self.preceived
+}
+
+func (self *Rtp_proxy_client_base) GetSessionsCreated() int64 {
+    return self.sessions_created
+}
+
+func (self *Rtp_proxy_client_base) GetPTransmitted() int64 {
+    return self.ptransmitted
+}
+
 func (self *Rtp_proxy_client_base) Shutdown() {
     if self.shut_down { // do not crash when shutdown() called twice
         return
