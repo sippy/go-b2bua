@@ -232,10 +232,12 @@ func (self *Rtp_proxy_client_udp) shutdown() {
     self.worker.Shutdown()
     self.worker = nil
 }
-/*
-    def get_rtpc_delay(self):
-        return self.delay_flt.lastval
 
+func (self *Rtp_proxy_client_udp) get_rtpc_delay() float64 {
+    return self.delay_flt.GetLastval()
+}
+
+/*
 class selftest(object):
     def gotreply(self, *args):
         from twisted.internet import reactor

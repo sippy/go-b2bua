@@ -211,10 +211,11 @@ func (self *Rtp_proxy_client_stream) shutdown() {
 func (self *Rtp_proxy_client_stream) register_delay(rtpc_delay time.Duration) {
     self.delay_flt.Apply(rtpc_delay.Seconds())
 }
-/*
-    def get_rtpc_delay(self):
-        return self.delay_flt.lastval
 
+func (self *Rtp_proxy_client_stream) get_rtpc_delay() float64 {
+    return self.delay_flt.GetLastval()
+}
+/*
 if __name__ == "__main__":
     from twisted.internet import reactor
     def display(*args):

@@ -60,6 +60,7 @@ type Rtp_proxy_client_base struct {
 
 type rtp_proxy_transport interface {
     address() net.Addr
+    get_rtpc_delay() float64
     is_local() bool
     send_command(string, func(string))
     shutdown()
@@ -242,10 +243,10 @@ func (self *Rtp_proxy_client_base) Shutdown() {
 func (self *Rtp_proxy_client_base) GetOpts() sippy_types.RtpProxyClientOpts {
     return self.opts
 }
-/*
-    def get_rtpc_delay(self):
-        self.transport.get_rtpc_delay(self)
-*/
+
+func (self *Rtp_proxy_client_base) GetRtpcDelay() {
+    self.transport.get_rtpc_delay()
+}
 
 type rtppCapsChecker struct {
     caps_requested  int
