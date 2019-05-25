@@ -244,8 +244,8 @@ func (self *Rtp_proxy_client_base) GetOpts() sippy_types.RtpProxyClientOpts {
     return self.opts
 }
 
-func (self *Rtp_proxy_client_base) GetRtpcDelay() {
-    self.transport.get_rtpc_delay()
+func (self *Rtp_proxy_client_base) GetRtpcDelay() float64 {
+    return self.transport.get_rtpc_delay()
 }
 
 type rtppCapsChecker struct {
