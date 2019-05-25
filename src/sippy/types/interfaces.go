@@ -382,6 +382,7 @@ type RtpProxyClient interface {
     GoOffline()
     GetOpts() RtpProxyClientOpts
     Start() error
+    UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted int64)
 }
 
 type RtpProxyUpdateResult interface {

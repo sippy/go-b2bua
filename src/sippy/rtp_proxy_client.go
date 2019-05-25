@@ -195,7 +195,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
                 ptransmitted, _ = strconv.ParseInt(line_parts[1], 10, 64)
             }
         }
-        self.update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
+        self.UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
     StartTimeoutWithSpread(self.heartbeat, nil, self.opts.hrtb_ival, 1, self.opts.logger, 0.1)
 }
@@ -225,7 +225,7 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     }
 }
 
-func (self *Rtp_proxy_client_base) update_active(active_sessions, sessions_created, active_streams, preceived, ptransmitted int64) {
+func (self *Rtp_proxy_client_base) UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted int64) {
     self.sessions_created = sessions_created
     self.active_sessions = active_sessions
     self.active_streams = active_streams
@@ -240,6 +240,10 @@ func (self *Rtp_proxy_client_base) Shutdown() {
     self.shut_down = true
     self.transport.shutdown()
     self.transport = nil
+}
+
+func (self *Rtp_proxy_client_base) IsShutDown() bool {
+    return self.shut_down
 }
 
 func (self *Rtp_proxy_client_base) GetOpts() sippy_types.RtpProxyClientOpts {

@@ -163,7 +163,7 @@ func (self *UpdateLookupOpts) Getstr(call_id string/*, swaptags bool*/) string {
 type Rtp_proxy_cmd struct {
     Type            byte
     ULOpts          *UpdateLookupOpts
-    command_opts    string
+    CommandOpts     string
     CallId          string
     args            string
     //nretr = None
@@ -198,21 +198,21 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
             }
         default:
             self.args = args
-            self.command_opts = command_opts[1:]
+            self.CommandOpts = command_opts[1:]
         }
     case 'G':
         if ! unicode.IsSpace([]rune(cmd)[1]) {
             cparts := sippy_utils.FieldsN(cmd[1:], 2)
             if len(cparts) > 1 {
-                self.command_opts, self.args = cparts[0], cparts[1]
+                self.CommandOpts, self.args = cparts[0], cparts[1]
             } else {
-                self.command_opts = cparts[0]
+                self.CommandOpts = cparts[0]
             }
         } else {
             self.args = strings.TrimSpace(cmd[1:])
         }
     default:
-        self.command_opts = cmd[1:]
+        self.CommandOpts = cmd[1:]
     }
     return self, nil
 }
@@ -222,8 +222,8 @@ func (self *Rtp_proxy_cmd) String() string {
     if self.ULOpts != nil {
         s += self.ULOpts.Getstr(self.CallId)
     } else {
-        if self.command_opts != "" {
-            s += self.command_opts
+        if self.CommandOpts != "" {
+            s += self.CommandOpts
         }
         if self.CallId != "" {
             s += " " + self.CallId
