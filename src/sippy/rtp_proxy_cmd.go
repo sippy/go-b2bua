@@ -27,6 +27,7 @@ package sippy
 
 import (
     "errors"
+    "strconv"
     "strings"
     "unicode"
 
@@ -237,6 +238,7 @@ func (self *Rtp_proxy_cmd) String() string {
 
 type Rtpp_stats struct {
     spookyprefix    string
+    all_names       []string
     Verbose         bool
     dict            map[string]int64
     total_duration  float64
@@ -247,6 +249,7 @@ func NewRtpp_stats(snames []string) *Rtpp_stats {
         Verbose         : false,
         spookyprefix    : "",
         dict            : make(map[string]int64),
+        all_names       : snames,
     }
     for _, sname := range snames {
         if sname != "total_duration" {
@@ -255,21 +258,38 @@ func NewRtpp_stats(snames []string) *Rtpp_stats {
     }
     return self
 }
+
+func (self *Rtpp_stats) AllNames() []string {
+    return self.all_names
+}
 /*
     def __iadd__(self, other):
         for sname in self.all_names:
             aname = self.spookyprefix + sname
             self.__dict__[aname] += other.__dict__[aname]
         return self
-
-    def parseAndAdd(self, rstr):
-        rparts = rstr.split(None, len(self.all_names) - 1)
-        for i in range(0, len(self.all_names)):
-            stype = self.all_types[i]
-            rval = stype(rparts[i])
-            aname = self.spookyprefix + self.all_names[i]
-            self.__dict__[aname] += rval
-
+*/
+func (self *Rtpp_stats) ParseAndAdd(rstr string) error {
+    rparts := sippy_utils.FieldsN(rstr, len(self.all_names))
+    for i, name := range self.all_names {
+        if name == "total_duration" {
+            rval, err := strconv.ParseFloat(rparts[i], 64)
+            if err != nil {
+                return err
+            }
+            self.total_duration += rval
+        } else {
+            rval, err := strconv.ParseInt(rparts[i], 10, 64)
+            if err != nil {
+                return err
+            }
+            aname := self.spookyprefix + self.all_names[i]
+            self.dict[aname] += rval
+        }
+    }
+    return nil
+}
+/*
     def __str__(self):
         aname = self.spookyprefix + self.all_names[0]
         if self.verbose:
