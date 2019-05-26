@@ -165,8 +165,8 @@ type Rtp_proxy_cmd struct {
     ULOpts          *UpdateLookupOpts
     CommandOpts     string
     CallId          string
-    args            string
-    //nretr = None
+    Args            string
+    Nretr           int
 }
 
 func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
@@ -197,19 +197,19 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
                 return nil, err
             }
         default:
-            self.args = args
+            self.Args = args
             self.CommandOpts = command_opts[1:]
         }
     case 'G':
         if ! unicode.IsSpace([]rune(cmd)[1]) {
             cparts := sippy_utils.FieldsN(cmd[1:], 2)
             if len(cparts) > 1 {
-                self.CommandOpts, self.args = cparts[0], cparts[1]
+                self.CommandOpts, self.Args = cparts[0], cparts[1]
             } else {
                 self.CommandOpts = cparts[0]
             }
         } else {
-            self.args = strings.TrimSpace(cmd[1:])
+            self.Args = strings.TrimSpace(cmd[1:])
         }
     default:
         self.CommandOpts = cmd[1:]
@@ -229,29 +229,33 @@ func (self *Rtp_proxy_cmd) String() string {
             s += " " + self.CallId
         }
     }
-    if self.args != "" {
-        s += " " + self.args
+    if self.Args != "" {
+        s += " " + self.Args
     }
     return s
 }
 
+type Rtpp_stats struct {
+    spookyprefix    string
+    Verbose         bool
+    dict            map[string]int64
+    total_duration  float64
+}
+
+func NewRtpp_stats(snames []string) *Rtpp_stats {
+    self := &Rtpp_stats{
+        Verbose         : false,
+        spookyprefix    : "",
+        dict            : make(map[string]int64),
+    }
+    for _, sname := range snames {
+        if sname != "total_duration" {
+            self.dict[self.spookyprefix + sname] = 0
+        }
+    }
+    return self
+}
 /*
-class Rtpp_stats(object):
-    spookyprefix = ''
-    verbose = False
-
-    def __init__(self, snames):
-        all_types = []
-        for sname in snames:
-            if sname != 'total_duration':
-                stype = int
-            else:
-                stype = float
-            self.__dict__[self.spookyprefix + sname] = stype()
-            all_types.append(stype)
-        self.all_names = tuple(snames)
-        self.all_types = tuple(all_types)
-
     def __iadd__(self, other):
         for sname in self.all_names:
             aname = self.spookyprefix + sname
