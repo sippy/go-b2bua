@@ -27,6 +27,7 @@ package sippy
 
 import (
     "errors"
+    "fmt"
     "strconv"
     "strings"
     "unicode"
@@ -289,21 +290,26 @@ func (self *Rtpp_stats) ParseAndAdd(rstr string) error {
     }
     return nil
 }
-/*
-    def __str__(self):
-        aname = self.spookyprefix + self.all_names[0]
-        if self.verbose:
-            rval = '%s=%s' % (self.all_names[0], str(self.__dict__[aname]))
-        else:
-            rval = str(self.__dict__[aname])
-        for sname in self.all_names[1:]:
-            aname = self.spookyprefix + sname
-            if self.verbose:
-                rval += ' %s=%s' % (sname, str(self.__dict__[aname]))
-            else:
-                rval += ' %s' % str(self.__dict__[aname])
-        return rval
 
+func (self *Rtpp_stats) String() string {
+    rvals := make([]string, 0, len(self.all_names))
+    for _, sname := range self.all_names {
+        var rval string
+
+        if sname == "total_duration" {
+            rval = fmt.Sprintf("%f", self.total_duration)
+        } else {
+            aname := self.spookyprefix + sname
+            rval = fmt.Sprintf("%d", self.dict[aname])
+        }
+        if self.Verbose {
+            rval = sname + "=" + rval
+        }
+        rvals = append(rvals, rval)
+    }
+    return strings.Join(rvals, " ")
+}
+/*
 if __name__ == '__main__':
     rc = Rtp_proxy_cmd('G nsess_created total_duration')
     print(rc)
