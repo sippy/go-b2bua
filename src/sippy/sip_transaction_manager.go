@@ -407,6 +407,7 @@ func (self *sipTransactionManager) BeginNewClientTransaction(req sippy_types.Sip
 // 2. Server transaction methods
 func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum string, tids []*sippy_header.TID, server sippy_net.Transport, data []byte) {
     var tid *sippy_header.TID
+    var rtid *sippy_header.RTID
     var err error
 
     self.tclient_lock.Lock()
@@ -431,7 +432,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     case "ACK":
         tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/)
     case "PRACK":
-        if rtid, err := req.GetRTId(); err == nil {
+        if rtid, err = req.GetRTId(); err == nil {
             self.rtid2tid_lock.Lock()
             tid = self.rtid2tid[*rtid]
             self.rtid2tid_lock.Unlock()
@@ -476,7 +477,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
             return
         }
         resp := req.GenResponse(481, "Huh?", /*body*/ nil, /*server*/ nil)
-        self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
+        self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, rtid.CallId)
     case "CANCEL":
         var via0 *sippy_header.SipViaBody
 
