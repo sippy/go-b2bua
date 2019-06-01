@@ -34,6 +34,7 @@ import (
     "syscall"
 
     "sippy/log"
+    "sippy/utils"
 )
 
 type CLIManagerIface interface {
@@ -127,7 +128,7 @@ func (self CLIConnectionManager) handle_accept(conn net.Conn) {
             }
         }
     }
-    cm := NewCLIManager(conn, self.command_cb)
+    cm := NewCLIManager(conn, self.command_cb, self.logger)
     go cm.run()
 }
 
@@ -180,12 +181,14 @@ type CLIManager struct {
     sock        net.Conn
     command_cb  func(CLIManagerIface, string)
     wbuffer     string
+    logger      sippy_log.ErrorLogger
 }
 
-func NewCLIManager(sock net.Conn, command_cb func(CLIManagerIface, string)) *CLIManager {
+func NewCLIManager(sock net.Conn, command_cb func(CLIManagerIface, string), logger sippy_log.ErrorLogger) *CLIManager {
     return &CLIManager{
         sock        : sock,
         command_cb  : command_cb,
+        logger      : logger,
     }
 }
 
@@ -197,7 +200,7 @@ func (self *CLIManager) run() {
         if err != nil && err != syscall.EINTR {
             return
         } else {
-            self.command_cb(self, string(line))
+            sippy_utils.SafeCall(func() { self.command_cb(self, string(line)) }, nil, self.logger)
         }
         for self.wbuffer != "" {
             n, err := self.sock.Write([]byte(self.wbuffer))
