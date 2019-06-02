@@ -212,25 +212,28 @@ func zoneToUint32(zone string) uint32 {
 func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, error) {
     var laddress *net.UDPAddr
     var err error
+    var ip4 net.IP
 
+    proto := syscall.AF_INET
     if uopts.laddress != nil {
         laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
-    }
-    if err != nil { return nil, err }
-    ip4 := laddress.IP.To4()
-    proto := syscall.AF_INET
-    if ip4 == nil {
-        proto = syscall.AF_INET6
+        if err != nil {
+            return nil, err
+        }
+        ip4 = laddress.IP.To4()
+        if ip4 == nil {
+            proto = syscall.AF_INET6
+        }
     }
     s, err := syscall.Socket(proto, syscall.SOCK_DGRAM, 0)
     if err != nil { return nil, err }
     if laddress != nil {
-        if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+        if err = syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
             syscall.Close(s)
             return nil, err
         }
         if C.SO_REUSEPORT_EXISTS == 1 {
-            if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, C.SO_REUSEPORT, 1); err != nil {
+            if err = syscall.SetsockoptInt(s, syscall.SOL_SOCKET, C.SO_REUSEPORT, 1); err != nil {
                 syscall.Close(s)
                 return nil, err
             }
