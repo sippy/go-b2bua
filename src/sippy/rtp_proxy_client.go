@@ -311,7 +311,7 @@ func (self *rtppCapsChecker) caps_query_done(result string, attr *bool) {
     }
     if self.caps_received == self.caps_requested {
         self.rtpc.caps_done = true
-        self.rtpc.GoOnline()
+        self.rtpc.me().GoOnline()
         self.rtpc = nil
     }
 }
