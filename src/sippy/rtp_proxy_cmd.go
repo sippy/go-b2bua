@@ -30,6 +30,7 @@ import (
     "fmt"
     "strconv"
     "strings"
+    "sync"
     "unicode"
 
     "sippy/utils"
@@ -242,6 +243,7 @@ type Rtpp_stats struct {
     all_names       []string
     Verbose         bool
     dict            map[string]int64
+    dict_lock       sync.Mutex
     total_duration  float64
 }
 
@@ -285,7 +287,9 @@ func (self *Rtpp_stats) ParseAndAdd(rstr string) error {
                 return err
             }
             aname := self.spookyprefix + self.all_names[i]
+            self.dict_lock.Lock()
             self.dict[aname] += rval
+            self.dict_lock.Unlock()
         }
     }
     return nil
@@ -300,7 +304,9 @@ func (self *Rtpp_stats) String() string {
             rval = fmt.Sprintf("%f", self.total_duration)
         } else {
             aname := self.spookyprefix + sname
+            self.dict_lock.Lock()
             rval = fmt.Sprintf("%d", self.dict[aname])
+            self.dict_lock.Unlock()
         }
         if self.Verbose {
             rval = sname + "=" + rval
