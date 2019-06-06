@@ -53,7 +53,7 @@ type rtpProxyClientOpts struct {
 func NewRtpProxyClientOpts(spath string, bind_address *sippy_net.HostPort, config sippy_conf.Config, logger sippy_log.ErrorLogger) (*rtpProxyClientOpts, error) {
     self := &rtpProxyClientOpts{
         hrtb_retr_ival      : 60 * time.Second,
-        hrtb_ival           : 10 * time.Second,
+        hrtb_ival           : 1 * time.Second,
         no_version_check    : false,
         logger              : logger,
         config              : config,
