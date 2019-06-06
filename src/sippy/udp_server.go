@@ -216,13 +216,15 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, e
 
     proto := syscall.AF_INET
     if uopts.laddress != nil {
-        laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
+        laddress, err = net.ResolveUDPAddr("udp4", uopts.laddress.String())
         if err != nil {
-            return nil, err
-        }
-        ip4 = laddress.IP.To4()
-        if ip4 == nil {
+            laddress, err = net.ResolveUDPAddr("udp6", uopts.laddress.String())
+            if err != nil {
+                return nil, err
+            }
             proto = syscall.AF_INET6
+        } else {
+            ip4 = laddress.IP.To4()
         }
     }
     s, err := syscall.Socket(proto, syscall.SOCK_DGRAM, 0)

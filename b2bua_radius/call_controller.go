@@ -296,7 +296,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
         nh_address = self.source
     } else {
         //host = oroute.hostonly
-        nh_address, _ = oroute.getNHAddr(self.source)
+        nh_address = oroute.getNHAddr(self.source)
     }
     //if ! oroute.forward_on_fail && self.global_config['acct_enable'] {
     //    self.acctO = RadiusAccounting(self.global_config, "originate",
