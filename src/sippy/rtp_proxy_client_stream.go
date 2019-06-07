@@ -209,6 +209,7 @@ func (self *Rtp_proxy_client_stream) shutdown() {
         <-rworker.shutdown_chan
     }
     self.workers = nil
+    <-self.wi // take away the shutdown request
 }
 
 func (self *Rtp_proxy_client_stream) register_delay(rtpc_delay time.Duration) {
