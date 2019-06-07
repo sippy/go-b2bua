@@ -101,7 +101,7 @@ func NewSdpOriginWithAddress(address string) (*SdpOrigin, error) {
         return nil, errors.New("The address is not IP address: " + address)
     }
     address_type := "IP4"
-    if _, err := net.ResolveIPAddr("ip6", ip.String()); err == nil {
+    if ! sippy_net.IsIP4(ip) {
         address_type = "IP6"
     }
     sid := atomic.AddInt64(&_sdp_session_id, 1)

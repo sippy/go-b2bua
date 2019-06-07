@@ -159,3 +159,10 @@ func (self *HostPort) GetCopy() *HostPort {
         Port : self.Port.GetCopy(),
     }
 }
+
+func IsIP4(ip net.IP) bool {
+    if strings.IndexByte(ip.String(), '.') >= 0 {
+        return true
+    }
+    return false
+}

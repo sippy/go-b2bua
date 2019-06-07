@@ -136,10 +136,8 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
         return nil, errors.New("NewB2BRoute: error resolving host IP '" + hostport[0] + "': " + err.Error())
     }
     for _, ip := range ips {
-        if ipv6only {
-            if _, err = net.ResolveIPAddr("ip6", ip.String()); err != nil {
-                continue
-            }
+        if ipv6only && sippy_net.IsIP4(ip) {
+            continue
         }
         self.ainfo = append(self.ainfo, &ainfo_item{ ip, port.String() })
     }
@@ -275,19 +273,12 @@ func (self *B2BRoute) getNHAddr(source *sippy_net.HostPort) *sippy_net.HostPort 
     if src_ip == nil {
         return self.ainfo[0].HostPort()
     }
-    src_is_ipv4 := true
-    if _, err := net.ResolveIPAddr("ip4", src_ip.String()); err != nil {
-        src_is_ipv4 = false
-    }
+    src_is_ipv4 := sippy_net.IsIP4(src_ip)
     for _, it := range self.ainfo {
-        if src_is_ipv4 {
-            if _, err := net.ResolveIPAddr("ip4", it.ip.String()); err == nil {
-                return it.HostPort()
-            }
-        } else {
-            if _, err := net.ResolveIPAddr("ip6", it.ip.String()); err == nil {
-                return it.HostPort()
-            }
+        if src_is_ipv4 && sippy_net.IsIP4(it.ip) {
+            return it.HostPort()
+        } else if ! src_is_ipv4 && ! sippy_net.IsIP4(it.ip) {
+            return it.HostPort()
         }
     }
     return self.ainfo[0].HostPort()

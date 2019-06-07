@@ -36,7 +36,6 @@ package sippy
 //
 import "C"
 import (
-    "fmt"
     "net"
     "os"
     "runtime"
@@ -90,7 +89,7 @@ LOOP:
         addr, err := net.ResolveUDPAddr("udp", wi.hostport.String())
         delay, _ := start.OffsetFromNow()
         if err != nil {
-            self.logger.Error(fmt.Sprintf("Udp_server: Cannot resolve '%s', dropping outgoing SIP message. Delay %s", wi.hostport, delay.String()))
+            self.logger.Errorf("Udp_server: Cannot resolve '%s', dropping outgoing SIP message. Delay %s", wi.hostport, delay.String())
             continue
         }
         if delay > time.Duration(.5 * float64(time.Second)) {
@@ -216,15 +215,11 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, e
 
     proto := syscall.AF_INET
     if uopts.laddress != nil {
-        laddress, err = net.ResolveUDPAddr("udp4", uopts.laddress.String())
-        if err != nil {
-            laddress, err = net.ResolveUDPAddr("udp6", uopts.laddress.String())
-            if err != nil {
-                return nil, err
-            }
-            proto = syscall.AF_INET6
-        } else {
+        laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
+        if sippy_net.IsIP4(laddress.IP) {
             ip4 = laddress.IP.To4()
+        } else {
+            proto = syscall.AF_INET6
         }
     }
     s, err := syscall.Socket(proto, syscall.SOCK_DGRAM, 0)
