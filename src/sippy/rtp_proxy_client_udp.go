@@ -50,6 +50,7 @@ type Rtp_proxy_client_udp struct {
     delay_flt           sippy_math.RecFilter
     worker              *UdpServer
     hostport            *sippy_net.HostPort
+    bind_address        *sippy_net.HostPort
     lock                sync.Mutex
     owner               sippy_types.RtpProxyClient
 }
@@ -94,19 +95,38 @@ func getnretrans(first_retr, timeout float64) (int64, error) {
 }
 
 func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, bind_address *sippy_net.HostPort) (rtp_proxy_transport, error) {
-    var err error
-
     self := &Rtp_proxy_client_udp{
         owner               : owner,
-        _address            : address,
         pending_requests    : make(map[string]*rtpp_req_udp),
         global_config       : global_config,
         delay_flt           : sippy_math.NewRecFilter(0.95, 0.25),
+        bind_address        : bind_address,
     }
-    self.hostport, err = sippy_net.NewHostPortFromAddr(self._address)
+    laddress, err := self._setup_addr(address, bind_address)
     if err != nil {
         return nil, err
     }
+    self.uopts = NewUdpServerOpts(laddress, self.process_reply)
+    //self.uopts.ploss_out_rate = self.ploss_out_rate
+    //self.uopts.pdelay_out_max = self.pdelay_out_max
+    if owner.GetOpts().GetNWorkers() != nil {
+        self.uopts.nworkers = *owner.GetOpts().GetNWorkers()
+    }
+    self.worker, err = NewUdpServer(global_config, self.uopts)
+    return self, err
+}
+
+
+func (self *Rtp_proxy_client_udp) _setup_addr(address net.Addr, bind_address *sippy_net.HostPort) (*sippy_net.HostPort, error) {
+    var err error
+
+    self.hostport, err = sippy_net.NewHostPortFromAddr(address)
+    if err != nil {
+        return nil, err
+    }
+    self._address = address
+    self.bind_address = bind_address
+
     if bind_address == nil {
         if self.hostport.Host.String()[0] == '[' {
             if self.hostport.Host.String() == "[::1]" {
@@ -122,14 +142,7 @@ func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sip
             }
         }
     }
-    self.uopts = NewUdpServerOpts(bind_address, self.process_reply)
-    //self.uopts.ploss_out_rate = self.ploss_out_rate
-    //self.uopts.pdelay_out_max = self.pdelay_out_max
-    if owner.GetOpts().GetNWorkers() != nil {
-        self.uopts.nworkers = *owner.GetOpts().GetNWorkers()
-    }
-    self.worker, err = NewUdpServer(global_config, self.uopts)
-    return self, err
+    return bind_address, nil
 }
 
 func (*Rtp_proxy_client_udp) is_local() bool {
@@ -222,10 +235,8 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_net.
 }
 
 func (self *Rtp_proxy_client_udp) reconnect(address net.Addr, bind_address *sippy_net.HostPort) {
-    self._address = address
-    self.hostport, _ = sippy_net.NewHostPortFromAddr(self._address)
-    if bind_address.String() != self.uopts.laddress.String() {
-        self.uopts.laddress = bind_address
+    if self._address.String() != address.String() || bind_address.String() != self.bind_address.String() {
+        self.uopts.laddress, _ = self._setup_addr(address, bind_address)
         self.worker.Shutdown()
         self.worker, _ = NewUdpServer(self.global_config, self.uopts)
         self.delay_flt = sippy_math.NewRecFilter(0.95, 0.25)
