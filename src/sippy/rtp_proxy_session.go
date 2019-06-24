@@ -97,9 +97,6 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     self.callee.session_exists = false
     self.caller.origin = sippy_sdp.NewSdpOrigin()
     if callee_origin != nil {
-        // New session means new RTP port so the SDP is now different and the SDP
-        // version must be increased.
-        callee_origin.IncVersion()
         self.callee.origin = callee_origin
     } else {
         self.callee.origin = sippy_sdp.NewSdpOrigin()
@@ -274,7 +271,7 @@ func (self *Rtp_proxy_session) CalleeOrigin() *sippy_sdp.SdpOrigin {
     return self.callee.origin
 }
 
-func (self Rtp_proxy_session) SBindSupported() (bool, error) {
+func (self *Rtp_proxy_session) SBindSupported() (bool, error) {
     rtp_proxy_client := self._rtp_proxy_client
     if rtp_proxy_client == nil {
         return true, errors.New("the session already deleted")
@@ -282,7 +279,7 @@ func (self Rtp_proxy_session) SBindSupported() (bool, error) {
     return rtp_proxy_client.SBindSupported(), nil
 }
 
-func (self Rtp_proxy_session) IsLocal() (bool, error) {
+func (self *Rtp_proxy_session) IsLocal() (bool, error) {
     rtp_proxy_client := self._rtp_proxy_client
     if rtp_proxy_client == nil {
         return true, errors.New("the session already deleted")
@@ -290,7 +287,7 @@ func (self Rtp_proxy_session) IsLocal() (bool, error) {
     return rtp_proxy_client.IsLocal(), nil
 }
 
-func (self Rtp_proxy_session) TNotSupported() (bool, error) {
+func (self *Rtp_proxy_session) TNotSupported() (bool, error) {
     rtp_proxy_client := self._rtp_proxy_client
     if rtp_proxy_client == nil {
         return true, errors.New("the session already deleted")
@@ -298,10 +295,14 @@ func (self Rtp_proxy_session) TNotSupported() (bool, error) {
     return rtp_proxy_client.TNotSupported(), nil
 }
 
-func (self Rtp_proxy_session) GetProxyAddress() (string, error) {
+func (self *Rtp_proxy_session) GetProxyAddress() (string, error) {
     rtp_proxy_client := self._rtp_proxy_client
     if rtp_proxy_client == nil {
         return "", errors.New("the session already deleted")
     }
     return rtp_proxy_client.GetProxyAddress(), nil
+}
+
+func (self *Rtp_proxy_session) ResetCalleeOHRemote() {
+    self.callee.oh_remote = nil
 }

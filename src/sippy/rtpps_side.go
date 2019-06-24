@@ -226,6 +226,8 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
                 self.origin.IncVersion()
             }
         }
+    } else {
+        self.origin.IncVersion()
     }
     self.oh_remote = parsed_body.GetOHeader().GetCopy()
     parsed_body.SetOHeader(self.origin.GetCopy())
