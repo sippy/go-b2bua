@@ -60,6 +60,7 @@ type callController struct {
     acctA           *fakeAccounting
     sip_tm          sippy_types.SipTransactionManager
     proxied         bool
+    sdp_session     *sippy.SdpSession
 }
 /*
 class CallController(object):
@@ -85,6 +86,7 @@ func NewCallController(id int64, remote_ip *sippy_net.MyAddress, source *sippy_n
         huntstop_scodes : make([]int, 0),
         proxied         : false,
         sip_tm          : sip_tm,
+        sdp_session     : sippy.NewSdpSession(),
     }
     self.uaA = sippy.NewUA(sip_tm, global_config, nil, self, self.lock, nil)
     self.uaA.SetKaInterval(self.global_config.keepalive_ans)
@@ -151,7 +153,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
 */
             if len(global_rtp_proxy_clients) > 0 {
                 var err error
-                self.rtp_proxy_session, err = sippy.NewRtp_proxy_session(self.global_config, global_rtp_proxy_clients, self.cId.CallId, "", "", self.global_config.b2bua_socket, /*notify_tag*/ fmt.Sprintf("r%%20%d", self.id), self.lock, nil /* callee_origin */)
+                self.rtp_proxy_session, err = sippy.NewRtp_proxy_session(self.global_config, global_rtp_proxy_clients, self.cId.CallId, "", "", self.global_config.b2bua_socket, /*notify_tag*/ fmt.Sprintf("r%%20%d", self.id), self.lock)
                 if err != nil {
                     self.uaA.RecvEvent(sippy.NewCCEventFail(500, "Internal Server Error (4)", event.GetRtime(), ""))
                     self.state = CCStateDead
@@ -203,6 +205,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 return
             }
         }
+        self.sdp_session.FixupVersion(event)
         self.uaA.RecvEvent(event)
     }
 }

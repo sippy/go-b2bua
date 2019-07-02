@@ -31,7 +31,6 @@ import (
     "math"
     "strconv"
     "strings"
-    "sync"
     "sync/atomic"
 
     "sippy/net"
@@ -46,10 +45,7 @@ type _rtpps_side struct {
     laddress        string
     raddress        *sippy_net.HostPort
     codecs          string
-    origin          *sippy_sdp.SdpOrigin
     repacketize     int
-    origin_lock     sync.Mutex
-    oh_remote       *sippy_sdp.SdpOrigin
     after_sdp_change func(sippy_types.RtpProxyUpdateResult)
     from_tag        string
     to_tag          string
@@ -214,24 +210,6 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
         // more work is in progress
         return
     }
-    self.origin_lock.Lock()
-    if self.oh_remote != nil {
-        if parsed_body.GetOHeader() != nil {
-            if self.oh_remote.GetSessionId() != parsed_body.GetOHeader().GetSessionId() ||
-                    self.oh_remote.GetVersion() != parsed_body.GetOHeader().GetVersion() {
-                // Please be aware that this code is not RFC-4566 compliant in case when
-                // the session is reused for hunting through several call legs. In that
-                // scenario the outgoing SDP should be compared with the previously sent
-                // one.
-                self.origin.IncVersion()
-            }
-        }
-    } else {
-        self.origin.IncVersion()
-    }
-    self.oh_remote = parsed_body.GetOHeader().GetCopy()
-    parsed_body.SetOHeader(self.origin.GetCopy())
-    self.origin_lock.Unlock()
     if self.owner.insert_nortpp {
         parsed_body.AppendAHeader("nortpproxy=yes")
     }

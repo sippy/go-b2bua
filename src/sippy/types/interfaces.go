@@ -345,6 +345,7 @@ type UaState interface {
 }
 
 type CCEvent interface {
+    GetBody() MsgBody
     GetSeq() int64
     GetRtime() *sippy_time.MonoTime
     GetOrigin() string

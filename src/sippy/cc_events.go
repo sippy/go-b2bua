@@ -263,6 +263,10 @@ func (self *CCEventDisconnect) GetRedirectURL() *sippy_header.SipAddress {
     return self.redirect_url
 }
 
+func (*CCEventDisconnect) GetBody() sippy_types.MsgBody {
+    return nil
+}
+
 type CCEventFail struct {
     CCEventGeneric
     challenge       sippy_header.SipHeader
@@ -300,6 +304,10 @@ func (self *CCEventFail) GetExtraHeaders() []sippy_header.SipHeader {
 
 func (self *CCEventFail) SetWarning(text string) {
     self.warning = sippy_header.NewSipWarning(text)
+}
+
+func (*CCEventFail) GetBody() sippy_types.MsgBody {
+    return nil
 }
 
 type CCEventPreConnect struct {

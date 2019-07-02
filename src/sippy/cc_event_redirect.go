@@ -80,6 +80,10 @@ func (self *CCEventRedirect) SortAddresses() {
     sort.Sort(sortRedirectAddresses(self.redirect_addresses))
 }
 
+func (*CCEventRedirect) GetBody() sippy_types.MsgBody {
+    return nil
+}
+
 type sortRedirectAddresses []*sippy_header.SipAddress
 func (self sortRedirectAddresses) Len() int { return len(self) }
 func (self sortRedirectAddresses) Swap(x, y int) { self[x], self[y] = self[y], self[x] }
