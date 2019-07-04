@@ -53,10 +53,6 @@ func (self *SdpSession) FixupVersion(event sippy_types.CCEvent) error {
     if self.last_origin != nil {
         if self.last_origin.GetSessionId() != new_origin.GetSessionId() ||
                 self.last_origin.GetVersion() != new_origin.GetVersion() {
-            // Please be aware that this code is not RFC-4566 compliant in case when
-            // the session is reused for hunting through several call legs. In that
-            // scenario the outgoing SDP should be compared with the previously sent
-            // one.
             self.origin.IncVersion()
         }
     }
