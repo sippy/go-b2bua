@@ -82,12 +82,12 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             // for putting session on hold. Quick and dirty hack to make this
             // scenario working.
             body = self.ua.GetRSDP().GetCopy()
-            parsed_body, err := body.GetParsedBody()
+            sdp, err := body.GetSdp()
             if err != nil {
                 self.config.ErrorLogger().Error("UaStateConnected::RecvRequest: #2: " + err.Error())
                 return nil, nil
             }
-            parsed_body.SetCHeaderAddr("0.0.0.0")
+            sdp.SetCHeaderAddr("0.0.0.0")
         } else if self.ua.GetRSDP().String() == body.String() {
             self.ua.SendUasResponse(t, 200, "OK", self.ua.GetLSDP(), self.ua.GetLContacts(), false /*ack_wait*/)
             return nil, nil

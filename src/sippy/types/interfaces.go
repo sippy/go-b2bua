@@ -123,14 +123,14 @@ type MsgBody interface {
     GetCopy() MsgBody
     NeedsUpdate() bool
     SetNeedsUpdate(bool)
-    GetParsedBody() (ParsedMsgBody, error)
+    GetSdp() (Sdp, error)
     AppendAHeader(string)
 }
 
-type ParsedMsgBody interface {
+type Sdp interface {
     String() string
     LocalStr(hostport *sippy_net.HostPort) string
-    GetCopy() ParsedMsgBody
+    GetCopy() Sdp
     SetCHeaderAddr(string)
     GetCHeader() *sippy_sdp.SdpConnecton
     GetSections() []*sippy_sdp.SdpMediaDescription

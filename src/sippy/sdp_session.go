@@ -45,11 +45,11 @@ func (self *SdpSession) FixupVersion(event sippy_types.CCEvent) error {
     if sdp_body == nil {
         return nil // no SDP so there is nothing to do
     }
-    parsed_body, err := sdp_body.GetParsedBody()
+    sdp, err := sdp_body.GetSdp()
     if err != nil {
         return err
     }
-    new_origin := parsed_body.GetOHeader().GetCopy()
+    new_origin := sdp.GetOHeader().GetCopy()
     if self.last_origin != nil {
         if self.last_origin.GetSessionId() != new_origin.GetSessionId() ||
                 self.last_origin.GetVersion() != new_origin.GetVersion() {
@@ -57,7 +57,6 @@ func (self *SdpSession) FixupVersion(event sippy_types.CCEvent) error {
         }
     }
     self.last_origin = new_origin
-    parsed_body.SetOHeader(self.origin.GetCopy())
-    sdp_body.SetNeedsUpdate(false)
+    sdp.SetOHeader(self.origin.GetCopy())
     return nil
 }

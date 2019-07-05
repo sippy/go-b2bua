@@ -279,7 +279,7 @@ func (self *sdpBody) LocalStr(hostport *sippy_net.HostPort) string {
     return s
 }
 
-func (self *sdpBody) GetCopy() sippy_types.ParsedMsgBody {
+func (self *sdpBody) GetCopy() sippy_types.Sdp {
     sections := make([]*sippy_sdp.SdpMediaDescription, len(self.sections))
     for i, s := range self.sections {
         sections[i] = s.GetCopy()

@@ -27,94 +27,47 @@
 package sippy
 
 import (
+    "errors"
     "fmt"
     "strings"
 
     "sippy/net"
-    "sippy/sdp"
     "sippy/types"
 )
 
 type msgBody struct {
     mtype                   string
-    parsed_body             sippy_types.ParsedMsgBody
+    sdp                     sippy_types.Sdp
     string_content          string
-    needs_update    bool
+    needs_update            bool
+    parsed                  bool
 }
 
 func NewMsgBody(content, mtype string) *msgBody {
     return &msgBody{
         mtype                   : mtype,
-        parsed_body             : nil,
+        sdp                     : nil,
         string_content          : content,
         needs_update            : true,
+        parsed                  : false,
     }
 }
 
-type genericMsgBody struct {
-    body string
-}
-
-func newGenericMsgBody(body string) *genericMsgBody {
-    return &genericMsgBody{ body }
-}
-
-func (self *genericMsgBody) String() string {
-    return self.body
-}
-
-func (self *genericMsgBody) LocalStr(*sippy_net.HostPort) string {
-    return self.body
-}
-
-func (self *genericMsgBody) GetCopy() sippy_types.ParsedMsgBody {
-    return &genericMsgBody{ self.body }
-}
-
-func (self *genericMsgBody) GetCHeader() *sippy_sdp.SdpConnecton {
-    return nil
-}
-
-func (self *genericMsgBody) SetCHeaderAddr(string) {
-    // NO OP
-}
-
-func (self *genericMsgBody) GetSections() []*sippy_sdp.SdpMediaDescription {
-    return make([]*sippy_sdp.SdpMediaDescription, 0)
-}
-
-func (self *genericMsgBody) SetSections([]*sippy_sdp.SdpMediaDescription) {
-    // NO OP
-}
-
-func (self *genericMsgBody) RemoveSection(int) {
-    // NO OP
-}
-
-func (self *genericMsgBody) GetOHeader() *sippy_sdp.SdpOrigin {
-    return nil
-}
-
-func (self *genericMsgBody) SetOHeader(*sippy_sdp.SdpOrigin) {
-    // NO OP
-}
-
-func (self *genericMsgBody) AppendAHeader(string) {
-    // NO OP
-}
-
-func (self *msgBody) GetParsedBody() (sippy_types.ParsedMsgBody, error) {
-    if self.parsed_body == nil {
-        err := self.parse()
-        if err != nil {
-            return nil, err
-        }
+func (self *msgBody) GetSdp() (sippy_types.Sdp, error) {
+    err := self.parse()
+    if err != nil {
+        return nil, err
     }
-    return self.parsed_body, nil
+    if self.sdp == nil {
+        return nil, errors.New("Not an SDP message")
+    }
+    return self.sdp, nil
 }
 
 func (self *msgBody) parse() error {
-    self.parsed_body = newGenericMsgBody(self.string_content)
+    if self.parsed {
+        return nil
+    }
     if strings.HasPrefix(self.mtype, "multipart/mixed;") {
         arr := strings.SplitN(self.mtype, ";", 2)
         mtheaders := arr[1]
@@ -127,7 +80,7 @@ func (self *msgBody) parse() error {
             }
         }
         if mth_boundary == nil {
-            return fmt.Errorf("Error parsing the multipart message")
+            return errors.New("Error parsing the multipart message")
         }
         boundary := "--" + *mth_boundary
         for _, subsection := range strings.Split(self.string_content, boundary) {
@@ -163,26 +116,27 @@ func (self *msgBody) parse() error {
         }
     }
     if self.mtype == "application/sdp" {
-        parsed_body, err := ParseSdpBody(self.string_content)
+        sdp, err := ParseSdpBody(self.string_content)
         if err == nil {
-            self.parsed_body = parsed_body
+            self.sdp = sdp
         } else {
             return fmt.Errorf("error parsing the SDP: %s", err.Error())
         }
     }
+    self.parsed = true
     return nil
 }
 
 func (self *msgBody) String() string {
-    if self.parsed_body != nil {
-        self.string_content = self.parsed_body.String()
+    if self.sdp != nil {
+        self.string_content = self.sdp.String()
     }
     return self.string_content
 }
 
 func (self *msgBody) LocalStr(local_hostport *sippy_net.HostPort) string {
-    if self.parsed_body != nil {
-        return self.parsed_body.LocalStr(local_hostport)
+    if self.sdp != nil {
+        return self.sdp.LocalStr(local_hostport)
     }
     return self.String()
 }
@@ -191,15 +145,13 @@ func (self *msgBody) GetCopy() sippy_types.MsgBody {
     if self == nil {
         return nil
     }
-    var parsed_body sippy_types.ParsedMsgBody
-    if self.parsed_body != nil {
-        parsed_body = self.parsed_body.GetCopy()
-    } else {
-        parsed_body = nil
+    var sdp sippy_types.Sdp
+    if self.sdp != nil {
+        sdp = self.sdp.GetCopy()
     }
     return &msgBody{
         mtype                   : self.mtype,
-        parsed_body             : parsed_body,
+        sdp                     : sdp,
         string_content          : self.string_content,
         needs_update            : true,
     }
@@ -218,8 +170,8 @@ func (self *msgBody) SetNeedsUpdate(v bool) {
 }
 
 func (self *msgBody) AppendAHeader(hdr string) {
-    if self.parsed_body != nil {
-        self.parsed_body.AppendAHeader(hdr)
+    if self.sdp != nil {
+        self.sdp.AppendAHeader(hdr)
     } else {
         self.string_content += "a=" + hdr + "\r\n"
     }

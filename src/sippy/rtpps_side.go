@@ -151,7 +151,7 @@ func (self *_rtpps_side) update_result(result, remote_ip, atype string, result_c
 }
 
 func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
-    parsed_body, err := sdp_body.GetParsedBody()
+    parsed_body, err := sdp_body.GetSdp()
     if err != nil {
         return err
     }
@@ -186,7 +186,7 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     return nil
 }
 
-func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.ParsedMsgBody, sect *sippy_sdp.SdpMediaDescription, sections_left *int64, result_callback func(sippy_types.MsgBody)) {
+func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp_body sippy_types.MsgBody, parsed_body sippy_types.Sdp, sect *sippy_sdp.SdpMediaDescription, sections_left *int64, result_callback func(sippy_types.MsgBody)) {
     if cb_args != nil {
         if self.after_sdp_change != nil {
             self.after_sdp_change(cb_args)
