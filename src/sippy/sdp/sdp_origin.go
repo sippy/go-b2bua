@@ -145,3 +145,7 @@ func (self *SdpOrigin) GetSessionId() string {
 func (self *SdpOrigin) GetVersion() int64 {
     return self.version
 }
+
+func (self *SdpOrigin) SetAddress(addr string) {
+    self.address = addr
+}

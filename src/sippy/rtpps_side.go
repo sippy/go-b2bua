@@ -214,6 +214,15 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
         parsed_body.AppendAHeader("nortpproxy=yes")
     }
     sdp_body.SetNeedsUpdate(false)
+    // RFC4566
+    // *******
+    // For privacy reasons, it is sometimes desirable to obfuscate the
+    // username and IP address of the session originator.  If this is a
+    // concern, an arbitrary <username> and private <unicast-address> MAY be
+    // chosen to populate the "o=" field, provided that these are selected
+    // in a manner that does not affect the global uniqueness of the field.
+    // *******
+    parsed_body.GetOHeader().SetAddress("192.0.2.1")
     result_callback(sdp_body)
 }
 
