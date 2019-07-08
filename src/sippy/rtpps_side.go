@@ -222,7 +222,10 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
     // chosen to populate the "o=" field, provided that these are selected
     // in a manner that does not affect the global uniqueness of the field.
     // *******
-    parsed_body.GetOHeader().SetAddress("192.0.2.1")
+    origin := parsed_body.GetOHeader()
+    origin.SetAddress("192.0.2.1")
+    origin.SetAddressType("IP4")
+    origin.SetNetworkType("IN")
     result_callback(sdp_body)
 }
 

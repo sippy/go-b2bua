@@ -149,3 +149,11 @@ func (self *SdpOrigin) GetVersion() int64 {
 func (self *SdpOrigin) SetAddress(addr string) {
     self.address = addr
 }
+
+func (self *SdpOrigin) SetAddressType(t string) {
+    self.address_type = t
+}
+
+func (self *SdpOrigin) SetNetworkType(t string) {
+    self.network_type = t
+}
