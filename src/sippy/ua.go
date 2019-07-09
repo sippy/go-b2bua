@@ -1179,3 +1179,6 @@ func (self *Ua) OnUacSetupComplete() {
 func (self *Ua) SetOnUacSetupComplete(fn func()) {
     self.on_uac_setup_complete = fn
 }
+
+func (self *Ua) Cleanup() {
+}

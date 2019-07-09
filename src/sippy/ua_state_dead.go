@@ -44,6 +44,7 @@ func NewUaStateDead(ua sippy_types.UA, config sippy_conf.Config) *UaStateDead {
 func (self *UaStateDead) OnActivation() {
     self.ua.OnDead()
     // Break cross-ref chain
+    self.ua.Cleanup()
     self.ua = nil
 }
 

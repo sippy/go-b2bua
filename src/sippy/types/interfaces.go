@@ -282,6 +282,7 @@ type UA interface {
     BeforeRequestSent(SipRequest)
     BeforeResponseSent(SipResponse)
     PrepTr(SipRequest) (ClientTransaction, error)
+    Cleanup()
 }
 
 type baseTransaction interface {
