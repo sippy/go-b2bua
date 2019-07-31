@@ -67,7 +67,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(event.GetRtime())
         }
-        self.ua.SendUasResponse(nil, code, reason, body, nil, false, eh...)
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), false, eh...)
         self.ua.RingCb(event.rtime, event.origin, code)
         return nil, nil, nil
     case *CCEventConnect:

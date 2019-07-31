@@ -63,7 +63,7 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
             }
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, code, reason, body, nil, false, eh...)
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), false, eh...)
         if self.ua.HasNoProgressTimer() {
             self.ua.CancelNoProgressTimer()
             if self.ua.GetExMtime() != nil {
