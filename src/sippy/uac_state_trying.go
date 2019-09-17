@@ -101,6 +101,10 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         req.AppendHeader(rack)
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
     }
+    if code > 100 && code < 300 {
+        // the route set must be ready for sending the PRACK
+        self.ua.UpdateRouting(resp, true, true)
+    }
     if code < 200 {
         event := NewCCEventRing(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         if body != nil {
@@ -119,10 +123,6 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         return NewUacStateRinging(self.ua, self.config), func() { self.ua.RingCb(resp.GetRtime(), self.ua.GetOrigin(), code) }
     }
     self.ua.CancelExpireTimer()
-    if code > 100 && code < 300 {
-        // the route set must be ready for sending the PRACK
-        self.ua.UpdateRouting(resp, true, true)
-    }
     if code >= 200 && code < 300 {
         var to_body *sippy_header.SipAddress
         var rUri *sippy_header.SipAddress
