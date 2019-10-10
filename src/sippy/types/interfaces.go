@@ -283,6 +283,7 @@ type UA interface {
     BeforeResponseSent(SipResponse)
     PrepTr(SipRequest) (ClientTransaction, error)
     Cleanup()
+    OnEarlyUasDisconnect(CCEvent) (int, string)
 }
 
 type baseTransaction interface {

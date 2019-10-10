@@ -1182,3 +1182,7 @@ func (self *Ua) SetOnUacSetupComplete(fn func()) {
 
 func (self *Ua) Cleanup() {
 }
+
+func (self *Ua) OnEarlyUasDisconnect(ev sippy_types.CCEvent) (int, string) {
+    return 500, "Disconnected"
+}

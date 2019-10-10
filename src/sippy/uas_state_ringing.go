@@ -106,7 +106,9 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateFailed(self.ua, self.config), func() { self.ua.FailCb(event.GetRtime(), event.GetOrigin(), code) }, nil
     case *CCEventDisconnect:
-        self.ua.SendUasResponse(nil, 500, "Disconnected", nil, nil, false, eh...)
+        code, reason := self.ua.OnEarlyUasDisconnect(event)
+        eh = event.GetExtraHeaders()
+        self.ua.SendUasResponse(nil, code, reason, nil, nil, false, eh...)
         self.ua.CancelExpireTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), nil) }, nil
