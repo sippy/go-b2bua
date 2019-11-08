@@ -125,7 +125,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     if self.ua.GetNpMtime() != nil {
         self.ua.StartNoProgressTimer()
     } else if self.ua.GetExMtime() != nil {
-        self.ua.StartExpireTimer()
+        self.ua.StartExpireTimer(req.GetRtime())
     }
     if body != nil {
         if self.ua.HasOnRemoteSdpChange() {

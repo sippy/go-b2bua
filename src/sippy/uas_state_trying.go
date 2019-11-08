@@ -67,7 +67,7 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         if self.ua.HasNoProgressTimer() {
             self.ua.CancelNoProgressTimer()
             if self.ua.GetExMtime() != nil {
-                self.ua.StartExpireTimer()
+                self.ua.StartExpireTimer(event.GetRtime())
             }
         }
         if self.ua.GetP1xxTs() == nil {

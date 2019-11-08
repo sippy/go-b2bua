@@ -206,7 +206,7 @@ type UA interface {
     SetNoProgressTime(time.Duration)
     StartNoReplyTimer()
     StartNoProgressTimer()
-    StartExpireTimer()
+    StartExpireTimer(*sippy_time.MonoTime)
     CancelExpireTimer()
     DiscCb(*sippy_time.MonoTime, string, int, SipRequest)
     GetDiscCb() OnDisconnectListener
@@ -284,6 +284,7 @@ type UA interface {
     PrepTr(SipRequest) (ClientTransaction, error)
     Cleanup()
     OnEarlyUasDisconnect(CCEvent) (int, string)
+    SetExpireStartsOnSetup(bool)
 }
 
 type baseTransaction interface {

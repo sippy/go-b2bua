@@ -109,6 +109,7 @@ type Ua struct {
     heir            sippy_types.UA
     uas_lossemul    int
     on_uac_setup_complete   func()
+    expire_starts_on_setup  bool
 }
 
 func (self *Ua) me() sippy_types.UA {
@@ -154,6 +155,7 @@ func NewUA(sip_tm sippy_types.SipTransactionManager, config sippy_conf.Config, n
         pass_auth       : false,
         late_media      : false,
         heir            : heir,
+        expire_starts_on_setup : true,
     }
 }
 
@@ -761,9 +763,15 @@ func (self *Ua) StartNoProgressTimer() {
     self.no_progress_timer = StartTimeout(self.no_progress_expires, self.session_lock, self._np_mtime.Sub(now), 1, self.config.ErrorLogger())
 }
 
-func (self *Ua) StartExpireTimer() {
+func (self *Ua) StartExpireTimer(start *sippy_time.MonoTime) {
+    var d time.Duration
     now, _ := sippy_time.NewMonoTime()
-    self.expire_timer = StartTimeout(self.expires, self.session_lock, self._ex_mtime.Sub(now), 1, self.config.ErrorLogger())
+    if self.expire_starts_on_setup {
+        d = self._ex_mtime.Sub(now)
+    } else {
+        d = self.expire_time - now.Sub(start)
+    }
+    self.expire_timer = StartTimeout(self.expires, self.session_lock, d, 1, self.config.ErrorLogger())
 }
 
 func (self *Ua) CancelExpireTimer() {
@@ -1185,4 +1193,8 @@ func (self *Ua) Cleanup() {
 
 func (self *Ua) OnEarlyUasDisconnect(ev sippy_types.CCEvent) (int, string) {
     return 500, "Disconnected"
+}
+
+func (self *Ua) SetExpireStartsOnSetup(v bool) {
+    self.expire_starts_on_setup = v
 }
