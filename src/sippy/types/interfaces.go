@@ -204,9 +204,9 @@ type UA interface {
     SetExpireTime(time.Duration)
     GetNoProgressTime() time.Duration
     SetNoProgressTime(time.Duration)
-    StartNoReplyTimer(*sippy_time.MonoTime)
-    StartNoProgressTimer(*sippy_time.MonoTime)
-    StartExpireTimer(*sippy_time.MonoTime)
+    StartNoReplyTimer()
+    StartNoProgressTimer()
+    StartExpireTimer()
     CancelExpireTimer()
     DiscCb(*sippy_time.MonoTime, string, int, SipRequest)
     GetDiscCb() OnDisconnectListener

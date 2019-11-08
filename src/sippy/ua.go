@@ -751,19 +751,19 @@ func (self *Ua) SetNoProgressTime(no_progress_time time.Duration) {
     self.no_progress_time = no_progress_time
 }
 
-func (self *Ua) StartNoReplyTimer(t *sippy_time.MonoTime) {
+func (self *Ua) StartNoReplyTimer() {
     now, _ := sippy_time.NewMonoTime()
-    self.no_reply_timer = StartTimeout(self.no_reply_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
+    self.no_reply_timer = StartTimeout(self.no_reply_expires, self.session_lock, self._nr_mtime.Sub(now), 1, self.config.ErrorLogger())
 }
 
-func (self *Ua) StartNoProgressTimer(t *sippy_time.MonoTime) {
+func (self *Ua) StartNoProgressTimer() {
     now, _ := sippy_time.NewMonoTime()
-    self.no_progress_timer = StartTimeout(self.no_progress_expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
+    self.no_progress_timer = StartTimeout(self.no_progress_expires, self.session_lock, self._np_mtime.Sub(now), 1, self.config.ErrorLogger())
 }
 
-func (self *Ua) StartExpireTimer(t *sippy_time.MonoTime) {
+func (self *Ua) StartExpireTimer() {
     now, _ := sippy_time.NewMonoTime()
-    self.expire_timer = StartTimeout(self.expires, self.session_lock, t.Sub(now), 1, self.config.ErrorLogger())
+    self.expire_timer = StartTimeout(self.expires, self.session_lock, self._ex_mtime.Sub(now), 1, self.config.ErrorLogger())
 }
 
 func (self *Ua) CancelExpireTimer() {

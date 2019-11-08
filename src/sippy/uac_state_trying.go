@@ -58,9 +58,9 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     if self.ua.HasNoReplyTimer() {
         self.ua.CancelNoReplyTimer()
         if code == 100 && self.ua.GetNpMtime() != nil {
-            self.ua.StartNoProgressTimer(self.ua.GetNpMtime())
+            self.ua.StartNoProgressTimer()
         } else if code < 200 && self.ua.GetExMtime() != nil {
-            self.ua.StartExpireTimer(self.ua.GetExMtime())
+            self.ua.StartExpireTimer()
         }
     }
     if code == 100 {
@@ -71,7 +71,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     if self.ua.HasNoProgressTimer() {
         self.ua.CancelNoProgressTimer()
         if code < 200 && self.ua.GetExMtime() != nil {
-            self.ua.StartExpireTimer(self.ua.GetExMtime())
+            self.ua.StartExpireTimer()
         }
     }
     if rseq := resp.GetRSeq(); rseq != nil {

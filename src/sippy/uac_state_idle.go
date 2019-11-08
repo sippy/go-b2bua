@@ -135,11 +135,11 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             self.ua.SetNrMtime(event.GetRtime().Add(self.ua.GetNoReplyTime()))
         }
         if self.ua.GetNrMtime() != nil {
-            self.ua.StartNoReplyTimer(self.ua.GetNrMtime())
+            self.ua.StartNoReplyTimer()
         } else if self.ua.GetNpMtime() != nil {
-            self.ua.StartNoProgressTimer(self.ua.GetNpMtime())
+            self.ua.StartNoProgressTimer()
         } else if self.ua.GetExMtime() != nil {
-            self.ua.StartExpireTimer(self.ua.GetExMtime())
+            self.ua.StartExpireTimer()
         }
         return NewUacStateTrying(self.ua, self.config), nil, nil
     case *CCEventFail:
