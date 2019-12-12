@@ -560,6 +560,9 @@ func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool 
             self.routes[i] = r.AsSipRoute()
         }
     }
+    if self.outbound_proxy != nil {
+        self.routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true))) }, self.routes...)
+    }
     if len(self.routes) > 0 {
         r0, err := self.routes[0].GetBody(self.config)
         if err != nil {
@@ -576,9 +579,6 @@ func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool 
         }
     } else {
         self.rAddr = self.rTarget.GetAddr(self.config)
-    }
-    if self.outbound_proxy != nil {
-        self.routes = append([]*sippy_header.SipRoute{ sippy_header.NewSipRoute(sippy_header.NewSipAddress("", sippy_header.NewSipURL("", self.outbound_proxy.Host, self.outbound_proxy.Port, true))) }, self.routes...)
     }
 }
 
