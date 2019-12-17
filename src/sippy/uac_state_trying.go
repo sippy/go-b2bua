@@ -126,7 +126,6 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
     if code >= 200 && code < 300 {
         var to_body *sippy_header.SipAddress
         var rUri *sippy_header.SipAddress
-        var newstate sippy_types.UaState
         var cb func()
 
         to_body, err = resp.GetTo().GetBody(self.config)
@@ -166,14 +165,13 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             self.ua.StartCreditTimer(resp.GetRtime())
             self.ua.SetConnectTs(resp.GetRtime())
-            newstate = NewUaStateConnected(self.ua, self.config)
             cb = func() { self.ua.ConnCb(resp.GetRtime(), self.ua.GetOrigin()) }
         } else {
             event = NewCCEventPreConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             tr.SetUAck(true)
             self.ua.SetPendingTr(tr)
-            newstate = NewUaStateConnected(self.ua, self.config)
         }
+        newstate := NewUaStateConnected(self.ua, self.config)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, func(x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
