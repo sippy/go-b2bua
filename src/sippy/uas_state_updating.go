@@ -98,6 +98,15 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         self.ua.SetLSDP(body)
         self.ua.SendUasResponse(nil, code, reason, body, nil, false, eh...)
         return nil, nil, nil
+    case *CCEventPreConnect:
+        code, reason, body := event.scode, event.scode_reason, event.body
+        if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
+            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            return nil, nil, nil
+        }
+        self.ua.SetLSDP(body)
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), true /*ack_wait*/, eh...)
+        return NewUaStateConnected(self.ua, self.config), nil, nil
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {

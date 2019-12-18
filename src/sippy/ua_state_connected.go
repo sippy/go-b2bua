@@ -77,18 +77,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
         t.SendResponse(self.ua.GetUasResp(), false, nil)
         body := req.GetBody()
-        if body == nil {
-            // Some brain-damaged stacks use body-less re-INVITE as a means
-            // for putting session on hold. Quick and dirty hack to make this
-            // scenario working.
-            body = self.ua.GetRSDP().GetCopy()
-            sdp, err := body.GetSdp()
-            if err != nil {
-                self.config.ErrorLogger().Error("UaStateConnected::RecvRequest: #2: " + err.Error())
-                return nil, nil
-            }
-            sdp.SetCHeaderAddr("0.0.0.0")
-        } else if self.ua.GetRSDP().String() == body.String() {
+        if body != nil && self.ua.GetRSDP().String() == body.String() {
             self.ua.SendUasResponse(t, 200, "OK", self.ua.GetLSDP(), self.ua.GetLContacts(), false /*ack_wait*/)
             return nil, nil
         }
@@ -102,6 +91,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             }
         } else {
             self.ua.SetRSDP(nil)
+            self.ua.SetLateMedia(true)
         }
         self.ua.Enqueue(event)
         return NewUasStateUpdating(self.ua, self.config), nil
