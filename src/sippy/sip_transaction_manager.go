@@ -559,12 +559,6 @@ func (self *sipTransactionManager) new_server_transaction(server sippy_net.Trans
             if req_receiver != nil {
                 rval = req_receiver.RecvRequest(req, t)
             }
-            if ua != nil {
-                self.consumers_lock.Lock()
-                consumers, _ = self.req_consumers[tid.CallId]
-                self.req_consumers[tid.CallId] = append(consumers, ua)
-                self.consumers_lock.Unlock()
-            }
         }
     }
     if rval == nil {
