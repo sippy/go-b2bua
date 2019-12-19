@@ -91,7 +91,6 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
             }
         } else {
             self.ua.SetRSDP(nil)
-            self.ua.SetLateMedia(true)
         }
         self.ua.Enqueue(event)
         return NewUasStateUpdating(self.ua, self.config), nil
@@ -201,6 +200,9 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
                 self.ua.Enqueue(ev)
             }
             return nil, nil, nil
+        }
+        if body == nil {
+            self.ua.SetLateMedia(true)
         }
         eh2 := eh
         if _event.GetMaxForwards() != nil {
