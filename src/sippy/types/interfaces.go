@@ -353,6 +353,7 @@ type CCEvent interface {
     GetRtime() *sippy_time.MonoTime
     GetOrigin() string
     GetExtraHeaders() []sippy_header.SipHeader
+    GetMaxForwards() *sippy_header.SipMaxForwards
     SetReason(*sippy_header.SipReason)
     GetReason() *sippy_header.SipReason
     String() string

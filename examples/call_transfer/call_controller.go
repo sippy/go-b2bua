@@ -63,12 +63,22 @@ func (self *callController) handle_transfer(event sippy_types.CCEvent, ua sippy_
     switch ua {
     case self.uaA:
         if _, ok := event.(*sippy.CCEventConnect); ok {
+            // Transfer is completed.
             self.transfer_is_in_progress = false
         }
         self.uaO.RecvEvent(event)
     case self.uaO:
         if _, ok := event.(*sippy.CCEventPreConnect); ok {
-            // convert into CCEventUpdate
+            //
+            // Convert into CCEventUpdate.
+            //
+            // Here 200 OK response from the new callee has been received
+            // and now re-INVITE will be sent to the caller.
+            //
+            // The CCEventPreConnect is here because the outgoing call to the
+            // new destination has been sent using the late offer model, i.e.
+            // the outgoing INVITE was body-less.
+            //
             event = sippy.NewCCEventUpdate(event.GetRtime(), event.GetOrigin(), event.GetReason(),
                 event.GetMaxForwards(), event.GetBody().GetCopy())
         }
