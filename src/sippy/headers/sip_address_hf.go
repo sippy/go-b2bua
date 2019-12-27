@@ -58,9 +58,8 @@ func createSipAddressHFs(body string) []*sipAddressHF {
     addresses := []string{}
     pidx := 0
     for {
-        idx := strings.IndexRune(body[pidx:], ',')
+        idx := strings.IndexByte(body[pidx:], ',')
         if idx == -1 {
-            addresses = append(addresses, body[pidx:])
             break
         }
         onum, cnum, qnum := 0, 0, 0
@@ -79,6 +78,9 @@ func createSipAddressHFs(body string) []*sipAddressHF {
         } else {
             pidx = idx + 1
         }
+    }
+    if body != "" {
+        addresses = append(addresses, body)
     }
     retval := make([]*sipAddressHF, len(addresses))
     for i, address := range addresses {
