@@ -432,21 +432,23 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
     case "ACK":
         tid, err = req.GetTId(false /*wCSM*/, false /*wBRN*/, true /*wTTG*/)
     case "PRACK":
-        if rtid, err = req.GetRTId(); err == nil {
-            self.rtid2tid_lock.Lock()
-            tid = self.rtid2tid[*rtid]
-            self.rtid2tid_lock.Unlock()
+        if rtid, err = req.GetRTId(); err != nil {
+            self.logBadMessage("cannot get transaction ID: " + err.Error(), data)
+            return
         }
+        self.rtid2tid_lock.Lock()
+        tid = self.rtid2tid[*rtid]
+        self.rtid2tid_lock.Unlock()
     default:
         tid, err = req.GetTId(false /*wCSM*/, true /*wBRN*/, false /*wTTG*/)
         if err != nil {
             self.logBadMessage("cannot get transaction ID: " + err.Error(), data)
             return
         }
-        if tid == nil {
-            self.logBadMessage("cannot get transaction ID: ", data)
-            return
-        }
+    }
+    if tid == nil {
+        self.logBadMessage("cannot get transaction ID: ", data)
+        return
     }
     self.tserver_lock.Lock()
     t, ok := self.tserver[*tid]
@@ -477,7 +479,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
             return
         }
         resp := req.GenResponse(481, "Huh?", /*body*/ nil, /*server*/ nil)
-        self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, rtid.CallId)
+        self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
     case "CANCEL":
         var via0 *sippy_header.SipViaBody
 
