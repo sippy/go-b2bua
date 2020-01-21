@@ -285,6 +285,7 @@ type UA interface {
     Cleanup()
     OnEarlyUasDisconnect(CCEvent) (int, string)
     SetExpireStartsOnSetup(bool)
+    PrRel() bool
 }
 
 type baseTransaction interface {
@@ -320,7 +321,7 @@ type ServerTransaction interface {
     UpgradeToSessionLock(sync.Locker)
     SetServer(*sippy_header.SipServer)
     SetBeforeResponseSent(func(SipResponse))
-    Setup100rel(SipRequest)
+    SetPrackCBs(func(SipRequest), func(*sippy_time.MonoTime))
 }
 
 type SipTransactionManager interface {
@@ -345,6 +346,7 @@ type UaState interface {
     OnActivation()
     RecvACK(SipRequest)
     IsConnected() bool
+    RecvPRACK(SipRequest)
 }
 
 type CCEvent interface {

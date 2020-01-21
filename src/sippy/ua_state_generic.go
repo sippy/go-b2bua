@@ -73,3 +73,6 @@ func (*uaStateGeneric) RecvACK(sippy_types.SipRequest) {
 func (self *uaStateGeneric) IsConnected() bool {
     return self.connected
 }
+
+func (self *uaStateGeneric) RecvPRACK(req sippy_types.SipRequest) {
+}

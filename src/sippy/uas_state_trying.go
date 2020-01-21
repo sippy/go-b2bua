@@ -73,7 +73,9 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(event.GetRtime())
         }
-        return NewUasStateRinging(self.ua, self.config), func() { self.ua.RingCb(event.GetRtime(), event.GetOrigin(), code) }, nil
+        // 200 OK cannot be sent if body is present in unacknowledged provisional response
+        prack_wait := body != nil
+        return NewUasStateRinging(prack_wait, self.ua, self.config), func() { self.ua.RingCb(event.GetRtime(), event.GetOrigin(), code) }, nil
     case *CCEventPreConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
