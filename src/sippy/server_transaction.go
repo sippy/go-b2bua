@@ -117,6 +117,8 @@ func (self *serverTransaction) cleanup() {
     if self.teF != nil { self.teF.Cancel(); self.teF = nil }
     self.noack_cb = nil
     self.ack_cb = nil
+    self.prack_cb = nil
+    self.noprack_cb = nil
 }
 
 func (self *serverTransaction) startTeE(t time.Duration) {
