@@ -113,13 +113,15 @@ func (self *Timeout) _run() {
         if self.spread > 0 {
             t = time.Duration(float64(t) * (1 + self.spread * (1 - 2 * rand.Float64())))
         }
+        timer := time.NewTimer(t)
         select {
         case <-self.shutdown_chan:
             self.shutdown = true
-        case <-time.After(t):
+        case <-timer.C:
             if ! self.shutdown {
                 sippy_utils.SafeCall(self.callback, self.cb_lock, self.logger)
             }
         }
+        timer.Stop()
     }
 }
