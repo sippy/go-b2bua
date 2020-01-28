@@ -1208,6 +1208,11 @@ func (self *Ua) SetOnUacSetupComplete(fn func()) {
 }
 
 func (self *Ua) Cleanup() {
+    self.conn_cb = nil
+    self.dead_cb = nil
+    self.disc_cb = nil
+    self.fail_cb = nil
+    self.ring_cb = nil
 }
 
 func (self *Ua) OnEarlyUasDisconnect(ev sippy_types.CCEvent) (int, string) {
