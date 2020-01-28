@@ -184,15 +184,15 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
             if len(line_parts) != 2 { continue }
             switch line_parts[0] {
             case "sessions created":
-                sessions_created, _ = strconv.ParseInt(line_parts[1], 10, 64)
+                sessions_created, _ = strconv.ParseInt(strings.TrimSpace(line_parts[1]), 10, 64)
             case "active sessions":
-                active_sessions, _ = strconv.ParseInt(line_parts[1], 10, 64)
+                active_sessions, _ = strconv.ParseInt(strings.TrimSpace(line_parts[1]), 10, 64)
             case "active streams":
-                active_streams, _ = strconv.ParseInt(line_parts[1], 10, 64)
+                active_streams, _ = strconv.ParseInt(strings.TrimSpace(line_parts[1]), 10, 64)
             case "packets received":
-                preceived, _ = strconv.ParseInt(line_parts[1], 10, 64)
+                preceived, _ = strconv.ParseInt(strings.TrimSpace(line_parts[1]), 10, 64)
             case "packets transmitted":
-                ptransmitted, _ = strconv.ParseInt(line_parts[1], 10, 64)
+                ptransmitted, _ = strconv.ParseInt(strings.TrimSpace(line_parts[1]), 10, 64)
             }
         }
         self.UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
