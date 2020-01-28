@@ -110,7 +110,7 @@ func (self *CLIConnectionManager) run() {
     }
 }
 
-func (self CLIConnectionManager) handle_accept(conn net.Conn) {
+func (self *CLIConnectionManager) handle_accept(conn net.Conn) {
     if self.tcp {
         raddr, _, err := net.SplitHostPort(conn.RemoteAddr().String())
         if err != nil {
@@ -180,7 +180,6 @@ func (self *CLIConnectionManager) AcceptListRemove(ip string) {
 type CLIManager struct {
     sock        net.Conn
     command_cb  func(CLIManagerIface, string)
-    wbuffer     string
     logger      sippy_log.ErrorLogger
 }
 
@@ -202,18 +201,18 @@ func (self *CLIManager) run() {
         } else {
             sippy_utils.SafeCall(func() { self.command_cb(self, string(line)) }, nil, self.logger)
         }
-        for self.wbuffer != "" {
-            n, err := self.sock.Write([]byte(self.wbuffer))
-            if err != nil && err != syscall.EINTR {
-                return
-            }
-            self.wbuffer = self.wbuffer[n:]
-        }
     }
 }
 
+
 func (self *CLIManager) Send(data string) {
-    self.wbuffer += data
+    for len(data) > 0 {
+        n, err := self.sock.Write([]byte(data))
+        if err != nil && err != syscall.EINTR {
+            return
+        }
+        data = data[n:]
+    }
 }
 
 func (self *CLIManager) Close() {
