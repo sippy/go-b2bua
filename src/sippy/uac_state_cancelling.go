@@ -111,3 +111,7 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
     }
     return NewUaStateDead(self.ua, self.config), nil
 }
+
+func (self *UacStateCancelling) ID() sippy_types.UaStateID {
+    return sippy_types.UAC_STATE_CANCELLING
+}

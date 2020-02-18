@@ -38,7 +38,7 @@ import (
 type sip_transaction_state int
 
 const (
-    TRYING = iota
+    TRYING = sip_transaction_state(iota)
     RINGING
     COMPLETED
     CONFIRMED

@@ -156,3 +156,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
     }
     return NewUaStateDead(self.ua, self.config), func() { self.ua.DiscCb(_event.GetRtime(), _event.GetOrigin(), 0, nil) }, nil
 }
+
+func (self *UacStateIdle) ID() sippy_types.UaStateID {
+    return sippy_types.UAC_STATE_IDLE
+}

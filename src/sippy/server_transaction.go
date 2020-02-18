@@ -63,7 +63,7 @@ type serverTransaction struct {
     prack_cb        func(sippy_types.SipRequest)
     noprack_cb      func(*sippy_time.MonoTime)
     rseq            *sippy_header.SipRSeq
-
+    pr_rel          bool
 }
 
 func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sippy_header.TID, userv sippy_net.Transport, sip_tm *sipTransactionManager) (sippy_types.ServerTransaction, error) {
@@ -91,6 +91,7 @@ func NewServerTransaction(req sippy_types.SipRequest, checksum string, tid *sipp
         r487            : r487,
         branch          : branch,
         expires         : expires,
+        pr_rel          : false,
         //prov_inflight   : nil,
         rseq            : sippy_header.NewSipRSeq(),
     }
@@ -315,7 +316,7 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
             to.GenTag()
         }
     }
-    if self.prack_cb != nil && scode > 100 && scode < 200 {
+    if self.pr_rel && scode > 100 && scode < 200 {
         rseq := self.rseq.GetCopy()
         rseq_body, err := self.rseq.GetBody()
         if err != nil {
@@ -479,4 +480,23 @@ func (self *serverTransaction) retrUasResponse(last_timeout time.Duration, losse
 func (self *serverTransaction) SetPrackCBs(prack_cb func(sippy_types.SipRequest), noprack_cb func(*sippy_time.MonoTime)) {
     self.prack_cb = prack_cb
     self.noprack_cb = noprack_cb
+}
+
+func (self *serverTransaction) Setup100rel(req sippy_types.SipRequest) {
+    for _, require := range req.GetSipRequire() {
+        if require.HasTag("100rel") {
+            self.pr_rel = true
+            return
+        }
+    }
+    for _, supported := range req.GetSipSupported() {
+        if supported.HasTag("100rel") {
+            self.pr_rel = true
+            return
+        }
+    }
+}
+
+func (self *serverTransaction) PrRel() bool {
+    return self.pr_rel
 }

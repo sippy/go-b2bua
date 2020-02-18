@@ -292,3 +292,7 @@ func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
     self.ua.Enqueue(event)
     return
 }
+
+func (self *UaStateConnected) ID() sippy_types.UaStateID {
+    return sippy_types.UA_STATE_CONNECTED
+}

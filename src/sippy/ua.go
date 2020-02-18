@@ -179,20 +179,8 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     self.rCSeq = cseq_body.CSeq
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
-            for _, require := range req.GetSipRequire() {
-                if require.HasTag("100rel") {
-                    self.pr_rel = true
-                    break
-                }
-            }
-            if ! self.pr_rel {
-                for _, supported := range req.GetSipSupported() {
-                    if supported.HasTag("100rel") {
-                        self.pr_rel = true
-                        break
-                    }
-                }
-            }
+            t.Setup100rel(req)
+            self.pr_rel = t.PrRel()
             self.me().ChangeState(NewUasStateIdle(self.me(), self.config), nil)
         } else {
             return nil
@@ -901,8 +889,18 @@ func (self *Ua) ShouldUseRefer() bool {
     return self.useRefer
 }
 
-func (self *Ua) GetState() sippy_types.UaState {
-    return self.state
+func (self *Ua) GetStateName() string {
+    if state := self.state; state != nil {
+        return state.String()
+    }
+    return "None"
+}
+
+func (self *Ua) GetState() sippy_types.UaStateID {
+    if state := self.state; state != nil {
+        return state.ID()
+    }
+    return sippy_types.UA_STATE_NONE
 }
 
 func (self *Ua) GetUsername() string {

@@ -187,3 +187,7 @@ func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.
     //return nil, fmt.Errorf("wrong event %s in the Updating state", event.String())
     return nil, nil, nil
 }
+
+func (self *UacStateUpdating) ID() sippy_types.UaStateID {
+    return sippy_types.UAC_STATE_UPDATING
+}

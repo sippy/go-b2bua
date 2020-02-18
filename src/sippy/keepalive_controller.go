@@ -63,7 +63,7 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
     var req sippy_types.SipRequest
     var new_auth_fn sippy_header.NewSipXXXAuthorizationFunc
 
-    if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
+    if self.ua.GetState() != sippy_types.UA_STATE_CONNECTED {
         return
     }
     code, _ := resp.GetSCode()
@@ -123,7 +123,7 @@ func (self *keepaliveController) keepAlive() {
     var err error
     var req sippy_types.SipRequest
 
-    if _, ok := self.ua.GetState().(*UaStateConnected); ! ok {
+    if self.ua.GetState() != sippy_types.UA_STATE_CONNECTED {
         return
     }
     req, err = self.ua.GenRequest("INVITE", self.ua.GetLSDP(), "", "", nil)

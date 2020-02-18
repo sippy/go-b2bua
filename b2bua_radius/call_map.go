@@ -224,7 +224,7 @@ func (self *callMap) GClector() {
     if self.debug_mode {
         //println(self.global_config["_sip_tm"].tclient, self.global_config["_sip_tm"].tserver)
         for _, cc := range self.ccmap {
-            println(cc.uaA.GetState().String(), cc.uaO.GetState().String())
+            println(cc.uaA.GetStateName(), cc.uaO.GetStateName())
         }
     //} else {
     //    fmt.Printf("[%d]: %d client, %d server transactions in memory\n",
@@ -265,13 +265,13 @@ func (self *callMap) recvCommand(clim sippy_cli.CLIManagerIface, data string) {
             cc.lock.Lock()
             res += fmt.Sprintf("%s: %s (", cc.cId.CallId, cc.state.String())
             if cc.uaA != nil {
-                res += fmt.Sprintf("%s %s %s %s -> ", cc.uaA.GetState().String(), cc.uaA.GetRAddr0().String(),
+                res += fmt.Sprintf("%s %s %s %s -> ", cc.uaA.GetStateName(), cc.uaA.GetRAddr0().String(),
                   cc.uaA.GetCLD(), cc.uaA.GetCLI())
             } else {
                 res += "N/A -> "
             }
             if cc.uaO != nil {
-                res += fmt.Sprintf("%s %s %s %s)\n", cc.uaO.GetState().String(), cc.uaO.GetRAddr0().String(),
+                res += fmt.Sprintf("%s %s %s %s)\n", cc.uaO.GetStateName(), cc.uaO.GetRAddr0().String(),
                   cc.uaO.GetCLI(), cc.uaO.GetCLD())
             } else {
                 res += "N/A)\n"

@@ -35,17 +35,11 @@ import (
 
 type UasStateRinging struct {
     *uaStateGeneric
-    prack_received      bool
-    prack_wait          bool
-    pending_ev_ring     sippy_types.CCEvent
-    pending_ev_connect  sippy_types.CCEvent
 }
 
-func NewUasStateRinging(prack_wait bool, ua sippy_types.UA, config sippy_conf.Config) *UasStateRinging {
+func NewUasStateRinging(ua sippy_types.UA, config sippy_conf.Config) *UasStateRinging {
     return &UasStateRinging{
         uaStateGeneric  : newUaStateGeneric(ua, config),
-        prack_wait      : prack_wait,
-        prack_received  : false,
     }
 }
 
@@ -55,22 +49,9 @@ func (self *UasStateRinging) String() string {
 
 func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaState, func(), error) {
     eh := _event.GetExtraHeaders()
-    switch event :=_event.(type) {
+    switch event := _event.(type) {
     case *CCEventRing:
         code, reason, body := event.scode, event.scode_reason, event.body
-        if self.ua.PrRel() {
-            if ! self.prack_received {
-                // There is no PRACK for the previous response yet.
-                if code > 100 {
-                    // Memorize the last event
-                    self.pending_ev_ring = _event
-                }
-                return nil, nil, nil
-            } else {
-                self.prack_wait = body != nil
-                self.prack_received = false
-            }
-        }
         if code == 0 {
             code, reason, body = 180, "Ringing", nil
         } else {
@@ -90,13 +71,6 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.RingCb(event.rtime, event.origin, code)
         return nil, nil, nil
     case *CCEventConnect:
-        if self.ua.PrRel() && self.prack_wait && ! self.prack_received {
-            // 200 OK received but the last reliable provisional
-            // response has not yet been aknowledged. Memorize the event
-            // until PRACK is received.
-            self.pending_ev_connect = _event
-            return nil, nil, nil
-        }
         body := event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
             self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
@@ -109,12 +83,6 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.SetConnectTs(event.GetRtime())
         return NewUaStateConnected(self.ua, self.config), func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }, nil
     case *CCEventPreConnect:
-        if self.ua.PrRel() && self.prack_wait && ! self.prack_received {
-            // 200 OK received but the last reliable provisional
-            // response has not yet been confirmed.
-            self.pending_ev_connect = _event
-            return nil, nil, nil
-        }
         body := event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
             self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
@@ -183,23 +151,6 @@ func (self *UasStateRinging) Cancel(rtime *sippy_time.MonoTime, req sippy_types.
     self.ua.EmitEvent(event)
 }
 
-func (self *UasStateRinging) RecvPRACK(req sippy_types.SipRequest) {
-    var state sippy_types.UaState
-    var cb func()
-    var err error
-
-    self.prack_received = true
-    if self.pending_ev_connect != nil {
-        state, cb, err = self.RecvEvent(self.pending_ev_connect)
-    } else if self.pending_ev_ring != nil {
-        state, cb, err = self.RecvEvent(self.pending_ev_ring)
-    }
-    if err != nil {
-        self.config.ErrorLogger().Error("RecvPRACK: " + err.Error())
-    }
-    if state != nil {
-        self.ua.ChangeState(state, cb)
-    }
-    self.pending_ev_ring = nil
-    self.pending_ev_connect = nil
+func (self *UasStateRinging) ID() sippy_types.UaStateID {
+    return sippy_types.UAS_STATE_RINGING
 }

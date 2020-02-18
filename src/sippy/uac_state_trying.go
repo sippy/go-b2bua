@@ -258,3 +258,7 @@ func (self *UacStateTrying) RecvEvent(event sippy_types.CCEvent) (sippy_types.Ua
     //return nil, fmt.Errorf("uac-trying: wrong event %s in the Trying state", event.String())
     return nil, nil, nil
 }
+
+func (self *UacStateTrying) ID() sippy_types.UaStateID {
+    return sippy_types.UAC_STATE_TRYING
+}

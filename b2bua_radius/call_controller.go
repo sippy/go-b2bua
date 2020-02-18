@@ -185,10 +185,9 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
     } else {
         ev_fail, is_ev_fail := event.(*sippy.CCEventFail)
         _, is_ev_disconnect := event.(*sippy.CCEventFail)
-        _, is_state_trying := self.uaA.GetState().(*sippy.UasStateTrying)
-        _, is_state_ringing := self.uaA.GetState().(*sippy.UasStateRinging)
         if (is_ev_fail || is_ev_disconnect) && self.state == CCStateARComplete &&
-          (is_state_trying || is_state_ringing) && len(self.routes) > 0 {
+          (self.uaA.GetState() == sippy_types.UAS_STATE_TRYING ||
+          self.uaA.GetState() == sippy_types.UAS_STATE_RINGING) && len(self.routes) > 0 {
             huntstop := false
             if is_ev_fail {
                 for _, c := range self.huntstop_scodes {
@@ -233,7 +232,7 @@ func (self *callController) rDone(/*results*/) {
 */
         self.acctA = NewFakeAccounting()
     // Check that uaA is still in a valid state, send acct stop
-    if _, ok := self.uaA.GetState().(*sippy.UasStateTrying); ! ok {
+    if self.uaA.GetState() != sippy_types.UAS_STATE_TRYING {
         //self.acctA.disc(self.uaA, time(), "caller")
         return
     }
@@ -400,11 +399,7 @@ func (self *callController) aDisc(rtime *sippy_time.MonoTime, origin string, res
 }
 
 func (self *callController) aDead() {
-    is_dead := false
-    if self.uaO != nil {
-        _, is_dead = self.uaO.GetState().(*sippy.UaStateDead)
-    }
-    if self.uaO == nil || is_dead {
+    if self.uaO == nil || self.uaO.GetState() == sippy_types.UA_STATE_DEAD {
         if global_cmap.debug_mode {
             println("garbadge collecting", self)
         }
@@ -415,7 +410,7 @@ func (self *callController) aDead() {
 }
 
 func (self *callController) oDead() {
-    if _, ok := self.uaA.GetState().(*sippy.UaStateDead); ok {
+    if self.uaA.GetState() == sippy_types.UA_STATE_DEAD {
         if global_cmap.debug_mode {
             println("garbadge collecting", self)
         }

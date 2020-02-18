@@ -230,3 +230,7 @@ func (self *UacStateRinging) RecvEvent(event sippy_types.CCEvent) (sippy_types.U
     }
     return NewUacStateCancelling(self.ua, self.config), func() { self.ua.DiscCb(event.GetRtime(), event.GetOrigin(), self.ua.GetLastScode(), nil) }, nil
 }
+
+func (self *UacStateRinging) ID() sippy_types.UaStateID {
+    return sippy_types.UAC_STATE_RINGING
+}

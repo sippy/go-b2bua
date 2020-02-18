@@ -143,3 +143,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetSetupTs(req.GetRtime())
     return NewUasStateTrying(self.ua, self.config), nil
 }
+
+func (self *UasStateIdle) ID() sippy_types.UaStateID {
+    return sippy_types.UAS_STATE_IDLE
+}

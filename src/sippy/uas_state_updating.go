@@ -160,3 +160,7 @@ func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_typ
     }
     self.ua.EmitEvent(event)
 }
+
+func (self *UasStateUpdating) ID() sippy_types.UaStateID {
+    return sippy_types.UAS_STATE_UPDATING
+}

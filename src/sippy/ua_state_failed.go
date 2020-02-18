@@ -56,3 +56,7 @@ func (self *UaStateFailed) goDead() {
     //print 'Time in Failed state expired, going to the Dead state'
     self.ua.ChangeState(NewUaStateDead(self.ua, self.config), nil)
 }
+
+func (self *UaStateFailed) ID() sippy_types.UaStateID {
+    return sippy_types.UA_STATE_FAILED
+}

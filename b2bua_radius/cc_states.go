@@ -29,7 +29,7 @@ package main
 type CCState int
 
 const (
-    CCStateIdle = iota
+    CCStateIdle = CCState(iota)
     CCStateWaitRoute
     CCStateARComplete
     CCStateConnected

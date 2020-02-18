@@ -1,6 +1,5 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2006-2020 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2020 Andrii Pylypenko. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,34 +23,26 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+package sippy_types
 
-import (
-    "sippy/conf"
-    "sippy/types"
+type UaStateID int
+
+const (
+    UA_STATE_NONE = UaStateID(iota)
+
+    UAS_STATE_IDLE
+    UAS_STATE_TRYING
+    UAS_STATE_RINGING
+    UAS_STATE_UPDATING
+
+    UAC_STATE_IDLE
+    UAC_STATE_TRYING
+    UAC_STATE_RINGING
+    UAC_STATE_UPDATING
+    UAC_STATE_CANCELLING
+
+    UA_STATE_CONNECTED
+    UA_STATE_DISCONNECTED
+    UA_STATE_FAILED
+    UA_STATE_DEAD
 )
-
-type UaStateDead struct {
-    *uaStateGeneric
-}
-
-func NewUaStateDead(ua sippy_types.UA, config sippy_conf.Config) *UaStateDead {
-    return &UaStateDead {
-        uaStateGeneric  : newUaStateGeneric(ua, config),
-    }
-}
-
-func (self *UaStateDead) OnActivation() {
-    self.ua.OnDead()
-    // Break cross-ref chain
-    self.ua.Cleanup()
-    self.ua = nil
-}
-
-func (self *UaStateDead) String() string {
-    return "Dead"
-}
-
-func (self *UaStateDead) ID() sippy_types.UaStateID {
-    return sippy_types.UA_STATE_DEAD
-}
