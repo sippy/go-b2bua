@@ -40,12 +40,11 @@ func NewSdpSession() *SdpSession {
     }
 }
 
-func (self *SdpSession) FixupVersion(event sippy_types.CCEvent) error {
-    sdp_body := event.GetBody()
-    if sdp_body == nil {
-        return nil // no SDP so there is nothing to do
+func (self *SdpSession) FixupVersion(body sippy_types.MsgBody) error {
+    if body == nil {
+        return nil
     }
-    sdp, err := sdp_body.GetSdp()
+    sdp, err := body.GetSdp()
     if err != nil {
         return err
     }

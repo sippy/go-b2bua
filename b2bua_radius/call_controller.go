@@ -204,7 +204,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 return
             }
         }
-        self.sdp_session.FixupVersion(event)
+        self.sdp_session.FixupVersion(event.GetBody())
         self.uaA.RecvEvent(event)
     }
 }
