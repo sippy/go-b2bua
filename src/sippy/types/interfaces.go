@@ -308,6 +308,7 @@ type ClientTransaction interface {
     BeforeRequestSent(SipRequest)
     TransmitData()
     SetOnSendComplete(func())
+    CheckRSeq(*sippy_header.SipRSeq) bool
 }
 
 type ServerTransaction interface {

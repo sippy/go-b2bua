@@ -75,6 +75,10 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         }
     }
     if rseq := resp.GetRSeq(); rseq != nil {
+        if ! tr.CheckRSeq(rseq) {
+            // bad RSeq number - ignore the response
+            return nil, nil
+        }
         to_body, err := resp.GetTo().GetBody(self.config)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #7: " + err.Error())

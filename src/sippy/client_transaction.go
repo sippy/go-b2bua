@@ -57,6 +57,7 @@ type clientTransaction struct {
     ack_routes      []*sippy_header.SipRoute
     on_send_complete func()
     seen_rseqs      map[sippy_header.RTID]bool
+    last_rseq       int
 }
 
 func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_net.Transport, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_net.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
@@ -96,6 +97,7 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         before_request_sent : req_out_cb,
         ack_rparams_present : false,
         seen_rseqs      : make(map[sippy_header.RTID]bool),
+        last_rseq       : 0,
     }
     self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack)
     return self, nil
@@ -407,4 +409,12 @@ func (self *clientTransaction) SetAckRparams(rAddr *sippy_net.HostPort, rTarget 
     self.ack_rAddr = rAddr
     self.ack_rTarget = rTarget
     self.ack_routes = routes
+}
+
+func (self *clientTransaction) CheckRSeq(rseq *sippy_header.SipRSeq) bool {
+    if self.last_rseq != 0 && self.last_rseq + 1 != rseq.Number {
+        return false
+    }
+    self.last_rseq = rseq.Number
+    return true
 }

@@ -63,6 +63,10 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
     }
     if code < 200 {
         if rseq := resp.GetRSeq(); rseq != nil {
+            if ! tr.CheckRSeq(rseq) {
+                // bad RSeq number - ignore the response
+                return nil, nil
+            }
             to_body, err := resp.GetTo().GetBody(self.config)
             if err != nil {
                 self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #6: " + err.Error())
