@@ -235,6 +235,10 @@ func (self *SipAddress) GetName() string {
     return self.name
 }
 
+func (self *SipAddress) SetName(name string) {
+    self.name = name
+}
+
 func (self *SipAddress) GetUrl() *SipURL {
     return self.url
 }
