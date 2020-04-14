@@ -164,6 +164,7 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
         }
     }
     if len(sects) == 0 {
+        sdp_body.SetNeedsUpdate(false)
         result_callback(sdp_body)
         return nil
     }
