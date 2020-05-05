@@ -199,8 +199,9 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
         }
         if cb_args.sendonly {
             sect.RemoveAHeader("sendrecv")
-            sect.RemoveAHeader("sendonly")
-            sect.AddHeader("a", "sendonly")
+            if ! sect.HasAHeader("sendonly") && ! sect.HasAHeader("inactive") {
+                sect.AddHeader("a", "sendonly")
+            }
         }
         if self.repacketize > 0 {
             sect.RemoveAHeader("ptime:")

@@ -96,6 +96,15 @@ func (self *SdpMediaDescription) LocalStr(hostport *sippy_net.HostPort, noC bool
     return s
 }
 
+func (self *SdpMediaDescription) HasAHeader(header string) bool {
+    for _, hdr := range self.a_headers {
+        if hdr == header {
+            return true
+        }
+    }
+    return false
+}
+
 func (self *SdpMediaDescription) AddHeader(name, header string) {
     switch name {
     case "a":
