@@ -97,21 +97,19 @@ func (self *SdpMediaDescription) LocalStr(hostport *sippy_net.HostPort, noC bool
 }
 
 func (self *SdpMediaDescription) AddHeader(name, header string) {
-    if name == "a" {
+    switch name {
+    case "a":
         self.a_headers = append(self.a_headers, header)
-    } else {
-        switch name {
-        case "m":
-            self.m_header = ParseSdpMedia(header)
-        case "i":
-            self.i_header = ParseSdpGeneric(header)
-        case "c":
-            self.c_header = ParseSdpConnecton(header)
-        case "b":
-            self.b_header = ParseSdpGeneric(header)
-        case "k":
-            self.k_header = ParseSdpGeneric(header)
-        }
+    case "m":
+        self.m_header = ParseSdpMedia(header)
+    case "i":
+        self.i_header = ParseSdpGeneric(header)
+    case "c":
+        self.c_header = ParseSdpConnecton(header)
+    case "b":
+        self.b_header = ParseSdpGeneric(header)
+    case "k":
+        self.k_header = ParseSdpGeneric(header)
     }
 }
 
