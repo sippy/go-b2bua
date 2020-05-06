@@ -199,7 +199,10 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
         }
         if cb_args.sendonly {
             sect.RemoveAHeader("sendrecv")
-            if ! sect.HasAHeader("sendonly") && ! sect.HasAHeader("inactive") {
+            if sect.HasAHeader("recvonly") {
+                sect.RemoveAHeader("recvonly")
+                sect.AddHeader("a", "inactive")
+            } else if ! sect.HasAHeader("sendonly") && ! sect.HasAHeader("inactive") {
                 sect.AddHeader("a", "sendonly")
             }
         }
