@@ -161,7 +161,9 @@ func (self *asyncReceiver) run(userv *UdpServer) {
             self.logger.Error("Cannot create MonoTime object")
             continue
         }
-        sippy_utils.SafeCall(func() { userv.handle_read(buf[:n], address, rtime) }, nil, self.logger)
+        msg := make([]byte, 0, n)
+        msg = append(msg, buf[:n]...)
+        sippy_utils.SafeCall(func() { userv.handle_read(msg, address, rtime) }, nil, self.logger)
     }
     self.sem <- 1
 }
