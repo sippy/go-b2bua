@@ -40,7 +40,6 @@ type Timeout struct {
     timeout         time.Duration
     logger          sippy_log.ErrorLogger
     shutdown_chan   chan struct{}
-    shutdown        bool
     spread          float64
     nticks          int
     lock            sync.Mutex
@@ -66,7 +65,6 @@ func NewInactiveTimeout(callback func(), cb_lock sync.Locker, _timeout time.Dura
         nticks          : nticks,
         logger          : logger,
         shutdown_chan   : make(chan struct{}),
-        shutdown        : false,
         spread          : 0,
         started         : false,
         cb_lock         : cb_lock,
@@ -88,24 +86,19 @@ func (self *Timeout) SpreadRuns(spread float64) {
 }
 
 func (self *Timeout) Cancel() {
-    self.shutdown = true
     close(self.shutdown_chan)
 }
 
 func (self *Timeout) run() {
-    for !self.shutdown {
-        self._run()
-    }
+    self._run()
     self.callback = nil
     self.cb_lock = nil
 }
 
 func (self *Timeout) _run() {
-    for !self.shutdown {
-        if self.nticks == 0 {
-            self.shutdown = true
-            break
-        }
+    var timer *time.Timer
+LOOP:
+    for self.nticks != 0 {
         if self.nticks > 0 {
             self.nticks--
         }
@@ -113,15 +106,17 @@ func (self *Timeout) _run() {
         if self.spread > 0 {
             t = time.Duration(float64(t) * (1 + self.spread * (1 - 2 * rand.Float64())))
         }
-        timer := time.NewTimer(t)
+        if timer == nil {
+            timer = time.NewTimer(t)
+        } else {
+            timer.Reset(t)
+        }
         select {
         case <-self.shutdown_chan:
-            self.shutdown = true
+            timer.Stop()
+            break LOOP
         case <-timer.C:
-            if ! self.shutdown {
-                sippy_utils.SafeCall(self.callback, self.cb_lock, self.logger)
-            }
+            sippy_utils.SafeCall(self.callback, self.cb_lock, self.logger)
         }
-        timer.Stop()
     }
 }
