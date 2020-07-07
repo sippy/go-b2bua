@@ -260,7 +260,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
     return nil, nil, nil
 }
 
-func (self *UaStateConnected) OnStateChange() {
+func (self *UaStateConnected) OnDeactivate() {
     if self.ka_controller != nil {
         self.ka_controller.Stop()
     }

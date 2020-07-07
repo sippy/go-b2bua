@@ -61,7 +61,7 @@ func (self *uaStateGeneric) RecvEvent(event sippy_types.CCEvent) (sippy_types.Ua
 func (self *uaStateGeneric) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
 }
 
-func (*uaStateGeneric) OnStateChange() {
+func (*uaStateGeneric) OnDeactivate() {
 }
 
 func (*uaStateGeneric) OnActivation() {

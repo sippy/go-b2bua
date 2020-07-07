@@ -345,7 +345,7 @@ type UaState interface {
     RecvResponse(SipResponse, ClientTransaction) (UaState, func())
     RecvRequest(SipRequest, ServerTransaction) (UaState, func())
     Cancel(*sippy_time.MonoTime, SipRequest)
-    OnStateChange()
+    OnDeactivate()
     String() string
     OnActivation()
     RecvACK(SipRequest)

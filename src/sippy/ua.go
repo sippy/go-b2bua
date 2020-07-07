@@ -343,7 +343,7 @@ func (self *Ua) credit_expires(rtime *sippy_time.MonoTime) {
 
 func (self *Ua) ChangeState(newstate sippy_types.UaState, cb func()) {
     if self.state != nil {
-        self.state.OnStateChange()
+        self.state.OnDeactivate()
     }
     self.state = newstate //.Newstate(self, self.config)
     if newstate != nil {
