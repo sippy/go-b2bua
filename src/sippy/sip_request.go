@@ -63,7 +63,7 @@ func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.C
     if err != nil {
         return nil, errors.New("Bad SIP URL in SIP request: " + arr[1])
     }
-    err = self.init_body()
+    err = self.init_body(config.ErrorLogger())
     if err != nil {
         if e, ok := err.(*ESipParseException); ok {
             e.sip_response = self.GenResponse(400, "Bad Request - " + e.Error(), nil, nil)

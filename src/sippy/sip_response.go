@@ -70,7 +70,7 @@ func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.
         return nil, err
     }
     if self.scode != 100 || self.scode < 400 {
-        err = self.init_body()
+        err = self.init_body(config.ErrorLogger())
     }
     return self, err
 }

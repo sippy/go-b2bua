@@ -34,6 +34,7 @@ import (
 
     "sippy/conf"
     "sippy/headers"
+    "sippy/log"
     "sippy/net"
     "sippy/time"
     "sippy/types"
@@ -236,7 +237,7 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     self.headers = append(self.headers, hdr)
 }
 
-func (self *sipMsg) init_body() error {
+func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) error {
     var blen_hf *sippy_header.SipNumericHF
     if self.content_length != nil {
         blen_hf, _ = self.content_length.GetBody()
@@ -259,19 +260,19 @@ func (self *sipMsg) init_body() error {
                 // XXX: we should not really be doing this, but it appears to be
                 // a common off-by-one/two/.../six problem with SDPs generates by
                 // the consumer-grade devices.
-                fmt.Printf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
+                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
                 blen = mblen
             } else if blen - mblen == 2 && (*self.__mbody)[len(*self.__mbody)-2:] == "\r\n" {
                 // Missed last 2 \r\n is another common problem.
-                fmt.Printf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
+                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
                 (*self.__mbody) += "\r\n"
             } else if blen - mblen == 1 && (*self.__mbody)[len(*self.__mbody)-3:] == "\r\n\n" {
                 // Another possible mishap
-                fmt.Printf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
+                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
                 (*self.__mbody) = (*self.__mbody)[:len(*self.__mbody)-3] + "\r\n\r\n"
             } else if blen - mblen == 1 && (*self.__mbody)[len(*self.__mbody)-2:] == "\r\n" {
                 // One more
-                fmt.Printf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
+                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
                 (*self.__mbody) += "\r\n"
                 blen += 1
                 mblen += 2
