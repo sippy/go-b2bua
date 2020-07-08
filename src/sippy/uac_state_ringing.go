@@ -163,7 +163,6 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
             self.ua.SetPendingTr(tr)
             newstate = NewUaStateConnected(self.ua, self.config)
         }
-        self.ua.StartCreditTimer(resp.GetRtime())
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
