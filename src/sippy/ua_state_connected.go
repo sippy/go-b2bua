@@ -34,6 +34,7 @@ import (
 
 type UaStateConnected struct {
     *uaStateGeneric
+    confirmed           bool
     ka_controller       *keepaliveController
 }
 
@@ -42,6 +43,7 @@ func NewUaStateConnected(ua sippy_types.UA, config sippy_conf.Config) *UaStateCo
     self := &UaStateConnected{
         uaStateGeneric      : newUaStateGeneric(ua, config),
         ka_controller       : newKeepaliveController(ua, config.ErrorLogger()),
+        confirmed           : false,
     }
     self.connected = true
     return self
@@ -74,6 +76,10 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         return nil, nil
     }
     if req.GetMethod() == "INVITE" {
+        if ! self.confirmed {
+            t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
+            return nil, nil
+        }
         self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
         t.SendResponse(self.ua.GetUasResp(), false, nil)
         body := req.GetBody()
@@ -248,6 +254,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             return nil, nil, nil
         }
+        self.confirmed = true
         self.ua.GetPendingTr().GetACK().SetBody(body)
         self.ua.GetPendingTr().SendACK()
         self.ua.SetPendingTr(nil)
@@ -269,6 +276,7 @@ func (self *UaStateConnected) OnDeactivate() {
 }
 
 func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
+    self.confirmed = true
     rtime := req.GetRtime()
     body := req.GetBody()
     event := NewCCEventConfirm(body, rtime, self.ua.GetOrigin())
