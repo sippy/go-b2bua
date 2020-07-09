@@ -181,20 +181,21 @@ func NewCCEventRing(scode int, scode_reason string, body sippy_types.MsgBody, rt
 }
 
 func (self *CCEventRing) String() string { return "CCEventRing" }
+func (self *CCEventRing) GetScode() int { return self.scode }
+func (self *CCEventRing) GetBody() sippy_types.MsgBody { return self.body }
 
 type CCEventConnect struct {
     CCEventGeneric
+    late_media      bool
     scode           int
     scode_reason    string
     body    sippy_types.MsgBody
 }
 
-func (self *CCEventRing) GetScode() int { return self.scode }
-func (self *CCEventRing) GetBody() sippy_types.MsgBody { return self.body }
-
-func NewCCEventConnect(scode int, scode_reason string, msg_body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventConnect {
+func NewCCEventConnect(scode int, scode_reason string, late_media bool, msg_body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventConnect {
     return &CCEventConnect{
         CCEventGeneric : newCCEventGeneric(rtime, origin, extra_headers...),
+        late_media      : late_media,
         scode           : scode,
         scode_reason    : scode_reason,
         body            : msg_body,
@@ -202,10 +203,10 @@ func NewCCEventConnect(scode int, scode_reason string, msg_body sippy_types.MsgB
 }
 
 func (self *CCEventConnect) String() string { return "CCEventConnect" }
-
 func (self *CCEventConnect) GetBody() sippy_types.MsgBody {
     return self.body
 }
+func (self *CCEventConnect) GetLateMedia() bool { return self.late_media }
 
 type CCEventUpdate struct {
     CCEventGeneric
@@ -310,23 +311,17 @@ func (*CCEventFail) GetBody() sippy_types.MsgBody {
     return nil
 }
 
-type CCEventPreConnect struct {
+type CCEventAck struct {
     CCEventGeneric
-    scode           int
-    scode_reason    string
     body            sippy_types.MsgBody
 }
 
-func NewCCEventPreConnect(scode int, scode_reason string, body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string) *CCEventPreConnect {
-    return &CCEventPreConnect{
+func NewCCEventAck(body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string) *CCEventAck {
+    return &CCEventAck{
         CCEventGeneric  : newCCEventGeneric(rtime, origin),
-        scode           : scode,
-        scode_reason    : scode_reason,
         body            : body,
     }
 }
 
-func (self *CCEventPreConnect) String() string { return "CCEventPreConnect" }
-func (self *CCEventPreConnect) GetScode() int { return self.scode }
-func (self *CCEventPreConnect) GetScodeReason() string { return self.scode_reason }
-func (self *CCEventPreConnect) GetBody() sippy_types.MsgBody { return self.body }
+func (self *CCEventAck) String() string { return "CCEventAck" }
+func (self *CCEventAck) GetBody() sippy_types.MsgBody { return self.body }

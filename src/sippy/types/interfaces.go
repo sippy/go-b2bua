@@ -304,7 +304,6 @@ type ClientTransaction interface {
     Cancel(...sippy_header.SipHeader)
     GetACK() SipRequest
     SendACK()
-    SetUAck(bool)
     BeforeRequestSent(SipRequest)
     TransmitData()
     SetOnSendComplete(func())

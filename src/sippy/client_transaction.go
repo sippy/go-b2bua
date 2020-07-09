@@ -48,7 +48,6 @@ type clientTransaction struct {
     outbound_proxy  *sippy_net.HostPort
     cancel          sippy_types.SipRequest
     cancelPending   bool
-    uack            bool
     ack_rAddr       *sippy_net.HostPort
     ack_checksum    string
     before_request_sent func(sippy_types.SipRequest)
@@ -93,7 +92,6 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         expires         : expires,
         ack             : ack,
         cancel          : cancel,
-        uack            : false,
         before_request_sent : req_out_cb,
         ack_rparams_present : false,
         seen_rseqs      : make(map[sippy_header.RTID]bool),
@@ -326,17 +324,12 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
         if rAddr == nil {
             rAddr = self.address
         }
-        if ! self.uack {
-            self.BeforeRequestSent(self.ack)
-            sip_tm.transmitMsg(self.userv, self.ack, rAddr, checksum, self.tid.CallId)
-        } else {
-            self.state = UACK
-            self.ack_rAddr = rAddr
-            self.ack_checksum = checksum
-            sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
-            self.teG = StartTimeout(self.timerG, self.lock, 64 * time.Second, 1, self.logger)
-            return
-        }
+        self.state = UACK
+        self.ack_rAddr = rAddr
+        self.ack_checksum = checksum
+        sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
+        self.teG = StartTimeout(self.timerG, self.lock, 64 * time.Second, 1, self.logger)
+        return
     } else {
         sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
     }
@@ -386,10 +379,6 @@ func (self *clientTransaction) SendACK() {
 
 func (self *clientTransaction) GetACK() sippy_types.SipRequest {
     return self.ack
-}
-
-func (self *clientTransaction) SetUAck(uack bool) {
-    self.uack = uack
 }
 
 func (self *clientTransaction) BeforeRequestSent(req sippy_types.SipRequest) {

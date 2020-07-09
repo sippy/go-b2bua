@@ -71,18 +71,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.RingCb(event.rtime, event.origin, code)
         return nil, nil, nil
     case *CCEventConnect:
-        body := event.body
-        if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
-            return nil, nil, nil
-        }
-        self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContacts(), false, eh...)
-        self.ua.CancelExpireTimer()
-        self.ua.StartCreditTimer(event.GetRtime())
-        self.ua.SetConnectTs(event.GetRtime())
-        return NewUaStateConnected(self.ua, self.config), func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }, nil
-    case *CCEventPreConnect:
+        var cb func()
         body := event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
             self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
@@ -90,7 +79,13 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         }
         self.ua.SetLSDP(body)
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        if ! event.GetLateMedia() {
+            self.ua.CancelExpireTimer()
+            self.ua.StartCreditTimer(event.GetRtime())
+            self.ua.SetConnectTs(event.GetRtime())
+            cb = func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }
+        }
+        return NewUaStateConnected(self.ua, self.config), cb, nil
     case *CCEventRedirect:
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         self.ua.CancelExpireTimer()

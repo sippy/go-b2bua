@@ -82,13 +82,8 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         return nil, nil
     }
     if code >= 200 && code < 300 {
-        if ! self.ua.GetLateMedia() || body == nil {
-            event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
-        } else {
-            event = NewCCEventPreConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
-            tr.SetUAck(true)
-            self.ua.SetPendingTr(tr)
-        }
+        event = NewCCEventConnect(code, reason, self.ua.GetLateMedia(), body, resp.GetRtime(), self.ua.GetOrigin())
+        self.ua.SetPendingTr(tr)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 if err := self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) }); err != nil {

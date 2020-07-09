@@ -166,15 +166,12 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         rUri.SetTag(tag)
         if !self.ua.GetLateMedia() || body == nil {
             self.ua.SetLateMedia(false)
-            event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             self.ua.StartCreditTimer(resp.GetRtime())
             self.ua.SetConnectTs(resp.GetRtime())
             cb = func() { self.ua.ConnCb(resp.GetRtime(), self.ua.GetOrigin()) }
-        } else {
-            event = NewCCEventPreConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
-            tr.SetUAck(true)
-            self.ua.SetPendingTr(tr)
         }
+        event = NewCCEventConnect(code, reason, self.ua.GetLateMedia(), body, resp.GetRtime(), self.ua.GetOrigin())
+        self.ua.SetPendingTr(tr)
         newstate := NewUaStateConnected(self.ua, self.config)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
