@@ -214,7 +214,7 @@ type UA interface {
     FailCb(*sippy_time.MonoTime, string, int)
     GetFailCb() OnFailureListener
     SetFailCb(OnFailureListener)
-    ConnCb(*sippy_time.MonoTime, string)
+    OnConnect(*sippy_time.MonoTime, string)
     GetConnCb() OnConnectListener
     SetConnCb(OnConnectListener)
     RingCb(*sippy_time.MonoTime, string, int)
@@ -227,7 +227,6 @@ type UA interface {
     GetUasResp() SipResponse
     SetUasResp(SipResponse)
     CancelCreditTimer()
-    StartCreditTimer(*sippy_time.MonoTime)
     SetCreditTime(time.Duration)
     ResetCreditTime(*sippy_time.MonoTime, map[int64]*sippy_time.MonoTime)
     ShouldUseRefer() bool

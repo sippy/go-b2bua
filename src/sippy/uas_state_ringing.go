@@ -80,10 +80,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         self.ua.SetLSDP(body)
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
         if ! event.GetLateMedia() {
-            self.ua.CancelExpireTimer()
-            self.ua.StartCreditTimer(event.GetRtime())
-            self.ua.SetConnectTs(event.GetRtime())
-            cb = func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }
+            cb = func() { self.ua.OnConnect(event.GetRtime(), event.GetOrigin()) }
         }
         return NewUaStateConnected(self.ua, self.config), cb, nil
     case *CCEventRedirect:

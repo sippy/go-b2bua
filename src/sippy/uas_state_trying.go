@@ -87,10 +87,7 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         self.ua.SetLSDP(body)
         self.ua.CancelNoProgressTimer()
         if ! event.GetLateMedia() {
-            self.ua.CancelExpireTimer()
-            self.ua.StartCreditTimer(event.GetRtime())
-            self.ua.SetConnectTs(event.GetRtime())
-            cb = func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }
+            cb = func() { self.ua.OnConnect(event.GetRtime(), event.GetOrigin()) }
         }
         self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
         return NewUaStateConnected(self.ua, self.config), cb, nil

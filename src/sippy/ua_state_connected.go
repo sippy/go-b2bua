@@ -35,7 +35,6 @@ import (
 type UaStateConnected struct {
     *uaStateGeneric
     ka_controller       *keepaliveController
-    session_started    bool
 }
 
 func NewUaStateConnected(ua sippy_types.UA, config sippy_conf.Config) *UaStateConnected {
@@ -43,7 +42,6 @@ func NewUaStateConnected(ua sippy_types.UA, config sippy_conf.Config) *UaStateCo
     self := &UaStateConnected{
         uaStateGeneric      : newUaStateGeneric(ua, config),
         ka_controller       : newKeepaliveController(ua, config.ErrorLogger()),
-        session_started     : false,
     }
     self.connected = true
     return self
@@ -244,28 +242,16 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         return nil, nil, nil
     }
-    if _event, ok := event.(*CCEventConnect); ok && { //!_event.GetLateMedia() && self.ua.GetPendingTr() != nil {
+    if _event, ok := event.(*CCEventConfirm); ok && self.ua.GetPendingTr() != nil {
         body := _event.GetBody()
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
             self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             return nil, nil, nil
         }
-        self.ua.StartCreditTimer(event.GetRtime())
-        self.ua.SetConnectTs(event.GetRtime())
-        self.ua.SetLSDP(body)
-        self.ua.ConnCb(event.GetRtime(), self.ua.GetOrigin())
-        self.session_started = true
-    }
-    if _event, ok := event.(*CCEventAck); ok {
-        body := _event.GetBody()
-        if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
-            return nil, nil, nil
-        }
-        self.ua.CancelExpireTimer()
         self.ua.GetPendingTr().GetACK().SetBody(body)
         self.ua.GetPendingTr().SendACK()
         self.ua.SetPendingTr(nil)
+        self.ua.OnConnect(event.GetRtime(), self.ua.GetOrigin())
     }
     //print "wrong event %s in the Connected state" % event
     return nil, nil, nil
@@ -285,14 +271,8 @@ func (self *UaStateConnected) OnDeactivate() {
 func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
     rtime := req.GetRtime()
     body := req.GetBody()
-    event := NewCCEventAck(body, rtime, self.ua.GetOrigin())
-    if ! self.session_started {
-        self.ua.CancelExpireTimer()
-        self.ua.StartCreditTimer(rtime)
-        self.ua.SetConnectTs(rtime)
-        self.ua.ConnCb(rtime, self.ua.GetOrigin())
-        self.session_started = true
-    }
+    event := NewCCEventConfirm(body, rtime, self.ua.GetOrigin())
+    self.ua.OnConnect(rtime, self.ua.GetOrigin())
     if body != nil {
         if self.ua.HasOnRemoteSdpChange() {
             self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })

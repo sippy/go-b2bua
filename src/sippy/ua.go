@@ -111,6 +111,7 @@ type Ua struct {
     on_uac_setup_complete   func()
     expire_starts_on_setup  bool
     pr_rel          bool
+    connect_done    bool
 }
 
 func (self *Ua) me() sippy_types.UA {
@@ -1123,8 +1124,8 @@ func (self *Ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map
         self.credit_times[k] = v
     }
     if self.state.IsConnected() {
-        self.me().CancelCreditTimer()
-        self.me().StartCreditTimer(rtime)
+        self.CancelCreditTimer()
+        self.StartCreditTimer(rtime)
     }
 }
 
@@ -1225,4 +1226,16 @@ func (self *Ua) RecvPRACK(req sippy_types.SipRequest) {
 
 func (self *Ua) PrRel() bool {
     return self.pr_rel
+}
+
+func (self *Ua) OnConnect(rtime *sippy_time.MonoTime, origin string) {
+    if self.connect_done {
+        return
+    }
+    self.connect_done = true
+    self.CancelNoProgressTimer()
+    self.CancelExpireTimer()
+    self.StartCreditTimer(rtime)
+    self.SetConnectTs(rtime)
+    self.ConnCb(rtime, origin)
 }

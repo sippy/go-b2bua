@@ -311,17 +311,17 @@ func (*CCEventFail) GetBody() sippy_types.MsgBody {
     return nil
 }
 
-type CCEventAck struct {
+type CCEventConfirm struct {
     CCEventGeneric
     body            sippy_types.MsgBody
 }
 
-func NewCCEventAck(body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string) *CCEventAck {
-    return &CCEventAck{
+func NewCCEventConfirm(body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string) *CCEventConfirm {
+    return &CCEventConfirm{
         CCEventGeneric  : newCCEventGeneric(rtime, origin),
         body            : body,
     }
 }
 
-func (self *CCEventAck) String() string { return "CCEventAck" }
-func (self *CCEventAck) GetBody() sippy_types.MsgBody { return self.body }
+func (self *CCEventConfirm) String() string { return "CCEventConfirm" }
+func (self *CCEventConfirm) GetBody() sippy_types.MsgBody { return self.body }

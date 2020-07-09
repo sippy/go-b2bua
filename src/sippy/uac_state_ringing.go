@@ -151,9 +151,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
         rUri.SetTag(tag)
         if !self.ua.GetLateMedia() || body == nil {
             self.ua.SetLateMedia(false)
-            self.ua.StartCreditTimer(resp.GetRtime())
-            self.ua.SetConnectTs(resp.GetRtime())
-            cb = func() { self.ua.ConnCb(resp.GetRtime(), self.ua.GetOrigin()) }
+            cb = func() { self.ua.OnConnect(resp.GetRtime(), self.ua.GetOrigin()) }
         }
         event = NewCCEventConnect(code, reason, self.ua.GetLateMedia(), body, resp.GetRtime(), self.ua.GetOrigin())
         self.ua.SetPendingTr(tr)
