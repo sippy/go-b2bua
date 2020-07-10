@@ -255,6 +255,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil, nil
         }
         self.confirmed = true
+        self.ua.SetLSDP(body)
         self.ua.GetPendingTr().GetACK().SetBody(body)
         self.ua.GetPendingTr().SendACK()
         self.ua.SetPendingTr(nil)
