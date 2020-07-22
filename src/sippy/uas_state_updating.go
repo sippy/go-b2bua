@@ -106,7 +106,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         }
         self.ua.SetLSDP(body)
         self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), true /*ack_wait*/, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        return NewUaStateConnected(false /*confirmed*/, true /*send_connect_on_ack*/, self.ua, self.config), nil, nil
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
@@ -114,11 +114,11 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
             return nil, nil, nil
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), false, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), true /*ack_wait*/, eh...)
+        return NewUaStateConnected(false /*confirmed*/, false /*send_connect_on_ack*/, self.ua, self.config), nil, nil
     case *CCEventRedirect:
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        return NewUaStateConnected(true /*confirmed*/, false /*send_connect_on_ack*/, self.ua, self.config), nil, nil
     case *CCEventFail:
         code, reason := event.scode, event.scode_reason
         if code == 0 {
@@ -128,7 +128,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
             eh = append(eh, event.warning)
         }
         self.ua.SendUasResponse(nil, code, reason, nil, nil, false, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        return NewUaStateConnected(true /*confirmed*/, false /*send_connect_on_ack*/, self.ua, self.config), nil, nil
     case *CCEventDisconnect:
         self.ua.SendUasResponse(nil, 487, "Request Terminated", nil, nil, false, eh...)
         req, err := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)

@@ -34,14 +34,19 @@ import (
 
 type UaStateConnected struct {
     *uaStateGeneric
-    ka_controller *keepaliveController
+    ka_controller           *keepaliveController
+    confirmed               bool
+    send_connect_on_ack     bool
+    pending_update          *CCEventUpdate
 }
 
-func NewUaStateConnected(ua sippy_types.UA, config sippy_conf.Config) *UaStateConnected {
+func NewUaStateConnected(confirmed, send_connect_on_ack bool, ua sippy_types.UA, config sippy_conf.Config) *UaStateConnected {
     ua.SetBranch("")
     self := &UaStateConnected{
-        uaStateGeneric : newUaStateGeneric(ua, config),
-        ka_controller : newKeepaliveController(ua, config.ErrorLogger()),
+        uaStateGeneric      : newUaStateGeneric(ua, config),
+        ka_controller       : newKeepaliveController(ua, config.ErrorLogger()),
+        confirmed           : confirmed,
+        send_connect_on_ack : send_connect_on_ack,
     }
     self.connected = true
     return self
@@ -74,6 +79,11 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         return nil, nil
     }
     if req.GetMethod() == "INVITE" {
+        if self.ua.GetPendingTr() != nil {
+            // the ACK to the previous INVITE is still missing
+            t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
+            return nil, nil
+        }
         self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
         t.SendResponse(self.ua.GetUasResp(), false, nil)
         body := req.GetBody()
@@ -183,6 +193,10 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
     if _event, ok := event.(*CCEventUpdate); ok {
         var tr sippy_types.ClientTransaction
 
+        if ! self.confirmed {
+            self.pending_update = _event
+            return nil, nil, nil
+        }
         body := _event.GetBody()
         if self.ua.GetLSDP() != nil && body != nil && self.ua.GetLSDP().String() == body.String() {
             if self.ua.GetRSDP() != nil {
@@ -242,6 +256,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         return nil, nil, nil
     }
     if _event, ok := event.(*CCEventConnect); ok && self.ua.GetPendingTr() != nil {
+        self.confirmed = true
         self.ua.CancelExpireTimer()
         body := _event.GetBody()
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
@@ -272,25 +287,34 @@ func (self *UaStateConnected) OnDeactivate() {
 }
 
 func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
-    rtime := req.GetRtime()
-    body := req.GetBody()
-    event := NewCCEventConnect(0, "ACK", body, rtime, self.ua.GetOrigin())
-    self.ua.CancelExpireTimer()
-    self.ua.StartCreditTimer(rtime)
-    self.ua.SetConnectTs(rtime)
-    self.ua.ConnCb(rtime, self.ua.GetOrigin())
-    if body != nil {
-        if self.ua.HasOnRemoteSdpChange() {
-            self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
-            return
-        } else {
-            self.ua.SetRSDP(body.GetCopy())
-        }
-    } else {
-        self.ua.SetRSDP(nil)
+    if self.confirmed {
+        return
     }
-    self.ua.Enqueue(event)
-    return
+    self.confirmed = true
+    if self.send_connect_on_ack {
+        rtime := req.GetRtime()
+        body := req.GetBody()
+        event := NewCCEventConnect(0, "ACK", body, rtime, self.ua.GetOrigin())
+        self.ua.CancelExpireTimer()
+        self.ua.StartCreditTimer(rtime)
+        self.ua.SetConnectTs(rtime)
+        self.ua.ConnCb(rtime, self.ua.GetOrigin())
+        if body != nil {
+            if self.ua.HasOnRemoteSdpChange() {
+                self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+                return
+            } else {
+                self.ua.SetRSDP(body.GetCopy())
+            }
+        } else {
+            self.ua.SetRSDP(nil)
+        }
+        self.ua.Enqueue(event)
+    }
+    if self.pending_update != nil {
+        self.ua.RecvEvent(self.pending_update)
+        self.pending_update = nil
+    }
 }
 
 func (self *UaStateConnected) ID() sippy_types.UaStateID {

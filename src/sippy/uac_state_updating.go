@@ -82,9 +82,11 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         return nil, nil
     }
     if code >= 200 && code < 300 {
+        confirmed := true
         if ! self.ua.GetLateMedia() || body == nil {
             event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
         } else {
+            confirmed = false
             event = NewCCEventPreConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             tr.SetUAck(true)
             self.ua.SetPendingTr(tr)
@@ -96,7 +98,7 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
                     ev.SetWarning(fmt.Sprintf("Malformed SDP Body received from downstream: \"%s\"", err.Error()))
                     return self.updateFailed(ev)
                 }
-                return NewUaStateConnected(self.ua, self.config), nil
+                return NewUaStateConnected(confirmed, false /*send_connect_on_ack*/, self.ua, self.config), nil
             } else {
                 self.ua.SetRSDP(body.GetCopy())
             }
@@ -104,7 +106,7 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
             self.ua.SetRSDP(nil)
         }
         self.ua.Enqueue(event)
-        return NewUaStateConnected(self.ua, self.config), nil
+        return NewUaStateConnected(confirmed, false /*send_connect_on_ack*/, self.ua, self.config), nil
     }
     reason_rfc3326 := resp.GetReason()
     if (code == 301 || code == 302) && len(resp.GetContacts()) > 0 {
@@ -143,7 +145,7 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         return self.updateFailed(event)
     }
     self.ua.Enqueue(event)
-    return NewUaStateConnected(self.ua, self.config), nil
+    return NewUaStateConnected(true /*confirmed*/, false /*send_connect_on_ack*/, self.ua, self.config), nil
 }
 
 func (self *UacStateUpdating) updateFailed(event sippy_types.CCEvent) (sippy_types.UaState, func()) {

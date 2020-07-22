@@ -149,6 +149,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
             return nil, nil
         }
         rUri.SetTag(tag)
+        confirmed := true
         if !self.ua.GetLateMedia() || body == nil {
             self.ua.SetLateMedia(false)
             event = NewCCEventConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
@@ -156,11 +157,12 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
             self.ua.SetConnectTs(resp.GetRtime())
             cb = func() { self.ua.ConnCb(resp.GetRtime(), self.ua.GetOrigin()) }
         } else {
+            confirmed = false
             event = NewCCEventPreConnect(code, reason, body, resp.GetRtime(), self.ua.GetOrigin())
             tr.SetUAck(true)
             self.ua.SetPendingTr(tr)
         }
-        newstate := NewUaStateConnected(self.ua, self.config)
+        newstate := NewUaStateConnected(confirmed, false /*send_connect_on_ack*/, self.ua, self.config)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
                 self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
