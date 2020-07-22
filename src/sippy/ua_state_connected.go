@@ -79,7 +79,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         return nil, nil
     }
     if req.GetMethod() == "INVITE" {
-        if self.ua.GetPendingTr() != nil {
+        if ! self.confirmed {
             // the ACK to the previous INVITE is still missing
             t.SendResponse(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil)
             return nil, nil
