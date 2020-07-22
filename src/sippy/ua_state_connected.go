@@ -301,7 +301,13 @@ func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
         self.ua.ConnCb(rtime, self.ua.GetOrigin())
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
-                self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+                self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) {
+                    self.ua.DelayedRemoteSdpUpdate(event, x)
+                    if self.pending_update != nil {
+                        self.ua.RecvEvent(self.pending_update)
+                        self.pending_update = nil
+                    }
+                })
                 return
             } else {
                 self.ua.SetRSDP(body.GetCopy())
