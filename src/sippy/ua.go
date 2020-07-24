@@ -1030,7 +1030,9 @@ func (self *Ua) GetConnectTs() *sippy_time.MonoTime {
 }
 
 func (self *Ua) SetConnectTs(connect_ts *sippy_time.MonoTime) {
-    self.connect_ts = connect_ts
+    if self.connect_ts == nil {
+        self.connect_ts = connect_ts
+    }
 }
 
 func (self *Ua) SetBranch(branch string) {
