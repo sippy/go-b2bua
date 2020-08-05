@@ -45,7 +45,6 @@ type Rtp_proxy_session struct {
     to_tag                  string
     _rtp_proxy_client       sippy_types.RtpProxyClient
     max_index               int
-    l4r                     *local4remote
     notify_socket           string
     notify_tag              string
     insert_nortpp           bool
