@@ -191,6 +191,8 @@ type CCEventConnect struct {
 
 func (self *CCEventRing) GetScode() int { return self.scode }
 func (self *CCEventRing) GetBody() sippy_types.MsgBody { return self.body }
+func (self *CCEventRing) SetScode(scode int) { self.scode = scode }
+func (self *CCEventRing) SetScodeReason(scode_reason string) { self.scode_reason = scode_reason }
 
 func NewCCEventConnect(scode int, scode_reason string, msg_body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventConnect {
     return &CCEventConnect{
