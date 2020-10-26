@@ -45,7 +45,7 @@ func NewSipRoute(addr *SipAddress) *SipRoute {
 }
 
 func CreateSipRoute(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipRoute{

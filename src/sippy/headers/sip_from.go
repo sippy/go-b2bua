@@ -39,7 +39,7 @@ type SipFrom struct {
 var _sip_from_name compactName = newCompactName("From", "f")
 
 func CreateSipFrom(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, address := range addresses {
         rval[i] = &SipFrom{

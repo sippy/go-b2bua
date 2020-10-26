@@ -38,7 +38,7 @@ type SipReferredBy struct {
 var _sip_referred_by_name normalName = newNormalName("Referred-By")
 
 func CreateSipReferredBy(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipReferredBy{

@@ -38,7 +38,7 @@ type SipCCDiversion struct {
 var _sip_cc_diversion_name normalName = newNormalName("CC-Diversion")
 
 func CreateSipCCDiversion(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipCCDiversion{

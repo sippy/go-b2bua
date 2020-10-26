@@ -54,7 +54,7 @@ func newSipAddressHF(addr *SipAddress) *sipAddressHF {
     }
 }
 
-func createSipAddressHFs(body string) []*sipAddressHF {
+func CreateSipAddressHFs(body string) []*sipAddressHF {
     addresses := []string{}
     pidx := 0
     for {

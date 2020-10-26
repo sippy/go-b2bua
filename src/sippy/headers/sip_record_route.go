@@ -38,7 +38,7 @@ type SipRecordRoute struct {
 var _sip_record_route_name normalName = newNormalName("Record-Route")
 
 func CreateSipRecordRoute(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, address := range addresses {
         rval[i] = &SipRecordRoute{

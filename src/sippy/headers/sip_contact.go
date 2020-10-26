@@ -77,7 +77,7 @@ func CreateSipContact(body string) []SipHeader {
             compactName  : _sip_contact_name,
         })
     } else {
-        addresses := createSipAddressHFs(body)
+        addresses := CreateSipAddressHFs(body)
         for _, addr := range addresses {
             rval = append(rval, &SipContact{
                             sipAddressHF : addr,

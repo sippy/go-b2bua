@@ -45,7 +45,7 @@ func NewSipDiversion(addr *SipAddress) *SipDiversion {
 }
 
 func CreateSipDiversion(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipDiversion{

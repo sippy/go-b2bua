@@ -38,7 +38,7 @@ type SipAlso struct {
 var _sip_also_name normalName = newNormalName("Also")
 
 func CreateSipAlso(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipAlso{

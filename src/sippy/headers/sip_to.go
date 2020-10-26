@@ -52,7 +52,7 @@ func NewSipTo(address *SipAddress, config sippy_conf.Config) *SipTo {
 }
 
 func CreateSipTo(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipTo{

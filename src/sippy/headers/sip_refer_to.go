@@ -38,7 +38,7 @@ type SipReferTo struct {
 var _sip_refer_to_name compactName = newCompactName("Refer-To", "r")
 
 func CreateSipReferTo(body string) []SipHeader {
-    addresses := createSipAddressHFs(body)
+    addresses := CreateSipAddressHFs(body)
     rval := make([]SipHeader, len(addresses))
     for i, addr := range addresses {
         rval[i] = &SipReferTo{
