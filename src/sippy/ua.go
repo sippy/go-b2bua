@@ -1130,6 +1130,10 @@ func (self *Ua) ResetCreditTime(rtime *sippy_time.MonoTime, new_credit_times map
     }
 }
 
+func (self *Ua) GetExtraHeaders() []sippy_header.SipHeader {
+    return self.extra_headers
+}
+
 func (self *Ua) SetExtraHeaders(extra_headers []sippy_header.SipHeader) {
     self.extra_headers = extra_headers
 }

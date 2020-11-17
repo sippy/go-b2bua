@@ -274,6 +274,7 @@ type UA interface {
     GetOnRemoteSdpChange() OnRemoteSdpChange
     SetOnRemoteSdpChange(OnRemoteSdpChange)
     GetRemoteUA() string
+    GetExtraHeaders() []sippy_header.SipHeader
     SetExtraHeaders([]sippy_header.SipHeader)
     GetAcct(*sippy_time.MonoTime) (time.Duration, time.Duration, bool, bool)
     GetCLI() string
