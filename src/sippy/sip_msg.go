@@ -160,9 +160,6 @@ func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Conf
     if self.call_id == nil {
         return nil, errors.New("Call-ID HF is missed")
     }
-    if self.maxforwards == nil {
-        return nil, errors.New("Max-Forwards HF is missed")
-    }
     return self, nil
 }
 
