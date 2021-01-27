@@ -120,6 +120,7 @@ type CCEventTry struct {
     cli, cld, caller_name string
     auth        *sippy_header.SipAuthorizationBody
     body        sippy_types.MsgBody
+    routes          []*sippy_header.SipRoute
 }
 
 func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.SipCiscoGUID, cli string, cld string, body sippy_types.MsgBody, auth *sippy_header.SipAuthorizationBody, caller_name string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventTry {
@@ -131,6 +132,7 @@ func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.Sip
         auth        : auth,
         caller_name : caller_name,
         body        : body,
+        routes      : []*sippy_header.SipRoute{},
     }
 }
 
@@ -169,6 +171,10 @@ type CCEventRing struct {
     scode           int
     scode_reason    string
     body            sippy_types.MsgBody
+}
+
+func (self *CCEventTry) SetRoutes(routes []*sippy_header.SipRoute) {
+    self.routes = routes
 }
 
 func NewCCEventRing(scode int, scode_reason string, body sippy_types.MsgBody, rtime *sippy_time.MonoTime, origin string) *CCEventRing {
