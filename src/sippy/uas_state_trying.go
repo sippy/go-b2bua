@@ -86,7 +86,7 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
         self.ua.SetLSDP(body)
         self.ua.CancelNoProgressTimer()
         self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        return NewUasStatePreConnect(self.ua, self.config, true /*confirm_connect*/), nil, nil
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
@@ -94,12 +94,12 @@ func (self *UasStateTrying) RecvEvent(_event sippy_types.CCEvent) (sippy_types.U
             return nil, nil, nil
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), false, eh...)
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), /*ack_wait*/ true, eh...)
         self.ua.CancelExpireTimer()
         self.ua.CancelNoProgressTimer()
         self.ua.StartCreditTimer(event.GetRtime())
         self.ua.SetConnectTs(event.GetRtime())
-        return NewUaStateConnected(self.ua, self.config), func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }, nil
+        return NewUasStatePreConnect(self.ua, self.config, false /*confirm_connect*/), func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }, nil
     case *CCEventRedirect:
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         self.ua.CancelExpireTimer()

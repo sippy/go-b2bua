@@ -106,7 +106,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         }
         self.ua.SetLSDP(body)
         self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), true /*ack_wait*/, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        return NewUasStatePreConnect(self.ua, self.config, true /*confirm_connect*/), nil, nil
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
@@ -114,8 +114,8 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
             return nil, nil, nil
         }
         self.ua.SetLSDP(body)
-        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), false, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), true, eh...)
+        return NewUasStatePreConnect(self.ua, self.config, false /*confirm_connect*/), nil, nil
     case *CCEventRedirect:
         self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
         return NewUaStateConnected(self.ua, self.config), nil, nil

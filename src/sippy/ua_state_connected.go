@@ -271,28 +271,6 @@ func (self *UaStateConnected) OnDeactivate() {
     self.ua.CancelExpireTimer()
 }
 
-func (self *UaStateConnected) RecvACK(req sippy_types.SipRequest) {
-    rtime := req.GetRtime()
-    body := req.GetBody()
-    event := NewCCEventConnect(0, "ACK", body, rtime, self.ua.GetOrigin())
-    self.ua.CancelExpireTimer()
-    self.ua.StartCreditTimer(rtime)
-    self.ua.SetConnectTs(rtime)
-    self.ua.ConnCb(rtime, self.ua.GetOrigin())
-    if body != nil {
-        if self.ua.HasOnRemoteSdpChange() {
-            self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
-            return
-        } else {
-            self.ua.SetRSDP(body.GetCopy())
-        }
-    } else {
-        self.ua.SetRSDP(nil)
-    }
-    self.ua.Enqueue(event)
-    return
-}
-
 func (self *UaStateConnected) ID() sippy_types.UaStateID {
     return sippy_types.UA_STATE_CONNECTED
 }
