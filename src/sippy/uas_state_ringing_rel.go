@@ -75,7 +75,7 @@ func (self *UasStateRingingRel) RecvEvent(_event sippy_types.CCEvent) (sippy_typ
     return self.UasStateRinging.RecvEvent(_event)
 }
 
-func (self *UasStateRingingRel) RecvPRACK(req sippy_types.SipRequest) {
+func (self *UasStateRingingRel) RecvPRACK(req sippy_types.SipRequest, resp sippy_types.SipResponse) {
     var state sippy_types.UaState
     var cb func()
     var err error
@@ -94,4 +94,8 @@ func (self *UasStateRingingRel) RecvPRACK(req sippy_types.SipRequest) {
     }
     self.pending_ev_ring = nil
     self.pending_ev_connect = nil
+    body := req.GetBody()
+    if body != nil {
+        self.ua.SetRSDP(body.GetCopy())
+    }
 }

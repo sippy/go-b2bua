@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "strings"
     "sync"
     "time"
 
@@ -179,7 +180,30 @@ func (self *Ua) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTran
     self.rCSeq = cseq_body.CSeq
     if self.state == nil {
         if req.GetMethod() == "INVITE" {
-            t.Setup100rel(req)
+            if req.GetBody() == nil {
+                found := false
+REQ_LOOP:
+                for _, sip_req_str := range req.GetSipRequire() {
+                    for _, it := range strings.Split(sip_req_str.StringBody(), ",") {
+                        if strings.TrimSpace(it) == "100rel" {
+                            found = true
+                            break REQ_LOOP
+                        }
+                    }
+                }
+                if ! found {
+                    resp := req.GenResponse(420, "Bad Extension", /*body*/ nil, /*server*/ self.local_ua.AsSipServer())
+                    usup := sippy_header.NewSipGenericHF("Unsupported", "100rel")
+                    resp.AppendHeader(usup)
+                    return &sippy_types.Ua_context{
+                        Response : resp,
+                        CancelCB : nil,
+                        NoAckCB  : nil,
+                    }
+                }
+            } else {
+                t.Setup100rel(req)
+            }
             self.pr_rel = t.PrRel()
             self.me().ChangeState(NewUasStateIdle(self.me(), self.config), nil)
         } else {
@@ -1222,10 +1246,10 @@ func (self *Ua) SetExpireStartsOnSetup(v bool) {
     self.expire_starts_on_setup = v
 }
 
-func (self *Ua) RecvPRACK(req sippy_types.SipRequest) {
+func (self *Ua) RecvPRACK(req sippy_types.SipRequest, resp sippy_types.SipResponse) {
     state := self.state
     if state != nil {
-        state.RecvPRACK(req)
+        state.RecvPRACK(req, resp)
     }
 }
 
