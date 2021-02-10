@@ -60,7 +60,7 @@ type serverTransaction struct {
     before_response_sent func(sippy_types.SipResponse)
     prov_inflight   *provInFlight
     prov_inflight_lock sync.Mutex
-    prack_cb        func(sippy_types.SipRequest)
+    prack_cb        func(sippy_types.SipRequest, sippy_types.SipResponse)
     noprack_cb      func(*sippy_time.MonoTime)
     rseq            *sippy_header.SipRSeq
     pr_rel          bool
@@ -274,8 +274,8 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
             self.prov_inflight = nil
             self.prov_inflight_lock.Unlock()
             sip_tm.rtid_del(rskey)
-            self.prack_cb(req)
             resp = req.GenResponse(200, "OK", nil /*body*/, nil /*server*/)
+            self.prack_cb(req, resp)
         } else {
             self.prov_inflight_lock.Unlock()
             //print('rskey: %s, prov_inflight: %s' % (str(rskey), str(self.prov_inflight)))
@@ -477,7 +477,7 @@ func (self *serverTransaction) retrUasResponse(last_timeout time.Duration, losse
     self.prov_inflight_lock.Unlock()
 }
 
-func (self *serverTransaction) SetPrackCBs(prack_cb func(sippy_types.SipRequest), noprack_cb func(*sippy_time.MonoTime)) {
+func (self *serverTransaction) SetPrackCBs(prack_cb func(sippy_types.SipRequest, sippy_types.SipResponse), noprack_cb func(*sippy_time.MonoTime)) {
     self.prack_cb = prack_cb
     self.noprack_cb = noprack_cb
 }

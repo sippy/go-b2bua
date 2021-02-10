@@ -324,7 +324,7 @@ type ServerTransaction interface {
     UpgradeToSessionLock(sync.Locker)
     SetServer(*sippy_header.SipServer)
     SetBeforeResponseSent(func(SipResponse))
-    SetPrackCBs(func(SipRequest), func(*sippy_time.MonoTime))
+    SetPrackCBs(func(SipRequest, SipResponse), func(*sippy_time.MonoTime))
     Setup100rel(SipRequest)
     PrRel() bool
 }
@@ -351,7 +351,7 @@ type UaState interface {
     OnActivation()
     RecvACK(SipRequest)
     IsConnected() bool
-    RecvPRACK(SipRequest)
+    RecvPRACK(SipRequest, SipResponse)
     ID() UaStateID
 }
 
