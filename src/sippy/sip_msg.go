@@ -75,6 +75,7 @@ type sipMsg struct {
     sip_h323_conf_id    *sippy_header.SipH323ConfId
     sip_require         []*sippy_header.SipRequire
     sip_supported       []*sippy_header.SipSupported
+    sip_date            *sippy_header.SipDate
     config              sippy_conf.Config
 }
 
@@ -234,6 +235,8 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.sip_require = append(self.sip_require, t)
     case *sippy_header.SipSupported:
         self.sip_supported = append(self.sip_supported, t)
+    case *sippy_header.SipDate:
+        self.sip_date = t
     case nil:
         return
     }
@@ -644,4 +647,8 @@ func (self *sipMsg) GetSipRequire() []*sippy_header.SipRequire {
 
 func (self *sipMsg) GetSipSupported() []*sippy_header.SipSupported {
     return self.sip_supported
+}
+
+func (self *sipMsg) GetSipDate() *sippy_header.SipDate {
+    return self.sip_date
 }

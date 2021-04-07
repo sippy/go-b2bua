@@ -88,6 +88,7 @@ type SipMsg interface {
     GetRTId() (*sippy_header.RTID, error)
     GetSipRequire() []*sippy_header.SipRequire
     GetSipSupported() []*sippy_header.SipSupported
+    GetSipDate() *sippy_header.SipDate
 }
 
 type SipRequest interface {
