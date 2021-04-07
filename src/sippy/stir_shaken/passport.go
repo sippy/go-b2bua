@@ -33,8 +33,8 @@ type sshaken_passport struct {
     ppt_hdr_param   string
     alg_hdr_param   string
     signature       []byte
-    header          sshaken_header
-    payload         sshaken_payload
+    Header          sshaken_header
+    Payload         sshaken_payload
 }
 
 type sshaken_header struct {
@@ -61,58 +61,58 @@ type sshaken_orig struct {
 }
 
 func (self *sshaken_passport) Origid() string {
-    return self.payload.Origid
+    return self.Payload.Origid
 }
 
 func (self *sshaken_passport) Attest() string {
-    return self.payload.Attest
+    return self.Payload.Attest
 }
 
 func (self *sshaken_passport) X5u() string {
-    return self.header.X5u
+    return self.Header.X5u
 }
 
 func (self *sshaken_passport) OrigTN() string {
-    return self.payload.Orig.TN
+    return self.Payload.Orig.TN
 }
 
 func (self *sshaken_passport) DestTN() string {
-    if len(self.payload.Dest.TN) > 0 {
-        return self.payload.Dest.TN[0]
+    if len(self.Payload.Dest.TN) > 0 {
+        return self.Payload.Dest.TN[0]
     }
     return ""
 }
 
 func (self *sshaken_passport) Iat() time.Time {
-    return time.Unix(self.payload.Iat, 0)
+    return time.Unix(self.Payload.Iat, 0)
 }
 
 func (self *sshaken_passport) check_claims() error {
-    if self.header.Alg != "ES256" {
+    if self.Header.Alg != "ES256" {
         return errors.New("'alg' value should be 'ES256'");
     }
-    if self.header.Ppt != "shaken" {
+    if self.Header.Ppt != "shaken" {
         return errors.New("'ppt' value should be 'shaken'")
     }
-    if self.header.Typ != "passport" {
+    if self.Header.Typ != "passport" {
         return errors.New("'typ' value should be 'passport'")
     }
-    if self.header.X5u == "" {
+    if self.Header.X5u == "" {
         return errors.New("'x5u' value should not be empty")
     }
-    if self.payload.Attest == "" {
+    if self.Payload.Attest == "" {
         return errors.New("'attest' value should not be empty")
     }
-    if len(self.payload.Dest.TN) == 0 {
+    if len(self.Payload.Dest.TN) == 0 {
         return errors.New("dest tn value should not be empty")
     }
-    if self.payload.Iat == 0 {
+    if self.Payload.Iat == 0 {
         return errors.New("missing 'iat' claim")
     }
-    if self.payload.Orig.TN == "" {
+    if self.Payload.Orig.TN == "" {
         return errors.New("orig tn value should not be empty")
     }
-    if self.payload.Origid == "" {
+    if self.Payload.Origid == "" {
         return errors.New("'origid' value should not be empty")
     }
     return nil

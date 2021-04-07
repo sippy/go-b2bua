@@ -59,7 +59,31 @@ uoBgT+V+ZUUHF8HSpAy4Ey2BC73Gdj1Fpg==
     cert_buf := []byte(cert_str)
     pkey_buf := []byte(pkey_str)
     date_ts := time.Now()
-    verifier, err := NewStirVerifier("/var/env1/private/stir_shaken.crt")
+    root_certs := `-----BEGIN CERTIFICATE-----
+MIIBnjCCAUOgAwIBAgIJAIQSOKHaTrn2MAoGCCqGSM49BAMCMEUxCzAJBgNVBAYT
+AkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRn
+aXRzIFB0eSBMdGQwHhcNMjAwODE4MTYwMzU3WhcNMjEwODE4MTYwMzU3WjBFMQsw
+CQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJu
+ZXQgV2lkZ2l0cyBQdHkgTHRkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENNTB
+4FbGbt/GeZ5dNW24vDNiV12O/UNrdN6FEobikGjfseLqgThGuoBgT+V+ZUUHF8HS
+pAy4Ey2BC73Gdj1FpqMcMBowGAYIKwYBBQUHARoEDAwKVE5BdXRoTGlzdDAKBggq
+hkjOPQQDAgNJADBGAiEAoRvsrcKrd2ajDQp2o010BygDkUT9pW93svK/ikFn3UUC
+IQCdCcoA3EGt/qsLGqUQjukv6bgIwxPVCbx7mgCJSNRBDw==
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIBnjCCAUOgAwIBAgIJAIQSOKHaTrn2MAoGCCqGSM49BAMCMEUxCzAJBgNVBAYT
+AkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRn
+aXRzIFB0eSBMdGQwHhcNMjAwODE4MTYwMzU3WhcNMjEwODE4MTYwMzU3WjBFMQsw
+CQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJu
+ZXQgV2lkZ2l0cyBQdHkgTHRkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENNTB
+4FbGbt/GeZ5dNW24vDNiV12O/UNrdN6FEobikGjfseLqgThGuoBgT+V+ZUUHF8HS
+pAy4Ey2BC73Gdj1FpqMcMBowGAYIKwYBBQUHARoEDAwKVE5BdXRoTGlzdDAKBggq
+hkjOPQQDAgNJADBGAiEAoRvsrcKrd2ajDQp2o010BygDkUT9pW93svK/ikFn3UUC
+IQCdCcoA3EGt/qsLGqUQjukv6bgIwxPVCbx7mgCJSNRBDw==
+-----END CERTIFICATE-----
+`
+    chain_buf := []byte(root_certs)
+    verifier, err := NewVerifier(chain_buf)
     if err != nil {
         t.Error(err.Error())
         return
@@ -69,7 +93,12 @@ uoBgT+V+ZUUHF8HSpAy4Ey2BC73Gdj1Fpg==
         t.Error(err.Error())
         return
     }
-    err = verifier.Verify(identity, cert_buf, cert_buf, orig_tn, dest_tn, date_ts)
+    passport, err := ParseIdentity(identity)
+    if err != nil {
+        t.Error(err.Error())
+        return
+    }
+    err = verifier.Verify(passport, cert_buf, orig_tn, dest_tn, date_ts)
     if err != nil {
         t.Error(err.Error())
         return

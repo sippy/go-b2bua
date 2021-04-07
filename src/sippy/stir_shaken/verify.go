@@ -33,36 +33,22 @@ import (
     "encoding/pem"
     "errors"
     "fmt"
-    "io"
     "math/big"
-    "os"
     "strings"
     "time"
 )
+
+type Verifier interface {
+    Verify(passport *sshaken_passport, cert_buf []byte, orig_tn_p, dest_tn_p string, date_ts time.Time) error
+}
 
 type sshaken_verifier struct {
     roots       *x509.CertPool
 }
 
-func NewStirVerifier(roots_file string) (*sshaken_verifier, error) {
-    fd, err := os.Open(roots_file)
-    if err != nil {
-        return nil, err
-    }
+func NewVerifier(chain_buf []byte) (*sshaken_verifier, error) {
     self := &sshaken_verifier{
         roots   : x509.NewCertPool(),
-    }
-    buf := make([]byte, 16384)
-    chain_buf := []byte{}
-    for {
-        n, err := fd.Read(buf)
-        if err == io.EOF {
-            break
-        }
-        if err != nil {
-            return nil, err
-        }
-        chain_buf = append(chain_buf, buf[:n]...)
     }
     if ! self.roots.AppendCertsFromPEM(chain_buf) {
         return nil, errors.New("error parsing the root certificates")
@@ -70,18 +56,14 @@ func NewStirVerifier(roots_file string) (*sshaken_verifier, error) {
     return self, nil
 }
 
-func (self *sshaken_verifier) Verify(identity string, cert_buf, chain_buf []byte, orig_tn_p, dest_tn_p string, date_ts time.Time) error {
-    parsed, err := parse_identity_hf(identity)
-    if err != nil {
-        return err
-    }
-    if parsed.ppt_hdr_param != "shaken"{
+func (self *sshaken_verifier) Verify(passport *sshaken_passport, cert_buf []byte, orig_tn_p, dest_tn_p string, date_ts time.Time) error {
+    if passport.ppt_hdr_param != "shaken"{
         return errors.New("Unsupported 'ppt' extension")
     }
-    if parsed.alg_hdr_param != "" && parsed.alg_hdr_param != "ES256" {
+    if passport.alg_hdr_param != "" && passport.alg_hdr_param != "ES256" {
         return errors.New("Unsupported 'alg'")
     }
-    err = parsed.check_claims()
+    err := passport.check_claims()
     if err != nil {
         return err
     }
@@ -89,10 +71,10 @@ func (self *sshaken_verifier) Verify(identity string, cert_buf, chain_buf []byte
     if now.Sub(date_ts) > VERIFY_DATE_FRESHNESS {
         return errors.New("Date header value is older than local policy")
     }
-    if parsed.OrigTN() != orig_tn_p || parsed.DestTN() != dest_tn_p {
+    if passport.OrigTN() != orig_tn_p || passport.DestTN() != dest_tn_p {
         return errors.New("Signature would not verify successfully")
     }
-    cert, err := load_cert(cert_buf, chain_buf)
+    cert, err := load_cert(cert_buf)
     if err != nil {
         return err
     }
@@ -101,11 +83,11 @@ func (self *sshaken_verifier) Verify(identity string, cert_buf, chain_buf []byte
     if err != nil {
         return err
     }
-    iat_ts := parsed.Iat()
+    iat_ts := passport.Iat()
     if iat_ts != date_ts && now.Sub(iat_ts) > VERIFY_DATE_FRESHNESS {
         iat_ts = date_ts
     }
-    return verify_signature(cert, parsed, iat_ts, orig_tn_p, dest_tn_p)
+    return verify_signature(cert, passport, iat_ts, orig_tn_p, dest_tn_p)
 }
 
 func (self *sshaken_verifier) validate_certificate(cert *x509.Certificate) error {
@@ -157,13 +139,13 @@ func build_unsigned_pport(iat_ts time.Time, attest, cr_url, orig_tn, dest_tn, or
         strings.TrimRight(base64.URLEncoding.EncodeToString(payload_json_str), "=")
 }
 
-func verify_signature(cert *x509.Certificate, parsed *sshaken_passport, iat_ts time.Time, orig_tn, dest_tn string) error {
-    if len(parsed.signature) != 64 {
-        return fmt.Errorf("Bad raw signature length %d, should be 64", len(parsed.signature))
+func verify_signature(cert *x509.Certificate, passport *sshaken_passport, iat_ts time.Time, orig_tn, dest_tn string) error {
+    if len(passport.signature) != 64 {
+        return fmt.Errorf("Bad raw signature length %d, should be 64", len(passport.signature))
     }
-    unsigned_buf := build_unsigned_pport(iat_ts, parsed.Attest(), parsed.X5u(), orig_tn, dest_tn, parsed.Origid())
-    r := big.NewInt(0).SetBytes(parsed.signature[:32])
-    s := big.NewInt(0).SetBytes(parsed.signature[32:])
+    unsigned_buf := build_unsigned_pport(iat_ts, passport.Attest(), passport.X5u(), orig_tn, dest_tn, passport.Origid())
+    r := big.NewInt(0).SetBytes(passport.signature[:32])
+    s := big.NewInt(0).SetBytes(passport.signature[32:])
     hash := sha256.Sum256([]byte(unsigned_buf))
     pub_key, ok := cert.PublicKey.(*ecdsa.PublicKey)
     if ! ok {
@@ -175,7 +157,7 @@ func verify_signature(cert *x509.Certificate, parsed *sshaken_passport, iat_ts t
     return nil
 }
 
-func load_cert(cert_buf, chain_buf []byte) (*x509.Certificate, error) {
+func load_cert(cert_buf []byte) (*x509.Certificate, error) {
     block, _ := pem.Decode(cert_buf)
     cert, err := x509.ParseCertificate(block.Bytes)
     if err != nil {
@@ -184,7 +166,7 @@ func load_cert(cert_buf, chain_buf []byte) (*x509.Certificate, error) {
     return cert, nil
 }
 
-func parse_identity_hf(hdr_buf string) (*sshaken_passport, error) {
+func ParseIdentity(hdr_buf string) (*sshaken_passport, error) {
     arr := strings.SplitN(hdr_buf, ";", 2)
     if len(arr) != 2 {
         return nil, errors.New("no parameters in Identity")
@@ -197,7 +179,7 @@ func parse_identity_hf(hdr_buf string) (*sshaken_passport, error) {
     if len(params_arr) == 0 {
         return nil, errors.New("Header parameters missing")
     }
-    parsed := &sshaken_passport{}
+    passport := &sshaken_passport{}
 
     for _, param := range params_arr {
         p_arr := strings.SplitN(param, "=", 2)
@@ -206,30 +188,30 @@ func parse_identity_hf(hdr_buf string) (*sshaken_passport, error) {
         }
         switch p_arr[0] {
         case "alg":
-            parsed.alg_hdr_param = strings.Trim(p_arr[1], "\"")
+            passport.alg_hdr_param = strings.Trim(p_arr[1], "\"")
         case "ppt":
-            parsed.ppt_hdr_param = strings.Trim(p_arr[1], "\"")
+            passport.ppt_hdr_param = strings.Trim(p_arr[1], "\"")
         }
     }
     buf, err := b64decode_nopad(hdr_arr[0])
     if err != nil {
         return nil, err
     }
-    if err = json.Unmarshal(buf, &parsed.header); err != nil {
+    if err = json.Unmarshal(buf, &passport.Header); err != nil {
         return nil, err
     }
     buf, err = b64decode_nopad(hdr_arr[1])
     if err != nil {
         return nil, err
     }
-    if err = json.Unmarshal(buf, &parsed.payload); err != nil {
+    if err = json.Unmarshal(buf, &passport.Payload); err != nil {
         return nil, err
     }
-    parsed.signature, err = b64decode_nopad(hdr_arr[2])
+    passport.signature, err = b64decode_nopad(hdr_arr[2])
     if err != nil {
         return nil, err
     }
-    return parsed, nil
+    return passport, nil
 }
 
 func b64decode_nopad(s string) ([]byte, error) {
