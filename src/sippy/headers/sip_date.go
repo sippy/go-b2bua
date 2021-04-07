@@ -50,6 +50,15 @@ func CreateSipDate(body string) []SipHeader {
     }
 }
 
+func NewSipDate(ts time.Time) *SipDate {
+    return &SipDate{
+        normalName  : _sip_date_name,
+        str_body    : ts.UTC().Format("Mon, 2 Jan 2006 15:04:05 MST"),
+        parsed      : true,
+        ts          : ts,
+    }
+}
+
 func (self *SipDate) GetCopy() *SipDate {
     tmp := *self
     return &tmp
