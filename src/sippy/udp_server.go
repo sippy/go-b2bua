@@ -218,6 +218,9 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, e
     proto := syscall.AF_INET
     if uopts.laddress != nil {
         laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
+        if err != nil {
+            return nil, err
+        }
         if sippy_net.IsIP4(laddress.IP) {
             ip4 = laddress.IP.To4()
         } else {
