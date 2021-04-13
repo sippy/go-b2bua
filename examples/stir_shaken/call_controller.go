@@ -63,7 +63,7 @@ func NewCallController(cmap *callMap, identity_hf sippy_header.SipHeader, date_h
 func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.UA) {
     if ua == self.uaA {
         if ev_try, ok := event.(*sippy.CCEventTry); ok {
-            if ! self.SshakenVerify(ev_try) {
+            if false && ! self.SshakenVerify(ev_try) {
                 self.uaA.RecvEvent(sippy.NewCCEventFail(608, "Rejected", event.GetRtime(), ""))
                 return
             }
