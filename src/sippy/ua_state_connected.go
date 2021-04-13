@@ -152,7 +152,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         if redirect != nil && self.ua.ShouldUseRefer() {
             var lUri *sippy_header.SipAddress
 
-            req, err = self.ua.GenRequest("REFER", nil, "", "", nil, eh...)
+            req, err = self.ua.GenRequest("REFER", nil, nil, eh...)
             if err != nil {
                 return nil, nil, err
             }
@@ -166,7 +166,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             req.AppendHeader(rby)
             self.ua.SipTM().BeginNewClientTransaction(req, newRedirectController(self.ua), self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
         } else {
-            req, err = self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+            req, err = self.ua.GenRequest("BYE", nil, nil, eh...)
             if err != nil {
                 return nil, nil, err
             }
@@ -218,7 +218,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             }
             eh2 = append(eh2, sippy_header.NewSipMaxForwards(max_forwards.Number - 1))
         }
-        req, err = self.ua.GenRequest("INVITE", body, "", "", nil, eh2...)
+        req, err = self.ua.GenRequest("INVITE", body, nil, eh2...)
         if err != nil {
             return nil, nil, err
         }
@@ -233,7 +233,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
     }
     if _event, ok := event.(*CCEventInfo); ok {
         body := _event.GetBody()
-        req, err = self.ua.GenRequest("INFO", nil, "", "", nil, eh...)
+        req, err = self.ua.GenRequest("INFO", nil, nil, eh...)
         if err != nil {
             return nil, nil, err
         }

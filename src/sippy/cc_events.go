@@ -118,12 +118,12 @@ type CCEventTry struct {
     call_id     *sippy_header.SipCallId
     cisco_guid  *sippy_header.SipCiscoGUID
     cli, cld, caller_name string
-    auth        *sippy_header.SipAuthorizationBody
+    auth        sippy_header.SipHeader
     body        sippy_types.MsgBody
     routes          []*sippy_header.SipRoute
 }
 
-func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.SipCiscoGUID, cli string, cld string, body sippy_types.MsgBody, auth *sippy_header.SipAuthorizationBody, caller_name string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventTry {
+func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.SipCiscoGUID, cli string, cld string, body sippy_types.MsgBody, auth sippy_header.SipHeader, caller_name string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventTry {
     return &CCEventTry{
         CCEventGeneric : newCCEventGeneric(rtime, origin, extra_headers...),
         call_id     : call_id,
@@ -140,7 +140,7 @@ func (self *CCEventTry) GetBody() sippy_types.MsgBody {
     return self.body
 }
 
-func (self *CCEventTry) GetSipAuthorization() *sippy_header.SipAuthorizationBody {
+func (self *CCEventTry) GetSipAuthorization() sippy_header.SipHeader {
     return self.auth
 }
 
@@ -277,7 +277,7 @@ func (*CCEventDisconnect) GetBody() sippy_types.MsgBody {
 
 type CCEventFail struct {
     CCEventGeneric
-    challenge       sippy_header.SipHeader
+    challenges      []sippy_header.SipHeader
     scode           int
     scode_reason    string
     warning         *sippy_header.SipWarning
@@ -299,14 +299,8 @@ func (self *CCEventFail) GetScodeReason() string { return self.scode_reason }
 func (self *CCEventFail) SetScodeReason(reason string) { self.scode_reason = reason }
 
 func (self *CCEventFail) GetExtraHeaders() []sippy_header.SipHeader {
-    if self.challenge == nil {
-        return self.CCEventGeneric.GetExtraHeaders()
-    }
     extra_headers := self.CCEventGeneric.GetExtraHeaders()
-    if extra_headers == nil {
-        return []sippy_header.SipHeader{ self.challenge }
-    }
-    extra_headers = append(extra_headers, self.challenge)
+    extra_headers = append(extra_headers, self.challenges...)
     return extra_headers
 }
 

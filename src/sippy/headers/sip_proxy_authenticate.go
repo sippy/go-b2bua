@@ -35,6 +35,7 @@ var _sip_proxy_authenticate_name normalName = newNormalName("Proxy-Authenticate"
 func CreateSipProxyAuthenticate(body string) []SipHeader {
     super := createSipWWWAuthenticateObj(body)
     super.normalName = _sip_proxy_authenticate_name
+    super.aclass = func(body *SipAuthorizationBody) SipHeader { return NewSipProxyAuthorizationWithBody(body) }
     return []SipHeader{
         &SipProxyAuthenticate{
             SipWWWAuthenticate : super,

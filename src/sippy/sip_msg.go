@@ -65,10 +65,10 @@ type sipMsg struct {
     target              *sippy_net.HostPort
     reason_hf           *sippy_header.SipReason
     sip_warning         *sippy_header.SipWarning
-    sip_www_authenticate *sippy_header.SipWWWAuthenticate
+    sip_www_authenticates []*sippy_header.SipWWWAuthenticate
     sip_authorization   *sippy_header.SipAuthorization
     sip_proxy_authorization *sippy_header.SipProxyAuthorization
-    sip_proxy_authenticate *sippy_header.SipProxyAuthenticate
+    sip_proxy_authenticates []*sippy_header.SipProxyAuthenticate
     sip_server          *sippy_header.SipServer
     sip_user_agent      *sippy_header.SipUserAgent
     sip_cisco_guid      *sippy_header.SipCiscoGUID
@@ -205,7 +205,7 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     case *sippy_header.SipContact:
         self.contacts = append(self.contacts, t)
     case *sippy_header.SipWWWAuthenticate:
-        self.sip_www_authenticate = t
+        self.sip_www_authenticates = append(self.sip_www_authenticates, t)
     case *sippy_header.SipAuthorization:
         self.sip_authorization = t
     case *sippy_header.SipServer:
@@ -223,7 +223,7 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     case *sippy_header.SipCCDiversion:
     case *sippy_header.SipReferredBy:
     case *sippy_header.SipProxyAuthenticate:
-        self.sip_proxy_authenticate = t
+        self.sip_proxy_authenticates = append(self.sip_proxy_authenticates, t)
     case *sippy_header.SipProxyAuthorization:
         self.sip_proxy_authorization = t
     case *sippy_header.SipReplaces:
@@ -505,12 +505,12 @@ func (self *sipMsg) GetSipRAck() *sippy_header.SipRAck {
     return self.rack
 }
 
-func (self *sipMsg) GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate {
-    return self.sip_proxy_authenticate
+func (self *sipMsg) GetSipProxyAuthenticates() []*sippy_header.SipProxyAuthenticate {
+    return self.sip_proxy_authenticates
 }
 
-func (self *sipMsg) GetSipWWWAuthenticate() *sippy_header.SipWWWAuthenticate {
-    return self.sip_www_authenticate
+func (self *sipMsg) GetSipWWWAuthenticates() []*sippy_header.SipWWWAuthenticate {
+    return self.sip_www_authenticates
 }
 
 func (self *sipMsg) GetTo() *sippy_header.SipTo {

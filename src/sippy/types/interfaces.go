@@ -78,7 +78,6 @@ type SipMsg interface {
     GetRecordRoutes() []*sippy_header.SipRecordRoute
     GetCGUID() *sippy_header.SipCiscoGUID
     GetH323ConfId() *sippy_header.SipH323ConfId
-    GetSipAuthorization() *sippy_header.SipAuthorization
     GetSource() *sippy_net.HostPort
     GetFirstHF(string) sippy_header.SipHeader
     GetHFs(string) []sippy_header.SipHeader
@@ -94,6 +93,7 @@ type SipMsg interface {
 type SipRequest interface {
     SipMsg
     GetSipProxyAuthorization() *sippy_header.SipProxyAuthorization
+    GetSipAuthorization() *sippy_header.SipAuthorization
     GenResponse(int, string, MsgBody, *sippy_header.SipServer) SipResponse
     GetMethod() string
     GetExpires() *sippy_header.SipExpires
@@ -111,8 +111,8 @@ type SipResponse interface {
     SetSCode(int, string)
     GetSCodeNum() int
     GetSCodeReason() string
-    GetSipWWWAuthenticate() *sippy_header.SipWWWAuthenticate
-    GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate
+    GetSipWWWAuthenticates() []*sippy_header.SipWWWAuthenticate
+    GetSipProxyAuthenticates() []*sippy_header.SipProxyAuthenticate
     SetSCodeReason(string)
     GetCopy() SipResponse
 }
@@ -192,7 +192,7 @@ type UA interface {
     SetLSDP(MsgBody)
     GetRSDP() MsgBody
     SetRSDP(MsgBody)
-    GenRequest(method string, body MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (SipRequest, error)
+    GenRequest(method string, body MsgBody, challenge Challenge, extra_headers ...sippy_header.SipHeader) (SipRequest, error)
     GetSourceAddress() *sippy_net.HostPort
     SetSourceAddress(*sippy_net.HostPort)
     GetClientTransaction() ClientTransaction
@@ -289,6 +289,7 @@ type UA interface {
     OnEarlyUasDisconnect(CCEvent) (int, string)
     SetExpireStartsOnSetup(bool)
     PrRel() bool
+    PassAuth() bool
 }
 
 type baseTransaction interface {
@@ -401,4 +402,10 @@ type RtpProxyClient interface {
 
 type RtpProxyUpdateResult interface {
     Address() string
+}
+
+type Challenge interface {
+    GenAuthHF(username, password, method, uri string) (sippy_header.SipHeader, error)
+    Algorithm() (string, error)
+    SupportedAlgorithm() (bool, error)
 }
