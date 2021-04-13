@@ -30,11 +30,11 @@ import (
     "crypto/sha256"
     "crypto/x509"
     "encoding/asn1"
-    "encoding/base64"
     "encoding/pem"
     "errors"
-    "strings"
     "time"
+
+    "sippy/utils"
 )
 
 func Authenticate(date_ts time.Time, attest, origid string, cert_buf, pkey_buf []byte, cr_url, orig_tn, dest_tn string) (string, error) {
@@ -119,7 +119,7 @@ func gen_identity(pkey *ecdsa.PrivateKey, date_ts time.Time, attest, cr_url, ori
     copy(r_padded[32 - len(r.Bytes()):], r.Bytes())
     s_padded := make([]byte, 32)
     copy(s_padded[32 - len(s.Bytes()):], s.Bytes())
-    buf := strings.TrimRight(base64.URLEncoding.EncodeToString(append(r_padded, s_padded...)), "=")
+    buf := sippy_utils.B64EncodeNoPad(append(r_padded, s_padded...))
     identity := unsigned_buf + "." + buf + ";info=<" + cr_url + ">;ppt=shaken"
     return identity, nil
 }

@@ -28,7 +28,6 @@ import (
     "crypto/ecdsa"
     "crypto/sha256"
     "crypto/x509"
-    "encoding/base64"
     "encoding/json"
     "encoding/pem"
     "errors"
@@ -36,6 +35,8 @@ import (
     "math/big"
     "strings"
     "time"
+
+    "sippy/utils"
 )
 
 type Verifier interface {
@@ -135,8 +136,7 @@ func build_unsigned_pport(iat_ts time.Time, attest, cr_url, orig_tn, dest_tn, or
         Origid  : origid,
     }
     payload_json_str, _ := json.Marshal(payload)
-    return strings.TrimRight(base64.URLEncoding.EncodeToString(hdr_json_str), "=") + "." +
-        strings.TrimRight(base64.URLEncoding.EncodeToString(payload_json_str), "=")
+    return sippy_utils.B64EncodeNoPad(hdr_json_str) + "." + sippy_utils.B64EncodeNoPad(payload_json_str)
 }
 
 func verify_signature(cert *x509.Certificate, passport *sshaken_passport, iat_ts time.Time, orig_tn, dest_tn string) error {
@@ -193,30 +193,23 @@ func ParseIdentity(hdr_buf string) (*sshaken_passport, error) {
             passport.ppt_hdr_param = strings.Trim(p_arr[1], "\"")
         }
     }
-    buf, err := b64decode_nopad(hdr_arr[0])
+    buf, err := sippy_utils.B64DecodeNoPad(hdr_arr[0])
     if err != nil {
         return nil, err
     }
     if err = json.Unmarshal(buf, &passport.Header); err != nil {
         return nil, err
     }
-    buf, err = b64decode_nopad(hdr_arr[1])
+    buf, err = sippy_utils.B64DecodeNoPad(hdr_arr[1])
     if err != nil {
         return nil, err
     }
     if err = json.Unmarshal(buf, &passport.Payload); err != nil {
         return nil, err
     }
-    passport.signature, err = b64decode_nopad(hdr_arr[2])
+    passport.signature, err = sippy_utils.B64DecodeNoPad(hdr_arr[2])
     if err != nil {
         return nil, err
     }
     return passport, nil
-}
-
-func b64decode_nopad(s string) ([]byte, error) {
-    if l := len(s) % 4; l > 0 {
-        s += strings.Repeat("=", 4 - l)
-    }
-    return base64.URLEncoding.DecodeString(s)
 }
