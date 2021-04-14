@@ -187,6 +187,7 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.to = t
     case *sippy_header.SipMaxForwards:
         self.maxforwards = t
+        return
     case *sippy_header.SipVia:
         self.vias = append(self.vias, t)
         return
@@ -310,6 +311,9 @@ func (self *sipMsg) Bytes() []byte {
     for _, via := range self.routes {
         s += via.String() + "\r\n"
     }
+    if self.maxforwards != nil {
+        s += self.maxforwards.String() + "\r\n"
+    }
     for _, header := range self.headers {
         s += header.String() + "\r\n"
     }
@@ -333,6 +337,9 @@ func (self *sipMsg) localStr(hostport *sippy_net.HostPort, compact bool /*= Fals
     }
     for _, via := range self.routes {
         s += via.LocalStr(hostport, compact) + "\r\n"
+    }
+    if self.maxforwards != nil {
+        s += self.maxforwards.LocalStr(hostport, compact) + "\r\n"
     }
     for _, header := range self.headers {
         s += header.LocalStr(hostport, compact) + "\r\n"
