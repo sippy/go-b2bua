@@ -109,6 +109,8 @@ func check_cert_validity(cert *x509.Certificate, date_ts time.Time) error {
 }
 
 func gen_identity(pkey *ecdsa.PrivateKey, date_ts time.Time, attest, cr_url, orig_tn, dest_tn, origid string) (string, error) {
+    orig_tn = cleanup(orig_tn)
+    dest_tn = cleanup(dest_tn)
     unsigned_buf := build_unsigned_pport(date_ts, attest, cr_url, orig_tn, dest_tn, origid)
     hash := sha256.Sum256([]byte(unsigned_buf))
     r, s, err := ecdsa.Sign(rand.Reader, pkey, hash[:])

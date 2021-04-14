@@ -72,6 +72,8 @@ func (self *sshaken_verifier) Verify(passport *sshaken_passport, cert_buf []byte
     if now.Sub(date_ts) > VERIFY_DATE_FRESHNESS {
         return errors.New("Date header value is older than local policy")
     }
+    orig_tn_p = cleanup(orig_tn_p)
+    dest_tn_p = cleanup(dest_tn_p)
     if passport.OrigTN() != orig_tn_p || passport.DestTN() != dest_tn_p {
         return errors.New("Signature would not verify successfully")
     }
@@ -212,4 +214,26 @@ func ParseIdentity(hdr_buf string) (*sshaken_passport, error) {
         return nil, err
     }
     return passport, nil
+}
+
+func cleanup(in string) string {
+    out := []byte{}
+    for _, ch := range []byte(in) {
+        switch ch {
+        case '0': fallthrough
+        case '1': fallthrough
+        case '2': fallthrough
+        case '3': fallthrough
+        case '4': fallthrough
+        case '5': fallthrough
+        case '6': fallthrough
+        case '7': fallthrough
+        case '8': fallthrough
+        case '9': fallthrough
+        case '*': fallthrough
+        case '#':
+            out = append(out, ch)
+        }
+    }
+    return string(out)
 }
