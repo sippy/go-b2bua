@@ -43,6 +43,7 @@ type callController struct {
     cmap            *callMap
     identity_hf     sippy_header.SipHeader
     date_hf         *sippy_header.SipDate
+    call_id	string
 }
 
 func NewCallController(cmap *callMap, identity_hf sippy_header.SipHeader, date_hf *sippy_header.SipDate) *callController {
@@ -60,9 +61,14 @@ func NewCallController(cmap *callMap, identity_hf sippy_header.SipHeader, date_h
     return self
 }
 
+func (self *callController) Error(msg string) {
+	self.cmap.logger.Error(self.call_id + ": " + msg)
+}
+
 func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.UA) {
     if ua == self.uaA {
         if ev_try, ok := event.(*sippy.CCEventTry); ok {
+	    self.call_id = ev_try.GetSipCallId().StringBody()
             if ! self.SshakenVerify(ev_try) {
                 self.uaA.RecvEvent(sippy.NewCCEventFail(608, "Rejected", event.GetRtime(), ""))
                 return
@@ -94,17 +100,21 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
 
 func (self *callController) SshakenVerify(ev_try *sippy.CCEventTry) bool {
     if self.identity_hf == nil || self.date_hf == nil {
+        self.Error("Verification failure: no identity provided")
         return false
     }
     identity := self.identity_hf.StringBody()
     date_ts, err := self.date_hf.GetTime()
     if err != nil {
-        self.cmap.logger.Error("Error parsing Date: header: " + err.Error())
+        self.Error("Error parsing Date: header: " + err.Error())
         return false
     }
     orig_tn := ev_try.GetCLI()
     dest_tn := ev_try.GetCLD()
     err = self.cmap.sshaken.Verify(identity, orig_tn, dest_tn, date_ts)
+    if err != nil {
+	    self.Error("Verification failure: " + err.Error())
+    }
     return err == nil
 }
 
