@@ -97,7 +97,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetRUri(sippy_header.NewSipTo(from_body, self.config))
     self.ua.SetCallId(self.ua.GetUasResp().GetCallId())
     self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
-    auth_hf := req.GetSipAuthorization()
+    auth_hf := req.GetSipAuthorizationHF()
     body := req.GetBody()
     via0, err = req.GetVias()[0].GetBody()
     if err != nil {
@@ -105,8 +105,12 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
         return nil, nil
     }
     self.ua.SetBranch(via0.GetBranch())
-    event := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), from_body.GetUrl().Username,
+    event, err := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), from_body.GetUrl().Username,
         req.GetRURI().Username, body, auth_hf, from_body.GetName(), req.GetRtime(), self.ua.GetOrigin())
+    if err != nil {
+        self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #5: " + err.Error())
+        return nil, nil
+    }
     event.SetReason(req.GetReason())
     event.SetMaxForwards(req.GetMaxForwards())
     if self.ua.GetExpireTime() > 0 {

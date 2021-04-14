@@ -31,6 +31,7 @@ import (
     "errors"
     "fmt"
     "strings"
+    "time"
 
     "sippy/net"
     "sippy/security"
@@ -59,15 +60,15 @@ func CreateSipWWWAuthenticate(body string) []SipHeader {
     return []SipHeader{ createSipWWWAuthenticateObj(body) }
 }
 
-func NewSipWWWAuthenticateWithRealm(realm, algorithm string) *SipWWWAuthenticate {
+func NewSipWWWAuthenticateWithRealm(realm, algorithm string, now_mono time.Time) *SipWWWAuthenticate {
     return &SipWWWAuthenticate{
         normalName  : _sip_www_authenticate_name,
-        body        : newSipWWWAutenticateBody(realm, algorithm),
+        body        : newSipWWWAutenticateBody(realm, algorithm, now_mono),
         aclass      : func(body *SipAuthorizationBody) SipHeader { return NewSipAuthorizationWithBody(body) },
     }
 }
 
-func newSipWWWAutenticateBody(realm, algorithm string) *SipWWWAuthenticateBody {
+func newSipWWWAutenticateBody(realm, algorithm string, now_mono time.Time) *SipWWWAuthenticateBody {
     self := &SipWWWAuthenticateBody{
         algorithm   : algorithm,
         realm       : sippy_net.NewMyAddress(realm),
@@ -78,7 +79,7 @@ func newSipWWWAutenticateBody(realm, algorithm string) *SipWWWAuthenticateBody {
         rand.Read(buf)
         self.nonce = fmt.Sprintf("%x", buf)
     } else {
-        self.nonce = sippy_security.HashOracle.EmitChallenge(alg.Mask)
+        self.nonce = sippy_security.HashOracle.EmitChallenge(alg.Mask, now_mono)
     }
     return self
 }
@@ -197,8 +198,7 @@ func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri string
     if err != nil {
         return nil, err
     }
-    auth := newSipAuthorizationBody(body.realm.String(), body.nonce, uri, username)
-    auth.algorithm = body.algorithm
+    auth := newSipAuthorizationBody(body.realm.String(), body.nonce, uri, username, body.algorithm)
     if body.qop != nil {
         auth.qop = "auth"
         auth.nc = "00000001"

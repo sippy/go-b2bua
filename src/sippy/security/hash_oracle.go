@@ -30,8 +30,8 @@ import (
     "crypto/rand"
     "encoding/binary"
     "encoding/hex"
+    "time"
 
-    "sippy/time"
     "sippy/utils"
 )
 
@@ -71,15 +71,13 @@ func newHashOracle() (*hashOracle, error) {
     }, nil
 }
 
-func (self *hashOracle) EmitChallenge(cmask int64) string {
-    now, _ := sippy_time.ClockGettime(sippy_time.CLOCK_MONOTONIC)
-    ts64 := (now.UnixNano() << NUM_OF_DGSTS) | cmask
+func (self *hashOracle) EmitChallenge(cmask int64, now_mono time.Time) string {
+    ts64 := (now_mono.UnixNano() << NUM_OF_DGSTS) | cmask
     return self.ac.Encrypt(ts64)
 }
 
-func (self *hashOracle) ValidateChallenge(cryptic string, cmask int64) bool {
-    now, _ := sippy_time.ClockGettime(sippy_time.CLOCK_MONOTONIC)
-    new_ts := now.UnixNano()
+func (self *hashOracle) ValidateChallenge(cryptic string, cmask int64, now_mono time.Time) bool {
+    new_ts := now_mono.UnixNano()
     decryptic, err := self.ac.Decrypt(cryptic)
     if err != nil || (cmask & decryptic) == 0 {
         return false

@@ -38,3 +38,8 @@ type SipHeader interface {
     LocalStr(hostport *sippy_net.HostPort, compact bool) string
     GetCopyAsIface() SipHeader
 }
+
+type SipAuthorizationHeader interface {
+    SipHeader
+    GetBody() (*SipAuthorizationBody, error)
+}

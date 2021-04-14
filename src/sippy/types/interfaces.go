@@ -94,6 +94,7 @@ type SipRequest interface {
     SipMsg
     GetSipProxyAuthorization() *sippy_header.SipProxyAuthorization
     GetSipAuthorization() *sippy_header.SipAuthorization
+    GetSipAuthorizationHF() sippy_header.SipAuthorizationHeader
     GenResponse(int, string, MsgBody, *sippy_header.SipServer) SipResponse
     GetMethod() string
     GetExpires() *sippy_header.SipExpires
@@ -113,6 +114,7 @@ type SipResponse interface {
     GetSCodeReason() string
     GetSipWWWAuthenticates() []*sippy_header.SipWWWAuthenticate
     GetSipProxyAuthenticates() []*sippy_header.SipProxyAuthenticate
+    GetChallenges() []Challenge
     SetSCodeReason(string)
     GetCopy() SipResponse
 }

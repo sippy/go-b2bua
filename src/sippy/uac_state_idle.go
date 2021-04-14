@@ -121,8 +121,8 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         self.ua.SetClientTransaction(tr)
         self.ua.SipTM().BeginClientTransaction(req, tr)
-        if self.ua.PassAuth() && event.GetSipAuthorization() != nil {
-            req.AppendHeader(event.GetSipAuthorization())
+        if self.ua.PassAuth() && event.GetSipAuthorizationHF() != nil {
+            req.AppendHeader(event.GetSipAuthorizationHF())
         }
         self.ua.SetAuth(nil)
 

@@ -257,3 +257,13 @@ func (self *sipRequest) GetRTId() (*sippy_header.RTID, error) {
     from_tag := from_body.GetTag()
     return sippy_header.NewRTID(call_id, from_tag, rack.RSeq, rack.CSeq, rack.Method), nil
 }
+
+func (self *sipRequest) GetSipAuthorizationHF() sippy_header.SipAuthorizationHeader {
+    if self.sip_authorization != nil {
+        return self.sip_authorization
+    }
+    if self.sip_proxy_authorization != nil {
+        return self.sip_proxy_authorization
+    }
+    return nil
+}

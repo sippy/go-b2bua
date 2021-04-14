@@ -30,6 +30,7 @@ import (
     "errors"
     "fmt"
     "strings"
+    "time"
 
     "sippy/net"
     "sippy/security"
@@ -65,14 +66,15 @@ func NewSipAuthorizationWithBody(body *SipAuthorizationBody) *SipAuthorization {
     }
 }
 
-func NewSipAuthorization(realm, nonce, uri, username string) *SipAuthorization {
+func NewSipAuthorization(realm, nonce, uri, username, algorithm string) *SipAuthorization {
     return &SipAuthorization{
         normalName : _sip_authorization_name,
         body    : &SipAuthorizationBody{
-            realm   : realm,
-            nonce   : nonce,
-            uri     : uri,
-            username : username,
+            realm       : realm,
+            nonce       : nonce,
+            uri         : uri,
+            username    : username,
+            algorithm   : algorithm,
         },
     }
 }
@@ -89,12 +91,13 @@ func createSipAuthorizationObj(body string) *SipAuthorization {
     }
 }
 
-func newSipAuthorizationBody(realm, nonce, uri, username string) *SipAuthorizationBody {
+func newSipAuthorizationBody(realm, nonce, uri, username, algorithm string) *SipAuthorizationBody {
     return &SipAuthorizationBody{
         realm       : realm,
         nonce       : nonce,
         uri         : uri,
         username    : username,
+        algorithm   : algorithm,
     }
 }
 
@@ -163,7 +166,7 @@ func (self *SipAuthorizationBody) GetUsername() string {
     return self.username
 }
 
-func (self *SipAuthorizationBody) VerifyHA1(HA1, method string) bool {
+func (self *SipAuthorizationBody) VerifyHA1(HA1, method string, now_mono time.Time) bool {
     alg := sippy_security.GetAlgorithm(self.algorithm)
     if alg == nil {
         return false
@@ -171,7 +174,7 @@ func (self *SipAuthorizationBody) VerifyHA1(HA1, method string) bool {
     if self.qop != "" && self.qop != "auth" {
         return false
     }
-    if ! sippy_security.HashOracle.ValidateChallenge(self.nonce, alg.Mask) {
+    if ! sippy_security.HashOracle.ValidateChallenge(self.nonce, alg.Mask, now_mono) {
         return false
     }
     response := DigestCalcResponse(alg, HA1, self.nonce, self.nc, self.cnonce, self.qop, method, self.uri, "")
@@ -222,6 +225,14 @@ func (self *SipAuthorization) GetBody() (*SipAuthorizationBody, error) {
     return self.body, nil
 }
 
+func (self *SipAuthorization) GetUsername() (string, error) {
+    body, err := self.GetBody()
+    if err != nil {
+        return "", err
+    }
+    return body.GetUsername(), nil
+}
+
 func (self *SipAuthorizationBody) GenResponse(password, method string) {
     alg := sippy_security.GetAlgorithm(self.algorithm)
     if alg == nil {
@@ -239,14 +250,18 @@ func (self *SipAuthorization) GetCopyAsIface() SipHeader {
 
 func DigestCalcHA1(alg *sippy_security.Algorithm, pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce string) string {
     s := pszUserName + ":" + pszRealm + ":" + pszPassword
-    HA1 := alg.Hash.Sum([]byte(s))
+    hash := alg.NewHash()
+    hash.Write([]byte(s))
+    HA1 := hash.Sum(nil)
     if strings.HasSuffix(pszAlg, "-sess") {
         s2 := make([]byte, len(HA1))
         for i, b := range HA1 {
             s2[i] = b
         }
         s2 = append(s2, []byte(":" + pszNonce + ":" + pszCNonce)...)
-        HA1 = alg.Hash.Sum(s2)
+        hash = alg.NewHash()
+        hash.Write([]byte(s2))
+        HA1 = hash.Sum(nil)
     }
     return fmt.Sprintf("%x", HA1)
 }
@@ -256,11 +271,16 @@ func DigestCalcResponse(alg *sippy_security.Algorithm, HA1, pszNonce, pszNonceCo
     if pszQop == "auth-int" {
         s += ":" + pszHEntity
     }
-    HA2 := fmt.Sprintf("%x", alg.Hash.Sum([]byte(s)))
+    hash := alg.NewHash()
+    hash.Write([]byte(s))
+    HA2 := fmt.Sprintf("%x", hash.Sum(nil))
     s = HA1 + ":" + pszNonce + ":"
     if pszNonceCount != "" && pszCNonce != "" { // pszQop:
         s += pszNonceCount + ":" + pszCNonce + ":" + pszQop + ":"
     }
     s += HA2
-    return fmt.Sprintf("%x", alg.Hash.Sum([]byte(s)))
+    hash = alg.NewHash()
+    hash.Write([]byte(s))
+    ret := fmt.Sprintf("%x", hash.Sum(nil))
+    return ret
 }

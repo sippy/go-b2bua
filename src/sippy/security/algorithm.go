@@ -32,7 +32,7 @@ import (
 )
 
 type Algorithm struct {
-    Hash        hash.Hash
+    NewHash     func() hash.Hash
     Mask        int64
 }
 const (
@@ -47,13 +47,13 @@ const (
 )
 
 var algorithms = map[string]*Algorithm{
-    ""                  : &Algorithm{ md5.New(), DGST_MD5 },
-    "MD5"               : &Algorithm{ md5.New(), DGST_MD5 },
-    "MD5-sess"          : &Algorithm{ md5.New(), DGST_MD5SESS },
-    "SHA-256"           : &Algorithm{ sha256.New(), DGST_SHA256 },
-    "SHA-256-sess"      : &Algorithm{ sha256.New(), DGST_SHA256SESS },
-    "SHA-512-256"       : &Algorithm{ sha512.New512_256(), DGST_SHA512 },
-    "SHA-512-256-sess"  : &Algorithm{ sha512.New512_256(), DGST_SHA512SESS },
+    ""                  : &Algorithm{ md5.New, DGST_MD5 },
+    "MD5"               : &Algorithm{ md5.New, DGST_MD5 },
+    "MD5-sess"          : &Algorithm{ md5.New, DGST_MD5SESS },
+    "SHA-256"           : &Algorithm{ sha256.New, DGST_SHA256 },
+    "SHA-256-sess"      : &Algorithm{ sha256.New, DGST_SHA256SESS },
+    "SHA-512-256"       : &Algorithm{ sha512.New512_256, DGST_SHA512 },
+    "SHA-512-256-sess"  : &Algorithm{ sha512.New512_256, DGST_SHA512SESS },
 }
 
 func GetAlgorithm(alg_name string) *Algorithm {

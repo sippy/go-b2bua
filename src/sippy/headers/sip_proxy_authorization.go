@@ -40,8 +40,8 @@ func NewSipProxyAuthorizationWithBody(body *SipAuthorizationBody) *SipProxyAutho
     }
 }
 
-func NewSipProxyAuthorization(realm, nonce, uri, username string) *SipProxyAuthorization {
-    super := NewSipAuthorization(realm, nonce, uri, username)
+func NewSipProxyAuthorization(realm, nonce, uri, username, algorithm string) *SipProxyAuthorization {
+    super := NewSipAuthorization(realm, nonce, uri, username, algorithm)
     super.normalName = _sip_proxy_authorization_name
     return &SipProxyAuthorization{
         SipAuthorization : super,

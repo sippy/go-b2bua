@@ -159,3 +159,14 @@ func (self *sipResponse) GetRTId() (*sippy_header.RTID, error) {
     from_tag := from_body.GetTag()
     return sippy_header.NewRTID(call_id, from_tag, rseq.Number, cseq.CSeq, cseq.Method), nil
 }
+
+func (self *sipResponse) GetChallenges() []sippy_types.Challenge {
+    res := make([]sippy_types.Challenge, 0, len(self.sip_www_authenticates) + len(self.sip_proxy_authenticates))
+    for _, challenge := range self.sip_www_authenticates {
+        res = append(res, challenge)
+    }
+    for _, challenge := range self.sip_proxy_authenticates {
+        res = append(res, challenge)
+    }
+    return res
+}
