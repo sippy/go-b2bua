@@ -1,6 +1,4 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2020-2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,35 +22,40 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy_header
+package sippy_security
 
-type SipProxyAuthorization struct {
-    *SipAuthorization
+import (
+    "hash"
+    "crypto/md5"
+    "crypto/sha256"
+    "crypto/sha512"
+)
+
+type Algorithm struct {
+    NewHash     func() hash.Hash
+    Mask        int64
+}
+const (
+    DGST_MD5        = int64(1 << 0)
+    DGST_MD5SESS    = int64(1 << 1)
+    DGST_SHA256     = int64(1 << 2)
+    DGST_SHA256SESS = int64(1 << 3)
+    DGST_SHA512     = int64(1 << 4)
+    DGST_SHA512SESS = int64(1 << 5)
+
+    NUM_OF_DGSTS    = 6
+)
+
+var algorithms = map[string]*Algorithm{
+    ""                  : &Algorithm{ md5.New, DGST_MD5 },
+    "MD5"               : &Algorithm{ md5.New, DGST_MD5 },
+    "MD5-sess"          : &Algorithm{ md5.New, DGST_MD5SESS },
+    "SHA-256"           : &Algorithm{ sha256.New, DGST_SHA256 },
+    "SHA-256-sess"      : &Algorithm{ sha256.New, DGST_SHA256SESS },
+    "SHA-512-256"       : &Algorithm{ sha512.New512_256, DGST_SHA512 },
+    "SHA-512-256-sess"  : &Algorithm{ sha512.New512_256, DGST_SHA512SESS },
 }
 
-var _sip_proxy_authorization_name normalName = newNormalName("Proxy-Authorization")
-
-func NewSipProxyAuthorizationWithBody(body *SipAuthorizationBody) *SipProxyAuthorization {
-    super := NewSipAuthorizationWithBody(body)
-    super.normalName = _sip_proxy_authorization_name
-    return &SipProxyAuthorization{
-        SipAuthorization : super,
-    }
-}
-
-func NewSipProxyAuthorization(realm, nonce, uri, username, algorithm string) *SipProxyAuthorization {
-    super := NewSipAuthorization(realm, nonce, uri, username, algorithm)
-    super.normalName = _sip_proxy_authorization_name
-    return &SipProxyAuthorization{
-        SipAuthorization : super,
-    }
-}
-
-func CreateSipProxyAuthorization(body string) []SipHeader {
-    super := createSipAuthorizationObj(body)
-    super.normalName = _sip_proxy_authorization_name
-    return []SipHeader{ &SipProxyAuthorization{
-            SipAuthorization : super,
-        },
-    }
+func GetAlgorithm(alg_name string) *Algorithm {
+    return algorithms[alg_name]
 }

@@ -112,6 +112,7 @@ type Ua struct {
     on_uac_setup_complete   func()
     expire_starts_on_setup  bool
     pr_rel          bool
+    auth_enalgs     map[string]bool
 }
 
 func (self *Ua) me() sippy_types.UA {
@@ -232,10 +233,7 @@ REQ_LOOP:
 
 func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.ClientTransaction) {
     var err error
-    var challenge *sippy_header.SipWWWAuthenticateBody
-    var req sippy_types.SipRequest
     var cseq_body *sippy_header.SipCSeqBody
-    var new_auth_fn sippy_header.NewSipXXXAuthorizationFunc
 
     if self.state == nil {
         return
@@ -248,38 +246,10 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     self.update_ua(resp)
     code, _ := resp.GetSCode()
     orig_req, cseq_found := self.reqs[cseq_body.CSeq]
-    if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found && self.username != "" && self.password != "" {
-        if code == 401 && resp.GetSipWWWAuthenticate() != nil && orig_req.sip_authorization == nil {
-            challenge, err = resp.GetSipWWWAuthenticate().GetBody()
-            if err != nil {
-                self.logError("UA::RecvResponse: cannot parse WWW-Authenticate: " + err.Error())
-                return
-            }
-            new_auth_fn = func(realm, nonce, method, uri, username, password string) sippy_header.SipHeader {
-                return sippy_header.NewSipAuthorization(realm, nonce, method, uri, username, password)
-            }
-        } else if code == 407 && resp.GetSipProxyAuthenticate() != nil && orig_req.sip_proxy_authorization == nil {
-            challenge, err = resp.GetSipProxyAuthenticate().GetBody()
-            if err != nil {
-                self.logError("UA::RecvResponse: cannot parse Proxy-Authenticate: " + err.Error())
-                return
-            }
-            new_auth_fn = func(realm, nonce, method, uri, username, password string) sippy_header.SipHeader {
-                return sippy_header.NewSipProxyAuthorization(realm, nonce, method, uri, username, password)
-            }
-        }
-        if challenge != nil {
-            req, err = self.GenRequest("INVITE", self.lSDP, challenge.GetNonce(), challenge.GetRealm(), new_auth_fn)
-            if err != nil {
-                self.logError("UA::RecvResponse: cannot create INVITE: " + err.Error())
-                return
-            }
-            self.lCSeq += 1
-            self.tr, err = self.me().PrepTr(req)
-            if err == nil {
-                self.sip_tm.BeginClientTransaction(req, self.tr)
-                delete(self.reqs, cseq_body.CSeq)
-            }
+    if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found {
+        if code == 401 && self.processWWWChallenge(resp, cseq_body.CSeq, orig_req) {
+            return
+        } else if code == 407 && self.processProxyChallenge(resp, cseq_body.CSeq, orig_req) {
             return
         }
     }
@@ -401,7 +371,7 @@ func (self *Ua) emitPendingEvents() {
     }
 }
 
-func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (sippy_types.SipRequest, error) {
+func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, challenge sippy_types.Challenge, extra_headers ...sippy_header.SipHeader) (sippy_types.SipRequest, error) {
     var target *sippy_net.HostPort
 
     if self.outbound_proxy != nil {
@@ -415,10 +385,11 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, nonce string
     if err != nil {
         return nil, err
     }
-    if nonce != "" && realm != "" && self.username != "" && self.password != "" {
-        auth := SipXXXAuthorization(realm, nonce, method, /*uri*/ self.rTarget.String(),
-          self.username, self.password)
-        req.AppendHeader(auth)
+    if challenge != nil {
+        auth, err := challenge.GenAuthHF(self.username, self.password, method, self.rTarget.String())
+        if err == nil {
+            req.AppendHeader(auth)
+        }
     }
     if self.extra_headers != nil {
         req.appendHeaders(self.extra_headers)
@@ -1255,4 +1226,71 @@ func (self *Ua) RecvPRACK(req sippy_types.SipRequest, resp sippy_types.SipRespon
 
 func (self *Ua) PrRel() bool {
     return self.pr_rel
+}
+
+func (self *Ua) processProxyChallenge(resp sippy_types.SipResponse, cseq int, orig_req sippy_types.SipRequest) bool {
+    if self.username == "" || self.password == "" || orig_req.GetSipProxyAuthorization() != nil {
+        return false
+    }
+    auths := resp.GetSipProxyAuthenticates()
+    challenges := make([]sippy_types.Challenge, len(auths))
+    for i, hdr := range auths {
+        challenges[i] = hdr
+    }
+    return self.processChallenge(challenges, cseq)
+}
+
+func (self *Ua) processWWWChallenge(resp sippy_types.SipResponse, cseq int, orig_req sippy_types.SipRequest) bool {
+    if self.username == "" || self.password == "" || orig_req.GetSipAuthorization() != nil {
+        return false
+    }
+    auths := resp.GetSipWWWAuthenticates()
+    challenges := make([]sippy_types.Challenge, len(auths))
+    for i, hdr := range auths {
+        challenges[i] = hdr
+    }
+    return self.processChallenge(challenges, cseq)
+}
+
+func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) bool {
+    var challenge sippy_types.Challenge
+    found := false
+    for _, challenge := range challenges {
+        algorithm, err := challenge.Algorithm()
+        if err != nil {
+            self.logError("UA::processChallenge: cannot get algorithm: " + err.Error())
+            return false
+        }
+        if self.auth_enalgs != nil {
+            if _, ok := self.auth_enalgs[algorithm]; ! ok {
+                continue
+            }
+        }
+        supported, err := challenge.SupportedAlgorithm()
+        if err == nil && supported {
+            found = true
+            break
+        }
+    }
+    if ! found {
+        return false
+    }
+    req, err := self.GenRequest("INVITE", self.lSDP, challenge)
+    if err != nil {
+        self.logError("UA::processChallenge: cannot create INVITE: " + err.Error())
+        return false
+    }
+    self.lCSeq += 1
+    self.tr, err = self.me().PrepTr(req)
+    if err != nil {
+        self.logError("UA::processChallenge: cannot prepare client transaction: " + err.Error())
+        return false
+    }
+    self.sip_tm.BeginClientTransaction(req, self.tr)
+    delete(self.reqs, cseq)
+    return true
+}
+
+func (self *Ua) PassAuth() bool {
+    return self.pass_auth
 }

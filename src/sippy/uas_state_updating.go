@@ -131,7 +131,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         return NewUaStateConnected(self.ua, self.config), nil, nil
     case *CCEventDisconnect:
         self.ua.SendUasResponse(nil, 487, "Request Terminated", nil, nil, false, eh...)
-        req, err := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+        req, err := self.ua.GenRequest("BYE", nil, nil, eh...)
         if err != nil {
             return nil, nil, err
         }
@@ -145,7 +145,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
 }
 
 func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
-    req, err := self.ua.GenRequest("BYE", nil, "", "", nil)
+    req, err := self.ua.GenRequest("BYE", nil, nil)
     if err != nil {
         self.config.ErrorLogger().Error("UasStateUpdating::Cancel: #1: " + err.Error())
         return

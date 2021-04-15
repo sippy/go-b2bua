@@ -96,7 +96,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #9: " + err.Error())
             return nil, nil
         }
-        req, err := self.ua.GenRequest("PRACK", nil, "", "", nil)
+        req, err := self.ua.GenRequest("PRACK", nil, nil)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #10: " + err.Error())
             return nil, nil
@@ -144,7 +144,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
             //logger.Debug("tag-less 200 OK, disconnecting")
             self.ua.Enqueue(NewCCEventFail(502, "Bad Gateway", resp.GetRtime(), self.ua.GetOrigin()))
             // Generate and send BYE
-            req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
+            req, err = self.ua.GenRequest("BYE", nil, nil)
             if err != nil {
                 self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #2: " + err.Error())
                 return nil, nil
@@ -218,10 +218,16 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         event_fail := NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event = event_fail
         if self.ua.GetPassAuth() {
-            if code == 401 && resp.GetSipWWWAuthenticate() != nil {
-                event_fail.challenge = resp.GetSipWWWAuthenticate().GetCopy()
-            } else if code == 407 && resp.GetSipProxyAuthenticate() != nil {
-                event_fail.challenge = resp.GetSipProxyAuthenticate().GetCopy()
+            if code == 401 && len(resp.GetSipWWWAuthenticates()) > 0 {
+                event_fail.challenges = make([]sippy_header.SipHeader, len(resp.GetSipWWWAuthenticates()))
+                for i, hdr := range resp.GetSipWWWAuthenticates() {
+                    event_fail.challenges[i] = hdr.GetCopy()
+                }
+            } else if code == 407 && len(resp.GetSipProxyAuthenticates()) > 0 {
+                event_fail.challenges = make([]sippy_header.SipHeader, len(resp.GetSipProxyAuthenticates()))
+                for i, hdr := range resp.GetSipProxyAuthenticates() {
+                    event_fail.challenges[i] = hdr.GetCopy()
+                }
             }
         }
         if resp.GetReason() != nil {

@@ -31,20 +31,27 @@ import (
     "errors"
     "fmt"
     "strings"
+    "time"
 
     "sippy/net"
+    "sippy/security"
     "sippy/utils"
 )
 
 type SipWWWAuthenticateBody struct {
-    realm *sippy_net.MyAddress
-    nonce string
+    realm       *sippy_net.MyAddress
+    nonce       string
+    algorithm   string
+    qop         []string
+    otherparams []string
+    opaque      string
 }
 
 type SipWWWAuthenticate struct {
     normalName
     string_body     string
     body            *SipWWWAuthenticateBody
+    aclass          func(*SipAuthorizationBody) SipHeader
 }
 
 var _sip_www_authenticate_name normalName = newNormalName("WWW-Authenticate")
@@ -53,26 +60,35 @@ func CreateSipWWWAuthenticate(body string) []SipHeader {
     return []SipHeader{ createSipWWWAuthenticateObj(body) }
 }
 
-func NewSipWWWAuthenticateWithRealm(realm string) *SipWWWAuthenticate {
+func NewSipWWWAuthenticateWithRealm(realm, algorithm string, now_mono time.Time) *SipWWWAuthenticate {
     return &SipWWWAuthenticate{
         normalName  : _sip_www_authenticate_name,
-        body        : newSipWWWAutenticateBody(realm),
+        body        : newSipWWWAutenticateBody(realm, algorithm, now_mono),
+        aclass      : func(body *SipAuthorizationBody) SipHeader { return NewSipAuthorizationWithBody(body) },
     }
 }
 
-func newSipWWWAutenticateBody(realm string) *SipWWWAuthenticateBody {
-    buf := make([]byte, 20)
-    rand.Read(buf)
-    return &SipWWWAuthenticateBody{
-        realm : sippy_net.NewMyAddress(realm),
-        nonce : fmt.Sprintf("%x", buf),
+func newSipWWWAutenticateBody(realm, algorithm string, now_mono time.Time) *SipWWWAuthenticateBody {
+    self := &SipWWWAuthenticateBody{
+        algorithm   : algorithm,
+        realm       : sippy_net.NewMyAddress(realm),
     }
+    alg := sippy_security.GetAlgorithm(algorithm)
+    if alg == nil {
+        buf := make([]byte, 20)
+        rand.Read(buf)
+        self.nonce = fmt.Sprintf("%x", buf)
+    } else {
+        self.nonce = sippy_security.HashOracle.EmitChallenge(alg.Mask, now_mono)
+    }
+    return self
 }
 
 func createSipWWWAuthenticateObj(body string) *SipWWWAuthenticate {
     return &SipWWWAuthenticate{
         normalName      : _sip_www_authenticate_name,
         string_body     : body,
+        aclass          : func(body *SipAuthorizationBody) SipHeader { return NewSipAuthorizationWithBody(body) },
     }
 }
 
@@ -90,6 +106,15 @@ func (self *SipWWWAuthenticate) parse() error {
             body.realm = sippy_net.NewMyAddress(strings.Trim(arr[1], "\""))
         case "nonce":
             body.nonce = strings.Trim(arr[1], "\"")
+        case "opaque":
+            body.opaque = strings.Trim(arr[1], "\"")
+        case "algorithm":
+            body.algorithm = strings.Trim(arr[1], "\"")
+        case "qop":
+            qops := strings.Trim(arr[1], "\"")
+            body.qop = strings.Split(qops, ",")
+        default:
+            body.otherparams = append(body.otherparams, part)
         }
     }
     self.body = body
@@ -125,10 +150,26 @@ func (self *SipWWWAuthenticate) LocalStringBody(hostport *sippy_net.HostPort) st
 }
 
 func (self *SipWWWAuthenticateBody) localString(hostport *sippy_net.HostPort) string {
+    realm := self.realm.String()
     if hostport != nil && self.realm.IsSystemDefault() {
-        return "Digest realm=\"" + hostport.Host.String() + "\",nonce=\"" + self.nonce + "\""
+        realm = hostport.Host.String()
     }
-    return "Digest realm=\"" + self.realm.String() + "\",nonce=\"" + self.nonce + "\""
+    ret := "Digest realm=\"" + realm + "\",nonce=\"" + self.nonce + "\""
+    if self.algorithm != "" {
+        ret += ",algorithm=\"" + self.algorithm +"\""
+    }
+    if self.opaque != "" {
+        ret += ",opaque=\"" + self.opaque + "\""
+    }
+    if len(self.qop) == 1 {
+        ret += ",qop=" + self.qop[0]
+    } else if len(self.qop) > 1 {
+        ret += ",qop=\"" + strings.Join(self.qop, ",") + "\""
+    }
+    if len(self.otherparams) > 0 {
+        ret += "," + strings.Join(self.otherparams, ",")
+    }
+    return ret
 }
 
 func (self *SipWWWAuthenticateBody) GetRealm() string {
@@ -152,6 +193,43 @@ func (self *SipWWWAuthenticateBody) getCopy() *SipWWWAuthenticateBody {
     return &tmp
 }
 
+func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri string) (SipHeader, error) {
+    body, err := self.GetBody()
+    if err != nil {
+        return nil, err
+    }
+    auth := newSipAuthorizationBody(body.realm.String(), body.nonce, uri, username, body.algorithm)
+    if body.qop != nil {
+        auth.qop = "auth"
+        auth.nc = "00000001"
+        buf := make([]byte, 4)
+        rand.Read(buf)
+        auth.cnonce = fmt.Sprintf("%x", buf)
+    }
+    if body.opaque != "" {
+        auth.opaque = body.opaque
+    }
+    auth.GenResponse(password, method)
+    return self.aclass(auth), nil
+}
+
 func (self *SipWWWAuthenticate) GetCopyAsIface() SipHeader {
     return self.GetCopy()
+}
+
+func (self *SipWWWAuthenticate) Algorithm() (string, error) {
+    body, err := self.GetBody()
+    if err != nil {
+        return "", err
+    }
+    return body.algorithm, nil
+}
+
+func (self *SipWWWAuthenticate) SupportedAlgorithm() (bool, error) {
+    body, err := self.GetBody()
+    if err != nil {
+        return false, err
+    }
+    alg := sippy_security.GetAlgorithm(body.algorithm)
+    return alg != nil, nil
 }

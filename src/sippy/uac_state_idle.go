@@ -111,7 +111,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             eh = append(eh, event.GetMaxForwards())
         }
         self.ua.OnUacSetupComplete()
-        req, err = self.ua.GenRequest("INVITE", body, /*nonce*/ "", /*realm*/ "", /*SipXXXAuthorization*/ nil, eh...)
+        req, err = self.ua.GenRequest("INVITE", body, /*Challenge*/ nil, eh...)
         if err != nil {
             return nil, nil, err
         }
@@ -121,6 +121,9 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         self.ua.SetClientTransaction(tr)
         self.ua.SipTM().BeginClientTransaction(req, tr)
+        if self.ua.PassAuth() && event.GetSipAuthorizationHF() != nil {
+            req.AppendHeader(event.GetSipAuthorizationHF())
+        }
         self.ua.SetAuth(nil)
 
         if self.ua.GetExpireTime() > 0 {
