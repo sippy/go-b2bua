@@ -72,6 +72,8 @@ func (self *sshaken_verifier) Verify(passport *sshaken_passport, cert_buf []byte
     if now.Sub(date_ts) > VERIFY_DATE_FRESHNESS {
         return errors.New("Date header value is older than local policy")
     }
+    orig_tn_p = cleanup(orig_tn_p)
+    dest_tn_p = cleanup(dest_tn_p)
     if passport.OrigTN() != orig_tn_p || passport.DestTN() != dest_tn_p {
         return errors.New("Signature would not verify successfully")
     }
@@ -85,7 +87,11 @@ func (self *sshaken_verifier) Verify(passport *sshaken_passport, cert_buf []byte
         return err
     }
     iat_ts := passport.Iat()
-    if iat_ts != date_ts && now.Sub(iat_ts) > VERIFY_DATE_FRESHNESS {
+    diff := now.Sub(iat_ts)
+    if diff < 0 {
+        diff = -diff
+    }
+    if ! iat_ts.Equal(date_ts) && diff > VERIFY_DATE_FRESHNESS {
         iat_ts = date_ts
     }
     return verify_signature(cert, passport, iat_ts, orig_tn_p, dest_tn_p)
@@ -158,7 +164,13 @@ func verify_signature(cert *x509.Certificate, passport *sshaken_passport, iat_ts
 }
 
 func load_cert(cert_buf []byte) (*x509.Certificate, error) {
+    if len(cert_buf) == 0 {
+        return nil, errors.New("empty certificate")
+    }
     block, _ := pem.Decode(cert_buf)
+    if block == nil {
+        return nil, errors.New("error decoding a certificate")
+    }
     cert, err := x509.ParseCertificate(block.Bytes)
     if err != nil {
         return nil, err
@@ -212,4 +224,26 @@ func ParseIdentity(hdr_buf string) (*sshaken_passport, error) {
         return nil, err
     }
     return passport, nil
+}
+
+func cleanup(in string) string {
+    out := []byte{}
+    for _, ch := range []byte(in) {
+        switch ch {
+        case '0': fallthrough
+        case '1': fallthrough
+        case '2': fallthrough
+        case '3': fallthrough
+        case '4': fallthrough
+        case '5': fallthrough
+        case '6': fallthrough
+        case '7': fallthrough
+        case '8': fallthrough
+        case '9': fallthrough
+        case '*': fallthrough
+        case '#':
+            out = append(out, ch)
+        }
+    }
+    return string(out)
 }

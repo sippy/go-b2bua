@@ -332,6 +332,10 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
         var contact *sippy_header.SipAddress
 
         contact, err = req.contacts[0].GetBody(self.config)
+        if err != nil {
+            self.logBadMessage("Bad Contact: " + err.Error(), data)
+            return
+        }
         curl := contact.GetUrl()
         if check1918(curl.Host.String()) {
             tmp_host, tmp_port := address.Host.String(), address.Port.String()
