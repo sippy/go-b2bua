@@ -200,7 +200,13 @@ func (self *callMap) discAll(signum syscall.Signal) {
     if signum > 0 {
         println(fmt.Sprintf("Signal %d received, disconnecting all calls", signum))
     }
+    alist := []*callController{}
+    self.ccmap_lock.Lock()
     for _, cc := range self.ccmap {
+        alist = append(alist, cc)
+    }
+    self.ccmap_lock.Unlock()
+    for _, cc := range alist {
         cc.disconnect(nil)
     }
 }

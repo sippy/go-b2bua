@@ -143,7 +143,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 if ev_try.GetBody() != nil {
                     ev_try.GetBody().AppendAHeader("nated:yes")
                 }
-                event = sippy.NewCCEventTry(self.cId, self.cGUID, self.cli, self.cld, ev_try.GetBody(), ev_try.GetSipAuthorization(), self.caller_name, nil, "")
+                event, _ = sippy.NewCCEventTry(self.cId, self.cGUID, self.cli, self.cld, ev_try.GetBody(), ev_try.GetSipAuthorizationHF(), self.caller_name, nil, "")
             }
 /*
             if self.global_config.has_key('static_tr_in') {
@@ -349,7 +349,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     if caller_name == "" {
         caller_name = self.caller_name
     }
-    event := sippy.NewCCEventTry(cId, self.eTry.GetSipCiscoGUID(), oroute.cli, cld, body, self.eTry.GetSipAuthorization(), caller_name, nil, "")
+    event, _ := sippy.NewCCEventTry(cId, self.eTry.GetSipCiscoGUID(), oroute.cli, cld, body, self.eTry.GetSipAuthorizationHF(), caller_name, nil, "")
     //if self.eTry.max_forwards != nil {
     //    event.max_forwards = self.eTry.max_forwards - 1
     //    if event.max_forwards <= 0 {

@@ -174,9 +174,13 @@ func (self *callMap) Remove(ccid int64) {
 }
 
 func (self *callMap) Shutdown() {
+    acalls := []*callController{}
     self.ccmap_lock.Lock()
-    defer self.ccmap_lock.Unlock()
     for _, cc := range self.ccmap {
+        acalls = append(acalls, cc)
+    }
+    self.ccmap_lock.Unlock()
+    for _, cc := range acalls {
         //println(cc.String())
         cc.Shutdown()
     }
