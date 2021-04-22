@@ -840,7 +840,7 @@ func (self *Ua) OnDead() {
         return
     }
     if self.cId != nil {
-        self.sip_tm.UnregConsumer(self, self.cId.CallId)
+        self.sip_tm.UnregConsumer(self.me(), self.cId.CallId)
     }
     self.tr = nil
     self.call_controller = nil
