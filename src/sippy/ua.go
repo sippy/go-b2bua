@@ -1255,7 +1255,7 @@ func (self *Ua) processWWWChallenge(resp sippy_types.SipResponse, cseq int, orig
 func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) bool {
     var challenge sippy_types.Challenge
     found := false
-    for _, challenge := range challenges {
+    for _, challenge = range challenges {
         algorithm, err := challenge.Algorithm()
         if err != nil {
             self.logError("UA::processChallenge: cannot get algorithm: " + err.Error())
