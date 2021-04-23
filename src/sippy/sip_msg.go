@@ -209,6 +209,8 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.sip_www_authenticates = append(self.sip_www_authenticates, t)
     case *sippy_header.SipAuthorization:
         self.sip_authorization = t
+        self.sip_proxy_authorization = nil
+        return
     case *sippy_header.SipServer:
         self.sip_server = t
     case *sippy_header.SipUserAgent:
@@ -227,6 +229,8 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.sip_proxy_authenticates = append(self.sip_proxy_authenticates, t)
     case *sippy_header.SipProxyAuthorization:
         self.sip_proxy_authorization = t
+        self.sip_authorization = nil
+        return
     case *sippy_header.SipReplaces:
     case *sippy_header.SipReason:
         self.reason_hf  = t
@@ -340,6 +344,11 @@ func (self *sipMsg) localStr(hostport *sippy_net.HostPort, compact bool /*= Fals
     }
     if self.maxforwards != nil {
         s += self.maxforwards.LocalStr(hostport, compact) + "\r\n"
+    }
+    if self.sip_authorization != nil {
+        s += self.sip_authorization.LocalStr(hostport, compact) + "\r\n"
+    } else if self.sip_proxy_authorization != nil {
+        s += self.sip_proxy_authorization.LocalStr(hostport, compact) + "\r\n"
     }
     for _, header := range self.headers {
         s += header.LocalStr(hostport, compact) + "\r\n"
