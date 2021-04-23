@@ -345,13 +345,13 @@ func (self *sipMsg) localStr(hostport *sippy_net.HostPort, compact bool /*= Fals
     if self.maxforwards != nil {
         s += self.maxforwards.LocalStr(hostport, compact) + "\r\n"
     }
+    for _, header := range self.headers {
+        s += header.LocalStr(hostport, compact) + "\r\n"
+    }
     if self.sip_authorization != nil {
         s += self.sip_authorization.LocalStr(hostport, compact) + "\r\n"
     } else if self.sip_proxy_authorization != nil {
         s += self.sip_proxy_authorization.LocalStr(hostport, compact) + "\r\n"
-    }
-    for _, header := range self.headers {
-        s += header.LocalStr(hostport, compact) + "\r\n"
     }
     if self.body != nil {
         mbody := self.body.LocalStr(hostport)

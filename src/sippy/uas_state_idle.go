@@ -96,7 +96,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetLUri(sippy_header.NewSipFrom(to_body, self.config))
     self.ua.SetRUri(sippy_header.NewSipTo(from_body, self.config))
     self.ua.SetCallId(self.ua.GetUasResp().GetCallId())
-    self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
+    self.ua.RegConsumer(self.ua, self.ua.GetCallId().CallId)
     auth_hf := req.GetSipAuthorizationHF()
     body := req.GetBody()
     via0, err = req.GetVias()[0].GetBody()

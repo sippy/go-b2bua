@@ -89,7 +89,7 @@ func (self *keepaliveController) RecvResponse(resp sippy_types.SipResponse, tr s
             if err == nil {
                 self.triedauth = true
             }
-            self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
+            self.ua.BeginClientTransaction(req, self.ka_tr)
             return
         }
     }
@@ -126,7 +126,7 @@ func (self *keepaliveController) keepAlive() {
     self.triedauth = false
     self.ka_tr, err = self.ua.PrepTr(req)
     if err == nil {
-        self.ua.SipTM().BeginClientTransaction(req, self.ka_tr)
+        self.ua.BeginClientTransaction(req, self.ka_tr)
     }
 }
 

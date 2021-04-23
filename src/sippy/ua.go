@@ -27,6 +27,7 @@
 package sippy
 
 import (
+    "errors"
     "strings"
     "sync"
     "time"
@@ -41,6 +42,7 @@ import (
 
 type Ua struct {
     sip_tm          sippy_types.SipTransactionManager
+    sip_tm_lock     sync.RWMutex
     config          sippy_conf.Config
     call_controller sippy_types.CallController
     session_lock    sync.Locker
@@ -264,7 +266,11 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
 }
 
 func (self *Ua) PrepTr(req sippy_types.SipRequest) (sippy_types.ClientTransaction, error) {
-    tr, err := self.SipTM().CreateClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
+    sip_tm := self.get_sip_tm()
+    if sip_tm == nil {
+        return nil, errors.New("UA already dead")
+    }
+    tr, err := sip_tm.CreateClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
     if err != nil {
         return nil, err
     }
@@ -305,7 +311,8 @@ func (self *Ua) RecvEvent(event sippy_types.CCEvent) {
 }
 
 func (self *Ua) Disconnect(rtime *sippy_time.MonoTime, origin string) {
-    if self.sip_tm == nil {
+    sip_tm := self.get_sip_tm()
+    if sip_tm == nil {
         return // we are already in a dead state
     }
     if rtime == nil {
@@ -430,7 +437,9 @@ func (self *Ua) SendUasResponse(t sippy_types.ServerTransaction, scode int, reas
         t.SendResponseWithLossEmul(uasResp, /*retrans*/ false, ack_cb, self.uas_lossemul)
     } else {
         // the lock on the server transaction is already aquired so find it but do not try to lock
-        self.sip_tm.SendResponseWithLossEmul(uasResp, /*lock*/ false, ack_cb, self.uas_lossemul)
+        if sip_tm := self.get_sip_tm(); sip_tm != nil {
+            sip_tm.SendResponseWithLossEmul(uasResp, /*lock*/ false, ack_cb, self.uas_lossemul)
+        }
     }
 }
 
@@ -582,10 +591,6 @@ func (self *Ua) UpdateRouting(resp sippy_types.SipResponse, update_rtarget bool 
     } else {
         self.rAddr = self.rTarget.GetAddr(self.config)
     }
-}
-
-func (self *Ua) SipTM() sippy_types.SipTransactionManager {
-    return self.sip_tm
 }
 
 func (self *Ua) GetSetupTs() *sippy_time.MonoTime {
@@ -836,6 +841,8 @@ func (self *Ua) SetRAddr(addr *sippy_net.HostPort) {
 }
 
 func (self *Ua) OnDead() {
+    self.sip_tm_lock.Lock()
+    defer self.sip_tm_lock.Unlock()
     if self.sip_tm == nil {
         return
     }
@@ -1275,6 +1282,10 @@ func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) b
     if ! found {
         return false
     }
+    if challenge == nil {
+        // no supported challenge has been found
+        return false
+    }
     req, err := self.GenRequest("INVITE", self.lSDP, challenge)
     if err != nil {
         self.logError("UA::processChallenge: cannot create INVITE: " + err.Error())
@@ -1286,11 +1297,41 @@ func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) b
         self.logError("UA::processChallenge: cannot prepare client transaction: " + err.Error())
         return false
     }
-    self.sip_tm.BeginClientTransaction(req, self.tr)
+    self.BeginClientTransaction(req, self.tr)
     delete(self.reqs, cseq)
     return true
 }
 
 func (self *Ua) PassAuth() bool {
     return self.pass_auth
+}
+
+func (self *Ua) get_sip_tm() sippy_types.SipTransactionManager {
+    self.sip_tm_lock.RLock()
+    defer self.sip_tm_lock.RUnlock()
+    return self.sip_tm
+}
+
+func (self *Ua) BeginClientTransaction(req sippy_types.SipRequest, tr sippy_types.ClientTransaction) {
+    sip_tm := self.get_sip_tm()
+    if sip_tm == nil {
+        return
+    }
+    sip_tm.BeginClientTransaction(req, tr)
+}
+
+func (self *Ua) BeginNewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver) {
+    sip_tm := self.get_sip_tm()
+    if sip_tm == nil {
+        return
+    }
+    sip_tm.BeginNewClientTransaction(req, resp_receiver, self.session_lock, self.source_address, nil /*userv*/, self.me().BeforeRequestSent)
+}
+
+func (self *Ua) RegConsumer(consumer sippy_types.UA, call_id string) {
+    sip_tm := self.get_sip_tm()
+    if sip_tm == nil {
+        return
+    }
+    sip_tm.RegConsumer(consumer, call_id)
 }

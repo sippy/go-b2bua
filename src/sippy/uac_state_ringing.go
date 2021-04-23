@@ -91,7 +91,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
             }
             rack := sippy_header.NewSipRAck(rseq.Number, cseq.CSeq, cseq.Method)
             req.AppendHeader(rack)
-            self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+            self.ua.BeginNewClientTransaction(req, nil)
         }
         if self.ua.GetP1xxTs() == nil {
             self.ua.SetP1xxTs(resp.GetRtime())
@@ -134,7 +134,7 @@ func (self *UacStateRinging) RecvResponse(resp sippy_types.SipResponse, tr sippy
                 self.config.ErrorLogger().Error("UacStateRinging::RecvResponse: #2: " + err.Error())
                 return nil, nil
             }
-            self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+            self.ua.BeginNewClientTransaction(req, nil)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime())  {
                 self.ua.SetDisconnectTs(resp.GetRtime())
             } else {

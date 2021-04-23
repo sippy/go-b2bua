@@ -87,7 +87,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         rUri.GetUrl().Port = nil
         self.ua.SetLUri(sippy_header.NewSipFrom(sippy_header.NewSipAddress(event.GetCallerName(), sippy_header.NewSipURL(event.GetCLI(), self.config.GetMyAddress(), self.config.GetMyPort(), false)), self.config))
-        self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
+        self.ua.RegConsumer(self.ua, self.ua.GetCallId().CallId)
         lUri, err = self.ua.GetLUri().GetBody(self.config)
         if err != nil {
             return nil, nil, err
@@ -120,7 +120,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
             return nil, nil, err
         }
         self.ua.SetClientTransaction(tr)
-        self.ua.SipTM().BeginClientTransaction(req, tr)
+        self.ua.BeginClientTransaction(req, tr)
         if self.ua.PassAuth() && event.GetSipAuthorizationHF() != nil {
             req.AppendHeader(event.GetSipAuthorizationHF())
         }

@@ -151,7 +151,6 @@ type UA interface {
     GetSessionLock() sync.Locker
     RecvEvent(CCEvent)
     RecvACK(SipRequest)
-    SipTM() SipTransactionManager
     GetSetupTs() *sippy_time.MonoTime
     SetSetupTs(*sippy_time.MonoTime)
     GetDisconnectTs() *sippy_time.MonoTime
@@ -292,6 +291,10 @@ type UA interface {
     SetExpireStartsOnSetup(bool)
     PrRel() bool
     PassAuth() bool
+    // proxy methods for SipTransactionManager
+    BeginNewClientTransaction(SipRequest, ResponseReceiver)
+    BeginClientTransaction(SipRequest, ClientTransaction)
+    RegConsumer(UA, string)
 }
 
 type baseTransaction interface {

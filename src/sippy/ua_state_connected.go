@@ -164,7 +164,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             }
             rby := sippy_header.NewSipReferredBy(sippy_header.NewSipAddress("", lUri.GetUrl()))
             req.AppendHeader(rby)
-            self.ua.SipTM().BeginNewClientTransaction(req, newRedirectController(self.ua), self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+            self.ua.BeginNewClientTransaction(req, newRedirectController(self.ua))
         } else {
             req, err = self.ua.GenRequest("BYE", nil, nil, eh...)
             if err != nil {
@@ -174,7 +174,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
                 also := sippy_header.NewSipAlso(redirect)
                 req.AppendHeader(also)
             }
-            self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+            self.ua.BeginNewClientTransaction(req, nil)
         }
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
@@ -228,7 +228,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil, err
         }
         self.ua.SetClientTransaction(tr)
-        self.ua.SipTM().BeginClientTransaction(req, tr)
+        self.ua.BeginClientTransaction(req, tr)
         return NewUacStateUpdating(self.ua, self.config), nil, nil
     }
     if _event, ok := event.(*CCEventInfo); ok {
@@ -238,7 +238,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil, err
         }
         req.SetBody(body)
-        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, nil)
         return nil, nil, nil
     }
     if _event, ok := event.(*CCEventConnect); ok && self.ua.GetPendingTr() != nil {

@@ -45,5 +45,5 @@ func (self *redirectController) RecvResponse(resp sippy_types.SipResponse, t sip
     if err != nil {
         return
     }
-    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+    self.ua.BeginNewClientTransaction(req, nil)
 }

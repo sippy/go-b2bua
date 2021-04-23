@@ -103,7 +103,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
         }
         rack := sippy_header.NewSipRAck(rseq.Number, cseq.CSeq, cseq.Method)
         req.AppendHeader(rack)
-        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, nil)
     }
     if code > 100 && code < 300 {
         // the route set must be ready for sending the PRACK
@@ -149,7 +149,7 @@ func (self *UacStateTrying) RecvResponse(resp sippy_types.SipResponse, tr sippy_
                 self.config.ErrorLogger().Error("UacStateTrying::RecvResponse: #2: " + err.Error())
                 return nil, nil
             }
-            self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+            self.ua.BeginNewClientTransaction(req, nil)
             if self.ua.GetSetupTs() != nil && !self.ua.GetSetupTs().After(resp.GetRtime()) {
                 self.ua.SetDisconnectTs(resp.GetRtime())
             } else {

@@ -157,7 +157,7 @@ func (self *UacStateUpdating) updateFailed(event sippy_types.CCEvent) (sippy_typ
         self.config.ErrorLogger().Error("UacStateUpdating::updateFailed: #1: " + err.Error())
         return nil, nil
     }
-    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+    self.ua.BeginNewClientTransaction(req, nil)
 
     self.ua.CancelCreditTimer()
     self.ua.SetDisconnectTs(event.GetRtime())
@@ -179,7 +179,7 @@ func (self *UacStateUpdating) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         if err != nil {
             return nil, nil, err
         }
-        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, nil)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(event.GetRtime(), event.GetOrigin(), 0, nil) }, nil
