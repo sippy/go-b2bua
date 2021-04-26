@@ -194,7 +194,7 @@ REQ_LOOP:
                         }
                     }
                 }
-                if ! found {
+                if found {
                     resp := req.GenResponse(420, "Bad Extension", /*body*/ nil, /*server*/ self.local_ua.AsSipServer())
                     usup := sippy_header.NewSipGenericHF("Unsupported", "100rel")
                     resp.AppendHeader(usup)
