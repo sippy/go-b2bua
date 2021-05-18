@@ -104,7 +104,6 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         contact.GetUrl().Username = event.GetCLI()
         self.ua.SetRoutes(event.routes)
-        self.ua.SetCGUID(event.GetSipCiscoGUID())
         self.ua.SetLSDP(body)
         eh := event.GetExtraHeaders()
         if event.GetMaxForwards() != nil {

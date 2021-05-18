@@ -186,8 +186,6 @@ type UA interface {
     GetLContact() *sippy_header.SipContact
     GetLContacts() []*sippy_header.SipContact
     SetRoutes([]*sippy_header.SipRoute)
-    GetCGUID() *sippy_header.SipCiscoGUID
-    SetCGUID(*sippy_header.SipCiscoGUID)
     GetLSDP() MsgBody
     SetLSDP(MsgBody)
     GetRSDP() MsgBody

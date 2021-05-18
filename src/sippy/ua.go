@@ -64,7 +64,6 @@ type Ua struct {
     lCSeq           int
     lContact        *sippy_header.SipContact
     routes          []*sippy_header.SipRoute
-    cGUID           *sippy_header.SipCiscoGUID
     lSDP            sippy_types.MsgBody
     rSDP            sippy_types.MsgBody
     outbound_proxy  *sippy_net.HostPort
@@ -387,7 +386,7 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, challenge si
     }
     req, err := NewSipRequest(method, /*ruri*/ self.rTarget, /*sipver*/ "", /*to*/ self.rUri, /*fr0m*/ self.lUri,
                     /*via*/ nil, self.lCSeq, self.cId, /*maxforwars*/ nil, body, self.lContact, self.routes,
-                    target, self.cGUID, /*user_agent*/ self.local_ua, /*expires*/ nil, self.config)
+                    target, /*user_agent*/ self.local_ua, /*expires*/ nil, self.config)
     if err != nil {
         return nil, err
     }
@@ -685,14 +684,6 @@ func (self *Ua) SetLContact(contact *sippy_header.SipContact) {
 
 func (self *Ua) SetRoutes(routes []*sippy_header.SipRoute) {
     self.routes = routes
-}
-
-func (self *Ua) GetCGUID() *sippy_header.SipCiscoGUID {
-    return self.cGUID
-}
-
-func (self *Ua) SetCGUID(cguid *sippy_header.SipCiscoGUID) {
-    self.cGUID = cguid
 }
 
 func (self *Ua) GetLSDP() sippy_types.MsgBody {

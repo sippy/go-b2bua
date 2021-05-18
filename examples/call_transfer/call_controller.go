@@ -120,7 +120,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 nh_addr := self.cmap.config.nh_addr
 
                 self.uaO = sippy.NewUA(self.cmap.sip_tm, self.cmap.config, nh_addr, self, self.lock, nil)
-                ev_try, _ := sippy.NewCCEventTry(self.evTry.GetSipCallId(), self.evTry.GetSipCiscoGUID(),
+                ev_try, _ := sippy.NewCCEventTry(self.evTry.GetSipCallId(),
                     self.evTry.GetCLI(), cld, nil /*body*/, nil /*auth*/, self.evTry.GetCallerName(),
                     ev_disc.GetRtime(), self.evTry.GetOrigin())
                 self.transfer_is_in_progress = true

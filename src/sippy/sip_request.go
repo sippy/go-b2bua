@@ -75,8 +75,8 @@ func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.C
 func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *sippy_header.SipTo,
         from *sippy_header.SipFrom, via *sippy_header.SipVia, cseq int, callid *sippy_header.SipCallId,
         maxforwards *sippy_header.SipMaxForwards, body sippy_types.MsgBody, contact *sippy_header.SipContact,
-        routes []*sippy_header.SipRoute, target *sippy_net.HostPort, cguid *sippy_header.SipCiscoGUID,
-        user_agent *sippy_header.SipUserAgent, expires *sippy_header.SipExpires, config sippy_conf.Config) (*sipRequest, error) {
+        routes []*sippy_header.SipRoute, target *sippy_net.HostPort, user_agent *sippy_header.SipUserAgent,
+        expires *sippy_header.SipExpires, config sippy_conf.Config) (*sipRequest, error) {
     if routes == nil {
         routes = make([]*sippy_header.SipRoute, 0)
     }
@@ -140,10 +140,6 @@ func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *
         self.user_agent = sippy_header.NewSipUserAgent(config.GetMyUAName())
     }
     self.AppendHeader(self.user_agent)
-    if cguid != nil {
-        self.AppendHeader(cguid)
-        self.AppendHeader(cguid.AsH323ConfId())
-    }
     self.setBody(body)
     return self, nil
 }
@@ -207,7 +203,7 @@ func (self *sipRequest) GenACK(to *sippy_header.SipTo) (sippy_types.SipRequest, 
                       to, self.from.GetCopy(), self.vias[0].GetCopy(),
                       cseq.CSeq, self.call_id.GetCopy(),
                       maxforwards, /*body*/ nil, /*contact*/ nil,
-                      /*routes*/ nil, /*target*/ nil, /*cguid*/ nil, self.user_agent,
+                      /*routes*/ nil, /*target*/ nil, self.user_agent,
                       /*expires*/ nil, self.config)
 }
 
@@ -227,10 +223,9 @@ func (self *sipRequest) GenCANCEL() (sippy_types.SipRequest, error) {
     }
     return NewSipRequest("CANCEL", self.ruri.GetCopy(), self.sipver,
                       self.to.GetCopy(), self.from.GetCopy(), self.vias[0].GetCopy(),
-                      cseq.CSeq, self.call_id.GetCopy(),
-                      maxforwards, /*body*/ nil, /*contact*/ nil,
-                      routes, self.GetTarget(), /*cguid*/ nil,
-                      self.user_agent, /*expires*/ nil, self.config)
+                      cseq.CSeq, self.call_id.GetCopy(), maxforwards, /*body*/ nil,
+                      /*contact*/ nil, routes, self.GetTarget(), self.user_agent,
+                      /*expires*/ nil, self.config)
 }
 
 func (self *sipRequest) GetExpires() *sippy_header.SipExpires {

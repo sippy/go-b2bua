@@ -61,13 +61,6 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     }
     self.ua.SetOrigin("caller")
     //print "INVITE received in the Idle state, going to the Trying state"
-    if req.GetCGUID() != nil {
-        self.ua.SetCGUID(req.GetCGUID().GetCopy())
-    } else if req.GetH323ConfId() != nil {
-        self.ua.SetCGUID(req.GetH323ConfId().AsCiscoGUID())
-    } else {
-        self.ua.SetCGUID(sippy_header.NewSipCiscoGUID())
-    }
     self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
     self.ua.SetLCSeq(100) // XXX: 100 for debugging so that incorrect CSeq generation will be easily spotted
     if self.ua.GetLContact() == nil {
@@ -105,7 +98,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
         return nil, nil
     }
     self.ua.SetBranch(via0.GetBranch())
-    event, err := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), from_body.GetUrl().Username,
+    event, err := NewCCEventTry(self.ua.GetCallId(), from_body.GetUrl().Username,
         req.GetRURI().Username, body, auth_hf, from_body.GetName(), req.GetRtime(), self.ua.GetOrigin())
     if err != nil {
         self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #5: " + err.Error())
