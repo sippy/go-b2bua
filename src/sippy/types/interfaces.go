@@ -188,7 +188,6 @@ type UA interface {
     SetRoutes([]*sippy_header.SipRoute)
     GetCGUID() *sippy_header.SipCiscoGUID
     SetCGUID(*sippy_header.SipCiscoGUID)
-    SetH323ConfId(*sippy_header.SipH323ConfId)
     GetLSDP() MsgBody
     SetLSDP(MsgBody)
     GetRSDP() MsgBody

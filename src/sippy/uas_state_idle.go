@@ -64,7 +64,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     if req.GetCGUID() != nil {
         self.ua.SetCGUID(req.GetCGUID().GetCopy())
     } else if req.GetH323ConfId() != nil {
-        self.ua.SetH323ConfId(req.GetH323ConfId().GetCopy())
+        self.ua.SetCGUID(req.GetH323ConfId().AsCiscoGUID())
     } else {
         self.ua.SetCGUID(sippy_header.NewSipCiscoGUID())
     }

@@ -146,6 +146,7 @@ func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.Sip
         caller_name : caller_name,
         body        : body,
         routes      : []*sippy_header.SipRoute{},
+        cisco_guid  : cisco_guid,
     }, nil
 }
 

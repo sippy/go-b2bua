@@ -65,7 +65,6 @@ type Ua struct {
     lContact        *sippy_header.SipContact
     routes          []*sippy_header.SipRoute
     cGUID           *sippy_header.SipCiscoGUID
-    h323_conf_id    *sippy_header.SipH323ConfId
     lSDP            sippy_types.MsgBody
     rSDP            sippy_types.MsgBody
     outbound_proxy  *sippy_net.HostPort
@@ -1053,10 +1052,6 @@ func (self *Ua) GetConnCb() sippy_types.OnConnectListener {
 
 func (self *Ua) SetConnCb(conn_cb sippy_types.OnConnectListener) {
     self.conn_cb = conn_cb
-}
-
-func (self *Ua) SetH323ConfId(h323_conf_id *sippy_header.SipH323ConfId) {
-    self.h323_conf_id = h323_conf_id
 }
 
 func (self *Ua) SetAuth(auth sippy_header.SipHeader) {

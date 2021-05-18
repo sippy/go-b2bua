@@ -66,3 +66,10 @@ func (self *SipH323ConfId) String() string {
 func (self *SipH323ConfId) LocalStr(*sippy_net.HostPort, bool) string {
     return self.String()
 }
+
+func (self *SipH323ConfId) AsCiscoGUID() *SipCiscoGUID {
+    return &SipCiscoGUID{
+        normalName  : _sip_cisco_guid_name,
+        body : self.body,
+    }
+}
