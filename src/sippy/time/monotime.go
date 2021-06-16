@@ -43,6 +43,11 @@ import (
     "sippy/math"
 )
 
+const (
+    CLOCK_REALTIME = C.CLOCK_REALTIME
+    CLOCK_MONOTONIC = C.CLOCK_MONOTONIC
+)
+
 type MonoTime struct {
     monot time.Time
     realt time.Time
@@ -136,6 +141,15 @@ func newMonoTime() (self *MonoTime, err error) {
         monot : monot,
         realt : realt,
     }, nil
+}
+
+func ClockGettime(cid C.clockid_t) (time.Time, error) {
+    var ts C.timespec_struct
+
+    if res, _ := C.clock_gettime(cid, &ts); res != 0 {
+        return time.Unix(0, 0), errors.New("Cannot read clock")
+    }
+    return time.Unix(int64(ts.tv_sec), int64(ts.tv_nsec)), nil
 }
 
 func NewMonoTime() (self *MonoTime, err error) {

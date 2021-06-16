@@ -1,6 +1,4 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2020-2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,52 +22,16 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy_header
+package sippy_sshaken
 
 import (
-    "sippy/net"
+    "encoding/asn1"
+    "time"
 )
 
-type SipH323ConfId struct {
-    normalName
-    body    string
-}
-
-var _sip_h323_conf_id_name normalName = newNormalName("h323-conf-id")
-
-func CreateSipH323ConfId(body string) []SipHeader {
-    return []SipHeader{
-        &SipH323ConfId{
-            normalName  : _sip_h323_conf_id_name,
-            body        : body,
-        },
-    }
-}
-
-func (self *SipH323ConfId) GetCopy() *SipH323ConfId {
-    tmp := *self
-    return &tmp
-}
-
-func (self *SipH323ConfId) StringBody() string {
-    return self.body
-}
-
-func (self *SipH323ConfId) GetCopyAsIface() SipHeader {
-    return self.GetCopy()
-}
-
-func (self *SipH323ConfId) String() string {
-    return self.Name() + ": " + self.body
-}
-
-func (self *SipH323ConfId) LocalStr(*sippy_net.HostPort, bool) string {
-    return self.String()
-}
-
-func (self *SipH323ConfId) AsCiscoGUID() *SipCiscoGUID {
-    return &SipCiscoGUID{
-        normalName  : _sip_cisco_guid_name,
-        body : self.body,
-    }
-}
+const (
+    AUTH_DATE_FRESHNESS = 60 * time.Second
+    VERIFY_DATE_FRESHNESS = 60 * time.Second
+)
+var TNAUTHLIST_EXT asn1.ObjectIdentifier = asn1.ObjectIdentifier{ 1, 3, 6, 1, 5, 5, 7, 1, 26 }
+var EC_P256_PARAMS asn1.ObjectIdentifier = asn1.ObjectIdentifier{ 1, 2, 840, 10045, 3, 1, 7 } // RFC5480

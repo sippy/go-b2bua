@@ -131,11 +131,11 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         return NewUaStateConnected(self.ua, self.config), nil, nil
     case *CCEventDisconnect:
         self.ua.SendUasResponse(nil, 487, "Request Terminated", nil, nil, false, eh...)
-        req, err := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+        req, err := self.ua.GenRequest("BYE", nil, nil, eh...)
         if err != nil {
             return nil, nil, err
         }
-        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, nil)
         self.ua.CancelCreditTimer()
         self.ua.SetDisconnectTs(event.GetRtime())
         return NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(event.GetRtime(), event.GetOrigin(), 0, nil) }, nil
@@ -145,12 +145,12 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
 }
 
 func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
-    req, err := self.ua.GenRequest("BYE", nil, "", "", nil)
+    req, err := self.ua.GenRequest("BYE", nil, nil)
     if err != nil {
         self.config.ErrorLogger().Error("UasStateUpdating::Cancel: #1: " + err.Error())
         return
     }
-    self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+    self.ua.BeginNewClientTransaction(req, nil)
     self.ua.CancelCreditTimer()
     self.ua.SetDisconnectTs(rtime)
     self.ua.ChangeState(NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(rtime, self.ua.GetOrigin(), 0, inreq) })

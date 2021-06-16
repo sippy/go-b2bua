@@ -28,6 +28,7 @@ package sippy
 
 import (
     "net"
+    "sync"
 
     "sippy/conf"
     "sippy/net"
@@ -41,6 +42,7 @@ type local4remote struct {
     handleIncoming  sippy_net.DataPacketReceiver
     fixed           bool
     tfactory        sippy_net.SipTransportFactory
+    lock            sync.Mutex
 }
 
 func NewLocal4Remote(config sippy_conf.Config, handleIncoming sippy_net.DataPacketReceiver) (*local4remote, error) {
@@ -92,6 +94,9 @@ func NewLocal4Remote(config sippy_conf.Config, handleIncoming sippy_net.DataPack
 func (self *local4remote) getServer(address *sippy_net.HostPort, is_local bool /*= false*/) sippy_net.Transport {
     var laddress *sippy_net.HostPort
     var ok bool
+
+    self.lock.Lock()
+    defer self.lock.Unlock()
 
     if self.fixed {
         for _, server := range self.cache_l2s {
@@ -163,6 +168,9 @@ func (self *local4remote) getServer(address *sippy_net.HostPort, is_local bool /
 }
 
 func (self *local4remote) rotateCache() {
+    self.lock.Lock()
+    defer self.lock.Unlock()
+
     self.cache_r2l_old = self.cache_r2l
     self.cache_r2l = make(map[string]*sippy_net.HostPort)
 }

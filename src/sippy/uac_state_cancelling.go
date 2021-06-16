@@ -101,12 +101,12 @@ func (self *UacStateCancelling) RecvResponse(resp sippy_types.SipResponse, tr si
         }
         to_body, err = resp.GetTo().GetBody(self.config)
         rUri.SetTag(to_body.GetTag())
-        req, err = self.ua.GenRequest("BYE", nil, "", "", nil)
+        req, err = self.ua.GenRequest("BYE", nil, nil)
         if err != nil {
             self.config.ErrorLogger().Error("UacStateCancelling::RecvResponse: #2: " + err.Error())
             return nil, nil
         }
-        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), /*laddress*/ self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, nil)
         return NewUaStateDisconnected(self.ua, self.config), nil
     }
     return NewUaStateDead(self.ua, self.config), nil

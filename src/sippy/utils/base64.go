@@ -1,6 +1,4 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2020-2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,52 +22,20 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy_header
+package sippy_utils
 
 import (
-    "sippy/net"
+    "encoding/base64"
+    "strings"
 )
 
-type SipH323ConfId struct {
-    normalName
-    body    string
-}
-
-var _sip_h323_conf_id_name normalName = newNormalName("h323-conf-id")
-
-func CreateSipH323ConfId(body string) []SipHeader {
-    return []SipHeader{
-        &SipH323ConfId{
-            normalName  : _sip_h323_conf_id_name,
-            body        : body,
-        },
+func B64DecodeNoPad(s string) ([]byte, error) {
+    if l := len(s) % 4; l > 0 {
+        s += strings.Repeat("=", 4 - l)
     }
+    return base64.URLEncoding.DecodeString(s)
 }
 
-func (self *SipH323ConfId) GetCopy() *SipH323ConfId {
-    tmp := *self
-    return &tmp
-}
-
-func (self *SipH323ConfId) StringBody() string {
-    return self.body
-}
-
-func (self *SipH323ConfId) GetCopyAsIface() SipHeader {
-    return self.GetCopy()
-}
-
-func (self *SipH323ConfId) String() string {
-    return self.Name() + ": " + self.body
-}
-
-func (self *SipH323ConfId) LocalStr(*sippy_net.HostPort, bool) string {
-    return self.String()
-}
-
-func (self *SipH323ConfId) AsCiscoGUID() *SipCiscoGUID {
-    return &SipCiscoGUID{
-        normalName  : _sip_cisco_guid_name,
-        body : self.body,
-    }
+func B64EncodeNoPad(input []byte) string {
+    return strings.TrimRight(base64.URLEncoding.EncodeToString(input), "=")
 }

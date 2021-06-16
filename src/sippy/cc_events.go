@@ -116,40 +116,52 @@ func (self *CCEventGeneric) GetExtraHeaders() []sippy_header.SipHeader {
 type CCEventTry struct {
     CCEventGeneric
     call_id     *sippy_header.SipCallId
-    cisco_guid  *sippy_header.SipCiscoGUID
-    cli, cld, caller_name string
-    auth        *sippy_header.SipAuthorizationBody
+    cli         string
+    cld         string
+    caller_name string
+    auth_body   *sippy_header.SipAuthorizationBody
+    auth_hdr    sippy_header.SipAuthorizationHeader
     body        sippy_types.MsgBody
-    routes          []*sippy_header.SipRoute
+    routes      []*sippy_header.SipRoute
 }
 
-func NewCCEventTry(call_id *sippy_header.SipCallId, cisco_guid *sippy_header.SipCiscoGUID, cli string, cld string, body sippy_types.MsgBody, auth *sippy_header.SipAuthorizationBody, caller_name string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) *CCEventTry {
+func NewCCEventTry(call_id *sippy_header.SipCallId, cli string, cld string, body sippy_types.MsgBody, auth_hdr sippy_header.SipAuthorizationHeader, caller_name string, rtime *sippy_time.MonoTime, origin string, extra_headers ...sippy_header.SipHeader) (*CCEventTry, error) {
+    var err error
+    var auth_body *sippy_header.SipAuthorizationBody
+
+    if auth_hdr != nil {
+        auth_body, err = auth_hdr.GetBody()
+        if err != nil {
+            return nil, err
+        }
+    }
     return &CCEventTry{
         CCEventGeneric : newCCEventGeneric(rtime, origin, extra_headers...),
         call_id     : call_id,
         cli         : cli,
         cld         : cld,
-        auth        : auth,
+        auth_hdr    : auth_hdr,
+        auth_body   : auth_body,
         caller_name : caller_name,
         body        : body,
         routes      : []*sippy_header.SipRoute{},
-    }
+    }, nil
 }
 
 func (self *CCEventTry) GetBody() sippy_types.MsgBody {
     return self.body
 }
 
-func (self *CCEventTry) GetSipAuthorization() *sippy_header.SipAuthorizationBody {
-    return self.auth
+func (self *CCEventTry) GetSipAuthorizationHF() sippy_header.SipAuthorizationHeader {
+    return self.auth_hdr
+}
+
+func (self *CCEventTry) GetSipAuthorizationBody() *sippy_header.SipAuthorizationBody {
+    return self.auth_body
 }
 
 func (self *CCEventTry) GetSipCallId() *sippy_header.SipCallId {
     return self.call_id
-}
-
-func (self *CCEventTry) GetSipCiscoGUID() *sippy_header.SipCiscoGUID {
-    return self.cisco_guid
 }
 
 func (self *CCEventTry) GetCallerName() string {
@@ -277,7 +289,7 @@ func (*CCEventDisconnect) GetBody() sippy_types.MsgBody {
 
 type CCEventFail struct {
     CCEventGeneric
-    challenge       sippy_header.SipHeader
+    challenges      []sippy_header.SipHeader
     scode           int
     scode_reason    string
     warning         *sippy_header.SipWarning
@@ -299,14 +311,8 @@ func (self *CCEventFail) GetScodeReason() string { return self.scode_reason }
 func (self *CCEventFail) SetScodeReason(reason string) { self.scode_reason = reason }
 
 func (self *CCEventFail) GetExtraHeaders() []sippy_header.SipHeader {
-    if self.challenge == nil {
-        return self.CCEventGeneric.GetExtraHeaders()
-    }
     extra_headers := self.CCEventGeneric.GetExtraHeaders()
-    if extra_headers == nil {
-        return []sippy_header.SipHeader{ self.challenge }
-    }
-    extra_headers = append(extra_headers, self.challenge)
+    extra_headers = append(extra_headers, self.challenges...)
     return extra_headers
 }
 

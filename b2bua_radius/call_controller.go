@@ -73,7 +73,7 @@ class CallController(object):
     auth_proc = nil
     challenge = nil
 */
-func NewCallController(id int64, remote_ip *sippy_net.MyAddress, source *sippy_net.HostPort, global_config *myConfigParser, pass_headers []sippy_header.SipHeader, sip_tm sippy_types.SipTransactionManager) *callController {
+func NewCallController(id int64, remote_ip *sippy_net.MyAddress, source *sippy_net.HostPort, global_config *myConfigParser, pass_headers []sippy_header.SipHeader, sip_tm sippy_types.SipTransactionManager, cguid *sippy_header.SipCiscoGUID) *callController {
     self := &callController{
         id              : id,
         global_config   : global_config,
@@ -87,6 +87,7 @@ func NewCallController(id int64, remote_ip *sippy_net.MyAddress, source *sippy_n
         proxied         : false,
         sip_tm          : sip_tm,
         sdp_session     : sippy.NewSdpSession(),
+        cGUID           : cguid,
     }
     self.uaA = sippy.NewUA(sip_tm, global_config, nil, self, self.lock, nil)
     self.uaA.SetKaInterval(self.global_config.keepalive_ans)
@@ -108,7 +109,6 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 return
             }
             self.cId = ev_try.GetSipCallId()
-            self.cGUID = ev_try.GetSipCiscoGUID()
             self.cli = ev_try.GetCLI()
             self.cld = ev_try.GetCLD()
             //, body, auth, 
@@ -143,7 +143,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 if ev_try.GetBody() != nil {
                     ev_try.GetBody().AppendAHeader("nated:yes")
                 }
-                event = sippy.NewCCEventTry(self.cId, self.cGUID, self.cli, self.cld, ev_try.GetBody(), ev_try.GetSipAuthorization(), self.caller_name, nil, "")
+                event, _ = sippy.NewCCEventTry(self.cId, self.cli, self.cld, ev_try.GetBody(), ev_try.GetSipAuthorizationHF(), self.caller_name, nil, "")
             }
 /*
             if self.global_config.has_key('static_tr_in') {
@@ -319,7 +319,9 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     // oroute.user, oroute.passw, nh_address, oroute.credit_time,
     //  /*expire_time*/ oroute.expires, /*no_progress_time*/ oroute.no_progress_expires, /*extra_headers*/ oroute.extra_headers)
     //self.uaO.SetConnCbs([]sippy_types.OnConnectListener{ self.oConn })
-    self.uaO.SetExtraHeaders(oroute.extra_headers)
+    extra_headers := []sippy_header.SipHeader{ self.cGUID, self.cGUID.AsH323ConfId() }
+    extra_headers = append(extra_headers, oroute.extra_headers...)
+    self.uaO.SetExtraHeaders(extra_headers)
     self.uaO.SetDeadCb(self.oDead)
     self.uaO.SetLocalUA(sippy_header.NewSipUserAgent(self.global_config.GetMyUAName()))
     if oroute.outbound_proxy != nil && self.source.String() != oroute.outbound_proxy.String() {
@@ -349,7 +351,7 @@ func (self *callController) placeOriginate(oroute *B2BRoute) {
     if caller_name == "" {
         caller_name = self.caller_name
     }
-    event := sippy.NewCCEventTry(cId, self.eTry.GetSipCiscoGUID(), oroute.cli, cld, body, self.eTry.GetSipAuthorization(), caller_name, nil, "")
+    event, _ := sippy.NewCCEventTry(cId, oroute.cli, cld, body, self.eTry.GetSipAuthorizationHF(), caller_name, nil, "")
     //if self.eTry.max_forwards != nil {
     //    event.max_forwards = self.eTry.max_forwards - 1
     //    if event.max_forwards <= 0 {

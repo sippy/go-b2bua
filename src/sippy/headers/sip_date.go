@@ -1,6 +1,4 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,52 +22,73 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package sippy_header
 
 import (
+    "time"
+
     "sippy/net"
 )
 
-type SipH323ConfId struct {
+var _sip_date_name normalName = newNormalName("Date")
+
+type SipDate struct {
     normalName
-    body    string
+    str_body    string
+    ts          time.Time
+    parsed      bool
 }
 
-var _sip_h323_conf_id_name normalName = newNormalName("h323-conf-id")
-
-func CreateSipH323ConfId(body string) []SipHeader {
+func CreateSipDate(body string) []SipHeader {
     return []SipHeader{
-        &SipH323ConfId{
-            normalName  : _sip_h323_conf_id_name,
-            body        : body,
+        &SipDate{
+            normalName  : _sip_date_name,
+            str_body    : body,
+            parsed      : false,
         },
     }
 }
 
-func (self *SipH323ConfId) GetCopy() *SipH323ConfId {
+func NewSipDate(ts time.Time) *SipDate {
+    return &SipDate{
+        normalName  : _sip_date_name,
+        str_body    : ts.In(time.FixedZone("GMT", 0)).Format("Mon, 2 Jan 2006 15:04:05 MST"),
+        parsed      : true,
+        ts          : ts,
+    }
+}
+
+func (self *SipDate) GetCopy() *SipDate {
     tmp := *self
     return &tmp
 }
 
-func (self *SipH323ConfId) StringBody() string {
-    return self.body
-}
-
-func (self *SipH323ConfId) GetCopyAsIface() SipHeader {
+func (self *SipDate) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }
 
-func (self *SipH323ConfId) String() string {
-    return self.Name() + ": " + self.body
-}
-
-func (self *SipH323ConfId) LocalStr(*sippy_net.HostPort, bool) string {
+func (self *SipDate) LocalStr(hostport *sippy_net.HostPort, compact bool) string {
     return self.String()
 }
 
-func (self *SipH323ConfId) AsCiscoGUID() *SipCiscoGUID {
-    return &SipCiscoGUID{
-        normalName  : _sip_cisco_guid_name,
-        body : self.body,
+func (self *SipDate) String() string {
+    return self.Name() + ": " + self.str_body
+}
+
+func (self *SipDate) StringBody() string {
+    return self.str_body
+}
+
+func (self *SipDate) GetTime() (time.Time, error) {
+    var err error
+
+    if self.parsed {
+        return self.ts, nil
     }
+    self.ts, err = time.Parse("Mon, 2 Jan 2006 15:04:05 MST", self.str_body)
+    if err == nil {
+        self.parsed = true
+    }
+    return self.ts, err
 }

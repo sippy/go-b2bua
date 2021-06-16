@@ -86,8 +86,7 @@ func NewSipURL(username string, host *sippy_net.MyAddress, port *sippy_net.MyPor
     return self
 }
 
-func ParseSipURL(url string, relaxedparser bool, config sippy_conf.Config) (*SipURL, error) {
-
+func ParseURL(url string, relaxedparser bool) (*SipURL, error) {
     parts := strings.SplitN(url, ":", 2)
     if len(parts) != 2 {
         return nil, errors.New("scheme is not present")
@@ -99,23 +98,38 @@ func ParseSipURL(url string, relaxedparser bool, config sippy_conf.Config) (*Sip
     case "sips":
         return self, self.parseSipURL(parts[1], relaxedparser)
     case "tel":
-        if config.AutoConvertTelUrl() {
-            self.convertTelUrl(parts[1], relaxedparser, config)
-            return self, nil
-        }
+        self.parseTelUrl(parts[1])
+        return self, nil
     }
     return nil, errors.New("unsupported scheme: " + self.scheme + ":")
 }
 
-func (self *SipURL) convertTelUrl(url string, relaxedparser bool, config sippy_conf.Config) {
-    self.scheme = "sip"
+func ParseSipURL(url string, relaxedparser bool, config sippy_conf.Config) (*SipURL, error) {
+    self, err := ParseURL(url, relaxedparser)
+    if err != nil {
+        return nil, err
+    }
+    if self.scheme == "tel" {
+        if config.AutoConvertTelUrl() {
+            self.convertTelUrl(relaxedparser, config)
+        } else {
+            return nil, errors.New("unsupported scheme: " + self.scheme + ":")
+        }
+    }
+    return self, nil
+}
 
+func (self *SipURL) convertTelUrl(relaxedparser bool, config sippy_conf.Config) {
+    self.scheme = "sip"
     if relaxedparser {
         self.Host = sippy_net.NewMyAddress("")
     } else {
         self.Host = config.GetMyAddress()
         self.Port = config.DefaultPort()
     }
+}
+
+func (self *SipURL) parseTelUrl(url string) {
     parts := strings.Split(url, ";")
     self.Username, _ = user_enc.Unescape(parts[0])
     if len(parts) > 1 {
@@ -188,10 +202,8 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
     } else {
         // IPv4 host
         hpparts := strings.SplitN(hostport, ":", 2)
-        if len(hpparts) == 1 {
-            self.Host = sippy_net.NewMyAddress(hpparts[0])
-        } else {
-            self.Host = sippy_net.NewMyAddress(hpparts[0])
+        self.Host = sippy_net.NewMyAddress(hpparts[0])
+        if len(hpparts) == 2 {
             parseport = &hpparts[1]
         }
     }

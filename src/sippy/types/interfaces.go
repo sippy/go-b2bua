@@ -78,7 +78,6 @@ type SipMsg interface {
     GetRecordRoutes() []*sippy_header.SipRecordRoute
     GetCGUID() *sippy_header.SipCiscoGUID
     GetH323ConfId() *sippy_header.SipH323ConfId
-    GetSipAuthorization() *sippy_header.SipAuthorization
     GetSource() *sippy_net.HostPort
     GetFirstHF(string) sippy_header.SipHeader
     GetHFs(string) []sippy_header.SipHeader
@@ -88,11 +87,14 @@ type SipMsg interface {
     GetRTId() (*sippy_header.RTID, error)
     GetSipRequire() []*sippy_header.SipRequire
     GetSipSupported() []*sippy_header.SipSupported
+    GetSipDate() *sippy_header.SipDate
 }
 
 type SipRequest interface {
     SipMsg
     GetSipProxyAuthorization() *sippy_header.SipProxyAuthorization
+    GetSipAuthorization() *sippy_header.SipAuthorization
+    GetSipAuthorizationHF() sippy_header.SipAuthorizationHeader
     GenResponse(int, string, MsgBody, *sippy_header.SipServer) SipResponse
     GetMethod() string
     GetExpires() *sippy_header.SipExpires
@@ -110,8 +112,9 @@ type SipResponse interface {
     SetSCode(int, string)
     GetSCodeNum() int
     GetSCodeReason() string
-    GetSipWWWAuthenticate() *sippy_header.SipWWWAuthenticate
-    GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate
+    GetSipWWWAuthenticates() []*sippy_header.SipWWWAuthenticate
+    GetSipProxyAuthenticates() []*sippy_header.SipProxyAuthenticate
+    GetChallenges() []Challenge
     SetSCodeReason(string)
     GetCopy() SipResponse
 }
@@ -148,7 +151,6 @@ type UA interface {
     GetSessionLock() sync.Locker
     RecvEvent(CCEvent)
     RecvACK(SipRequest)
-    SipTM() SipTransactionManager
     GetSetupTs() *sippy_time.MonoTime
     SetSetupTs(*sippy_time.MonoTime)
     GetDisconnectTs() *sippy_time.MonoTime
@@ -184,14 +186,11 @@ type UA interface {
     GetLContact() *sippy_header.SipContact
     GetLContacts() []*sippy_header.SipContact
     SetRoutes([]*sippy_header.SipRoute)
-    GetCGUID() *sippy_header.SipCiscoGUID
-    SetCGUID(*sippy_header.SipCiscoGUID)
-    SetH323ConfId(*sippy_header.SipH323ConfId)
     GetLSDP() MsgBody
     SetLSDP(MsgBody)
     GetRSDP() MsgBody
     SetRSDP(MsgBody)
-    GenRequest(method string, body MsgBody, nonce string, realm string, SipXXXAuthorization sippy_header.NewSipXXXAuthorizationFunc, extra_headers ...sippy_header.SipHeader) (SipRequest, error)
+    GenRequest(method string, body MsgBody, challenge Challenge, extra_headers ...sippy_header.SipHeader) (SipRequest, error)
     GetSourceAddress() *sippy_net.HostPort
     SetSourceAddress(*sippy_net.HostPort)
     GetClientTransaction() ClientTransaction
@@ -288,6 +287,11 @@ type UA interface {
     OnEarlyUasDisconnect(CCEvent) (int, string)
     SetExpireStartsOnSetup(bool)
     PrRel() bool
+    PassAuth() bool
+    // proxy methods for SipTransactionManager
+    BeginNewClientTransaction(SipRequest, ResponseReceiver)
+    BeginClientTransaction(SipRequest, ClientTransaction)
+    RegConsumer(UA, string)
 }
 
 type baseTransaction interface {
@@ -400,4 +404,10 @@ type RtpProxyClient interface {
 
 type RtpProxyUpdateResult interface {
     Address() string
+}
+
+type Challenge interface {
+    GenAuthHF(username, password, method, uri string) (sippy_header.SipHeader, error)
+    Algorithm() (string, error)
+    SupportedAlgorithm() (bool, error)
 }

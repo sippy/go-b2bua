@@ -172,7 +172,14 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
         id := self.cc_id
         self.cc_id++
         self.cc_id_lock.Unlock()
-        cc := NewCallController(id, remote_ip, source, self.global_config, pass_headers, self.sip_tm)
+        cguid := req.GetCGUID()
+        if cguid == nil && req.GetH323ConfId() != nil {
+            cguid = req.GetH323ConfId().AsCiscoGUID()
+        }
+        if cguid == nil {
+            cguid = sippy_header.NewSipCiscoGUID()
+        }
+        cc := NewCallController(id, remote_ip, source, self.global_config, pass_headers, self.sip_tm, cguid)
         //cc.challenge = challenge
         //rval := cc.uaA.RecvRequest(req, sip_t)
         self.ccmap_lock.Lock()
@@ -200,7 +207,13 @@ func (self *callMap) discAll(signum syscall.Signal) {
     if signum > 0 {
         println(fmt.Sprintf("Signal %d received, disconnecting all calls", signum))
     }
+    alist := []*callController{}
+    self.ccmap_lock.Lock()
     for _, cc := range self.ccmap {
+        alist = append(alist, cc)
+    }
+    self.ccmap_lock.Unlock()
+    for _, cc := range alist {
         cc.disconnect(nil)
     }
 }

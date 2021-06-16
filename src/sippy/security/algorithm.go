@@ -1,6 +1,4 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2020-2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,52 +22,40 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy_header
+package sippy_security
 
 import (
-    "sippy/net"
+    "hash"
+    "crypto/md5"
+    "crypto/sha256"
+    "crypto/sha512"
 )
 
-type SipH323ConfId struct {
-    normalName
-    body    string
+type Algorithm struct {
+    NewHash     func() hash.Hash
+    Mask        int64
+}
+const (
+    DGST_MD5        = int64(1 << 0)
+    DGST_MD5SESS    = int64(1 << 1)
+    DGST_SHA256     = int64(1 << 2)
+    DGST_SHA256SESS = int64(1 << 3)
+    DGST_SHA512     = int64(1 << 4)
+    DGST_SHA512SESS = int64(1 << 5)
+
+    NUM_OF_DGSTS    = 6
+)
+
+var algorithms = map[string]*Algorithm{
+    ""                  : &Algorithm{ md5.New, DGST_MD5 },
+    "MD5"               : &Algorithm{ md5.New, DGST_MD5 },
+    "MD5-sess"          : &Algorithm{ md5.New, DGST_MD5SESS },
+    "SHA-256"           : &Algorithm{ sha256.New, DGST_SHA256 },
+    "SHA-256-sess"      : &Algorithm{ sha256.New, DGST_SHA256SESS },
+    "SHA-512-256"       : &Algorithm{ sha512.New512_256, DGST_SHA512 },
+    "SHA-512-256-sess"  : &Algorithm{ sha512.New512_256, DGST_SHA512SESS },
 }
 
-var _sip_h323_conf_id_name normalName = newNormalName("h323-conf-id")
-
-func CreateSipH323ConfId(body string) []SipHeader {
-    return []SipHeader{
-        &SipH323ConfId{
-            normalName  : _sip_h323_conf_id_name,
-            body        : body,
-        },
-    }
-}
-
-func (self *SipH323ConfId) GetCopy() *SipH323ConfId {
-    tmp := *self
-    return &tmp
-}
-
-func (self *SipH323ConfId) StringBody() string {
-    return self.body
-}
-
-func (self *SipH323ConfId) GetCopyAsIface() SipHeader {
-    return self.GetCopy()
-}
-
-func (self *SipH323ConfId) String() string {
-    return self.Name() + ": " + self.body
-}
-
-func (self *SipH323ConfId) LocalStr(*sippy_net.HostPort, bool) string {
-    return self.String()
-}
-
-func (self *SipH323ConfId) AsCiscoGUID() *SipCiscoGUID {
-    return &SipCiscoGUID{
-        normalName  : _sip_cisco_guid_name,
-        body : self.body,
-    }
+func GetAlgorithm(alg_name string) *Algorithm {
+    return algorithms[alg_name]
 }

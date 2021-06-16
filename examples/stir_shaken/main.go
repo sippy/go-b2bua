@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -36,15 +36,12 @@ import (
     "runtime"
     "strings"
     "strconv"
-    "sync"
     "syscall"
     "time"
 
     "sippy"
-    "sippy/conf"
     "sippy/log"
     "sippy/net"
-    "sippy/types"
 )
 
 var next_cc_id chan int64
@@ -60,77 +57,6 @@ func init() {
     }()
 }
 
-type callMap struct {
-    config *myconfig
-    logger          sippy_log.ErrorLogger
-    sip_tm          sippy_types.SipTransactionManager
-    proxy           sippy_types.StatefulProxy
-    ccmap           map[int64]*callController
-    ccmap_lock      sync.Mutex
-}
-
-func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) *callMap {
-    return &callMap{
-        logger          : logger,
-        config          : config,
-        ccmap           : make(map[int64]*callController),
-    }
-}
-
-func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
-    to_body, err := req.GetTo().GetBody(self.config)
-    if err != nil {
-        self.logger.Error("CallMap::OnNewDialog: #1: " + err.Error())
-        return nil, nil, req.GenResponse(500, "Internal Server Error", nil, nil)
-    }
-    if to_body.GetTag() != "" {
-        // Request within dialog, but no such dialog
-        return nil, nil, req.GenResponse(481, "Call Leg/Transaction Does Not Exist", nil, nil)
-    }
-    if req.GetMethod() == "INVITE" {
-        // New dialog
-        cc := NewCallController(self)
-        self.ccmap_lock.Lock()
-        self.ccmap[cc.id] = cc
-        self.ccmap_lock.Unlock()
-        return cc.uaA, cc.uaA, nil
-    }
-    if req.GetMethod() == "REGISTER" {
-        // Registration
-        return nil, self.proxy, nil
-    }
-    if req.GetMethod() == "NOTIFY" || req.GetMethod() == "PING" {
-        // Whynot?
-        return nil, nil, req.GenResponse(200, "OK", nil, nil)
-    }
-    return nil, nil, req.GenResponse(501, "Not Implemented", nil, nil)
-}
-
-func (self *callMap) Remove(ccid int64) {
-    self.ccmap_lock.Lock()
-    defer self.ccmap_lock.Unlock()
-    delete(self.ccmap, ccid)
-}
-
-func (self *callMap) Shutdown() {
-    acalls := []*callController{}
-    self.ccmap_lock.Lock()
-    for _, cc := range self.ccmap {
-        //println(cc.String())
-        acalls = append(acalls, cc)
-    }
-    self.ccmap_lock.Unlock()
-    for _, cc := range acalls {
-        cc.Shutdown()
-    }
-}
-
-type myconfig struct {
-    sippy_conf.Config
-
-    nh_addr *sippy_net.HostPort
-}
-
 func main() {
     runtime.GOMAXPROCS(runtime.NumCPU())
     buf := make([]byte, 8)
@@ -142,14 +68,20 @@ func main() {
     mrand.Seed(salt)
 
     var laddr, nh_addr, logfile string
+    var crt_roots_file string
     var lport int
-    var foreground bool
+    var attest, origid, x5u, crt_file, pkey_file string
 
     flag.StringVar(&laddr, "l", "", "Local addr")
-    flag.IntVar(&lport, "p", -1, "Local port")
-    flag.StringVar(&nh_addr, "n", "", "Next hop address")
-    flag.BoolVar(&foreground, "f", false, "Run in foreground")
+    flag.IntVar(&lport, "p", 5060, "Local port")
+    flag.StringVar(&nh_addr, "n", "192.168.0.102:5060", "Next hop address")
     flag.StringVar(&logfile, "L", "/var/log/sip.log", "Log file")
+    flag.StringVar(&crt_roots_file, "r", "", "Root certificate chain file")
+    flag.StringVar(&attest, "a", "", "STIR/SHAKEN attest")
+    flag.StringVar(&origid, "o", "", "STIR/SHAKEN origid")
+    flag.StringVar(&crt_file, "c", "", "Certificate file")
+    flag.StringVar(&pkey_file, "k", "", "Private key file")
+    flag.StringVar(&x5u, "x", "", "STIR/SHAKEN x5u")
     flag.Parse()
 
     error_logger := sippy_log.NewErrorLogger()
@@ -158,11 +90,19 @@ func main() {
         error_logger.Error(err)
         return
     }
-    config := &myconfig{
-        Config : sippy_conf.NewConfig(error_logger, sip_logger),
-        nh_addr      : sippy_net.NewHostPort("192.168.0.102", "5060"), // next hop address
+    if crt_roots_file == "" || origid == "" || x5u == "" || crt_file == "" || pkey_file == "" {
+        flag.Usage()
+        return
     }
+    config := NewMyConfig(error_logger, sip_logger)
     //config.SetIPV6Enabled(false)
+    config.attest = attest
+    config.origid = origid
+    config.x5u = x5u
+    config.crt_file = crt_file
+    config.pkey_file = pkey_file
+    config.crt_roots_file = crt_roots_file
+
     if nh_addr != "" {
         var parts []string
         var addr string
@@ -193,7 +133,11 @@ func main() {
         config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     }
     config.SetSipPort(config.GetMyPort())
-    cmap := NewCallMap(config, error_logger)
+    cmap, err := NewCallMap(config, error_logger)
+    if err != nil {
+        error_logger.Error(err)
+        return
+    }
     sip_tm, err := sippy.NewSipTransactionManager(config, cmap)
     if err != nil {
         error_logger.Error(err)

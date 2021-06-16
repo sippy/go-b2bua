@@ -54,7 +54,6 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     var to_body *sippy_header.SipAddress
     var from_body *sippy_header.SipAddress
     var via0 *sippy_header.SipViaBody
-    var auth *sippy_header.SipAuthorizationBody
 
     if req.GetMethod() != "INVITE" {
         //print "wrong request %s in the Trying state" % req.getMethod()
@@ -62,13 +61,6 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     }
     self.ua.SetOrigin("caller")
     //print "INVITE received in the Idle state, going to the Trying state"
-    if req.GetCGUID() != nil {
-        self.ua.SetCGUID(req.GetCGUID().GetCopy())
-    } else if req.GetH323ConfId() != nil {
-        self.ua.SetH323ConfId(req.GetH323ConfId().GetCopy())
-    } else {
-        self.ua.SetCGUID(sippy_header.NewSipCiscoGUID())
-    }
     self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
     self.ua.SetLCSeq(100) // XXX: 100 for debugging so that incorrect CSeq generation will be easily spotted
     if self.ua.GetLContact() == nil {
@@ -97,15 +89,8 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetLUri(sippy_header.NewSipFrom(to_body, self.config))
     self.ua.SetRUri(sippy_header.NewSipTo(from_body, self.config))
     self.ua.SetCallId(self.ua.GetUasResp().GetCallId())
-    self.ua.SipTM().RegConsumer(self.ua, self.ua.GetCallId().CallId)
-    if auth_hf := req.GetSipAuthorization(); auth_hf != nil {
-        auth, err = auth_hf.GetBody()
-        if err != nil {
-            self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #5: " + err.Error())
-            return nil, nil
-        }
-        auth = auth.GetCopy()
-    }
+    self.ua.RegConsumer(self.ua, self.ua.GetCallId().CallId)
+    auth_hf := req.GetSipAuthorizationHF()
     body := req.GetBody()
     via0, err = req.GetVias()[0].GetBody()
     if err != nil {
@@ -113,8 +98,12 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
         return nil, nil
     }
     self.ua.SetBranch(via0.GetBranch())
-    event := NewCCEventTry(self.ua.GetCallId(), self.ua.GetCGUID(), from_body.GetUrl().Username,
-        req.GetRURI().Username, body, auth, from_body.GetName(), req.GetRtime(), self.ua.GetOrigin())
+    event, err := NewCCEventTry(self.ua.GetCallId(), from_body.GetUrl().Username,
+        req.GetRURI().Username, body, auth_hf, from_body.GetName(), req.GetRtime(), self.ua.GetOrigin())
+    if err != nil {
+        self.config.ErrorLogger().Error("UasStateIdle::RecvRequest: #5: " + err.Error())
+        return nil, nil
+    }
     event.SetReason(req.GetReason())
     event.SetMaxForwards(req.GetMaxForwards())
     if self.ua.GetExpireTime() > 0 {

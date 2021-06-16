@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -28,37 +28,11 @@
 package main
 
 import (
-    crand "crypto/rand"
-    mrand "math/rand"
-    "flag"
-    "os"
-    "os/signal"
-    "runtime"
-    "strings"
-    "strconv"
     "sync"
-    "syscall"
-    "time"
 
-    "sippy"
-    "sippy/conf"
     "sippy/log"
-    "sippy/net"
     "sippy/types"
 )
-
-var next_cc_id chan int64
-
-func init() {
-    next_cc_id = make(chan int64)
-    go func() {
-        var id int64 = 1
-        for {
-            next_cc_id <- id
-            id++
-        }
-    }()
-}
 
 type callMap struct {
     config *myconfig
@@ -67,14 +41,22 @@ type callMap struct {
     proxy           sippy_types.StatefulProxy
     ccmap           map[int64]*callController
     ccmap_lock      sync.Mutex
+    sshaken         *StirShaken
 }
 
-func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) *callMap {
-    return &callMap{
+func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) (*callMap, error) {
+    var err error
+
+    ret := &callMap{
         logger          : logger,
         config          : config,
         ccmap           : make(map[int64]*callController),
     }
+    ret.sshaken, err = NewStirShaken(config)
+    if err != nil {
+        return nil, err
+    }
+    return ret, nil
 }
 
 func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
@@ -89,7 +71,9 @@ func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.Serv
     }
     if req.GetMethod() == "INVITE" {
         // New dialog
-        cc := NewCallController(self)
+        identity_hf := req.GetFirstHF("identity")
+        date_hf := req.GetSipDate()
+        cc := NewCallController(self, identity_hf, date_hf)
         self.ccmap_lock.Lock()
         self.ccmap[cc.id] = cc
         self.ccmap_lock.Unlock()
@@ -116,101 +100,11 @@ func (self *callMap) Shutdown() {
     acalls := []*callController{}
     self.ccmap_lock.Lock()
     for _, cc := range self.ccmap {
-        //println(cc.String())
         acalls = append(acalls, cc)
     }
     self.ccmap_lock.Unlock()
     for _, cc := range acalls {
+        //println(cc.String())
         cc.Shutdown()
-    }
-}
-
-type myconfig struct {
-    sippy_conf.Config
-
-    nh_addr *sippy_net.HostPort
-}
-
-func main() {
-    runtime.GOMAXPROCS(runtime.NumCPU())
-    buf := make([]byte, 8)
-    crand.Read(buf)
-    var salt int64
-    for _, c := range buf {
-        salt = (salt << 8) | int64(c)
-    }
-    mrand.Seed(salt)
-
-    var laddr, nh_addr, logfile string
-    var lport int
-    var foreground bool
-
-    flag.StringVar(&laddr, "l", "", "Local addr")
-    flag.IntVar(&lport, "p", -1, "Local port")
-    flag.StringVar(&nh_addr, "n", "", "Next hop address")
-    flag.BoolVar(&foreground, "f", false, "Run in foreground")
-    flag.StringVar(&logfile, "L", "/var/log/sip.log", "Log file")
-    flag.Parse()
-
-    error_logger := sippy_log.NewErrorLogger()
-    sip_logger, err := sippy_log.NewSipLogger("b2bua", logfile)
-    if err != nil {
-        error_logger.Error(err)
-        return
-    }
-    config := &myconfig{
-        Config : sippy_conf.NewConfig(error_logger, sip_logger),
-        nh_addr      : sippy_net.NewHostPort("192.168.0.102", "5060"), // next hop address
-    }
-    //config.SetIPV6Enabled(false)
-    if nh_addr != "" {
-        var parts []string
-        var addr string
-
-        if strings.HasPrefix(nh_addr, "[") {
-            parts = strings.SplitN(nh_addr, "]", 2)
-            addr = parts[0] + "]"
-            if len(parts) == 2 {
-                parts = strings.SplitN(parts[1], ":", 2)
-            }
-        } else {
-            parts = strings.SplitN(nh_addr, ":", 2)
-            addr = parts[0]
-        }
-        port := "5060"
-        if len(parts) == 2 {
-            port = parts[1]
-        }
-        config.nh_addr = sippy_net.NewHostPort(addr, port)
-    }
-    config.SetMyUAName("Sippy B2BUA (Simple)")
-    config.SetAllowFormats([]int{ 0, 8, 18, 100, 101 })
-    if laddr != "" {
-        config.SetMyAddress(sippy_net.NewMyAddress(laddr))
-    }
-    config.SetSipAddress(config.GetMyAddress())
-    if lport > 0 {
-        config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
-    }
-    config.SetSipPort(config.GetMyPort())
-    cmap := NewCallMap(config, error_logger)
-    sip_tm, err := sippy.NewSipTransactionManager(config, cmap)
-    if err != nil {
-        error_logger.Error(err)
-        return
-    }
-    cmap.sip_tm = sip_tm
-    cmap.proxy = sippy.NewStatefulProxy(sip_tm, config.nh_addr, config)
-    go sip_tm.Run()
-
-    signal_chan := make(chan os.Signal, 1)
-    signal.Notify(signal_chan, syscall.SIGTERM, syscall.SIGINT)
-    signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE, syscall.SIGUSR1, syscall.SIGUSR2)
-    select {
-    case <-signal_chan:
-        cmap.Shutdown()
-        sip_tm.Shutdown()
-        time.Sleep(time.Second)
-        break
     }
 }

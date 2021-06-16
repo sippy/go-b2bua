@@ -65,16 +65,17 @@ type sipMsg struct {
     target              *sippy_net.HostPort
     reason_hf           *sippy_header.SipReason
     sip_warning         *sippy_header.SipWarning
-    sip_www_authenticate *sippy_header.SipWWWAuthenticate
+    sip_www_authenticates []*sippy_header.SipWWWAuthenticate
     sip_authorization   *sippy_header.SipAuthorization
     sip_proxy_authorization *sippy_header.SipProxyAuthorization
-    sip_proxy_authenticate *sippy_header.SipProxyAuthenticate
+    sip_proxy_authenticates []*sippy_header.SipProxyAuthenticate
     sip_server          *sippy_header.SipServer
     sip_user_agent      *sippy_header.SipUserAgent
     sip_cisco_guid      *sippy_header.SipCiscoGUID
     sip_h323_conf_id    *sippy_header.SipH323ConfId
     sip_require         []*sippy_header.SipRequire
     sip_supported       []*sippy_header.SipSupported
+    sip_date            *sippy_header.SipDate
     config              sippy_conf.Config
 }
 
@@ -186,6 +187,7 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.to = t
     case *sippy_header.SipMaxForwards:
         self.maxforwards = t
+        return
     case *sippy_header.SipVia:
         self.vias = append(self.vias, t)
         return
@@ -204,9 +206,11 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     case *sippy_header.SipContact:
         self.contacts = append(self.contacts, t)
     case *sippy_header.SipWWWAuthenticate:
-        self.sip_www_authenticate = t
+        self.sip_www_authenticates = append(self.sip_www_authenticates, t)
     case *sippy_header.SipAuthorization:
         self.sip_authorization = t
+        self.sip_proxy_authorization = nil
+        return
     case *sippy_header.SipServer:
         self.sip_server = t
     case *sippy_header.SipUserAgent:
@@ -222,9 +226,11 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     case *sippy_header.SipCCDiversion:
     case *sippy_header.SipReferredBy:
     case *sippy_header.SipProxyAuthenticate:
-        self.sip_proxy_authenticate = t
+        self.sip_proxy_authenticates = append(self.sip_proxy_authenticates, t)
     case *sippy_header.SipProxyAuthorization:
         self.sip_proxy_authorization = t
+        self.sip_authorization = nil
+        return
     case *sippy_header.SipReplaces:
     case *sippy_header.SipReason:
         self.reason_hf  = t
@@ -234,6 +240,8 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
         self.sip_require = append(self.sip_require, t)
     case *sippy_header.SipSupported:
         self.sip_supported = append(self.sip_supported, t)
+    case *sippy_header.SipDate:
+        self.sip_date = t
     case nil:
         return
     }
@@ -307,6 +315,9 @@ func (self *sipMsg) Bytes() []byte {
     for _, via := range self.routes {
         s += via.String() + "\r\n"
     }
+    if self.maxforwards != nil {
+        s += self.maxforwards.String() + "\r\n"
+    }
     for _, header := range self.headers {
         s += header.String() + "\r\n"
     }
@@ -331,8 +342,16 @@ func (self *sipMsg) localStr(hostport *sippy_net.HostPort, compact bool /*= Fals
     for _, via := range self.routes {
         s += via.LocalStr(hostport, compact) + "\r\n"
     }
+    if self.maxforwards != nil {
+        s += self.maxforwards.LocalStr(hostport, compact) + "\r\n"
+    }
     for _, header := range self.headers {
         s += header.LocalStr(hostport, compact) + "\r\n"
+    }
+    if self.sip_authorization != nil {
+        s += self.sip_authorization.LocalStr(hostport, compact) + "\r\n"
+    } else if self.sip_proxy_authorization != nil {
+        s += self.sip_proxy_authorization.LocalStr(hostport, compact) + "\r\n"
     }
     if self.body != nil {
         mbody := self.body.LocalStr(hostport)
@@ -502,12 +521,12 @@ func (self *sipMsg) GetSipRAck() *sippy_header.SipRAck {
     return self.rack
 }
 
-func (self *sipMsg) GetSipProxyAuthenticate() *sippy_header.SipProxyAuthenticate {
-    return self.sip_proxy_authenticate
+func (self *sipMsg) GetSipProxyAuthenticates() []*sippy_header.SipProxyAuthenticate {
+    return self.sip_proxy_authenticates
 }
 
-func (self *sipMsg) GetSipWWWAuthenticate() *sippy_header.SipWWWAuthenticate {
-    return self.sip_www_authenticate
+func (self *sipMsg) GetSipWWWAuthenticates() []*sippy_header.SipWWWAuthenticate {
+    return self.sip_www_authenticates
 }
 
 func (self *sipMsg) GetTo() *sippy_header.SipTo {
@@ -644,4 +663,8 @@ func (self *sipMsg) GetSipRequire() []*sippy_header.SipRequire {
 
 func (self *sipMsg) GetSipSupported() []*sippy_header.SipSupported {
     return self.sip_supported
+}
+
+func (self *sipMsg) GetSipDate() *sippy_header.SipDate {
+    return self.sip_date
 }
