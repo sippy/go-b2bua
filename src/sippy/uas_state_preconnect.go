@@ -131,6 +131,7 @@ func (self *UasStatePreConnect) RecvACK(req sippy_types.SipRequest) {
         body := req.GetBody()
         event = NewCCEventConnect(0, "ACK", body, rtime, origin)
         self.ua.CancelExpireTimer()
+        self.ua.CancelCreditTimer() // prevent timer leak
         self.ua.StartCreditTimer(rtime)
         self.ua.SetConnectTs(rtime)
         self.ua.ConnCb(rtime, origin)

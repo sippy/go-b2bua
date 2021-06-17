@@ -248,6 +248,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
             return nil, nil, nil
         }
+        self.ua.CancelCreditTimer() // prevent timer leak
         self.ua.StartCreditTimer(event.GetRtime())
         self.ua.SetConnectTs(event.GetRtime())
         self.ua.SetLSDP(body)
