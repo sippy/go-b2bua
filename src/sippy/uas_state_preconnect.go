@@ -70,7 +70,7 @@ func (self *UasStatePreConnect) try_other_events(event sippy_types.CCEvent) (sip
     if redirect != nil && self.ua.ShouldUseRefer() {
         var lUri *sippy_header.SipAddress
 
-        req, err := self.ua.GenRequest("REFER", nil, "", "", nil, eh...)
+        req, err := self.ua.GenRequest("REFER", nil, nil, eh...)
         if err != nil {
             return nil, nil, err
         }
@@ -82,9 +82,9 @@ func (self *UasStatePreConnect) try_other_events(event sippy_types.CCEvent) (sip
         }
         rby := sippy_header.NewSipReferredBy(sippy_header.NewSipAddress("", lUri.GetUrl()))
         req.AppendHeader(rby)
-        self.ua.SipTM().BeginNewClientTransaction(req, newRedirectController(self.ua), self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, newRedirectController(self.ua))
     } else {
-        req, err := self.ua.GenRequest("BYE", nil, "", "", nil, eh...)
+        req, err := self.ua.GenRequest("BYE", nil, nil, eh...)
         if err != nil {
             return nil, nil, err
         }
@@ -92,7 +92,7 @@ func (self *UasStatePreConnect) try_other_events(event sippy_types.CCEvent) (sip
             also := sippy_header.NewSipAlso(redirect)
             req.AppendHeader(also)
         }
-        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, nil)
     }
     self.ua.CancelCreditTimer()
     self.ua.SetDisconnectTs(event.GetRtime())
@@ -106,12 +106,12 @@ func (self *UasStatePreConnect) RecvEvent(event sippy_types.CCEvent) (sippy_type
         return nil, nil, nil
     case *CCEventInfo:
         body := ev.GetBody()
-        req, err := self.ua.GenRequest("INFO", nil, "", "", nil, event.GetExtraHeaders()...)
+        req, err := self.ua.GenRequest("INFO", nil, nil, event.GetExtraHeaders()...)
         if err != nil {
             return nil, nil, err
         }
         req.SetBody(body)
-        self.ua.SipTM().BeginNewClientTransaction(req, nil, self.ua.GetSessionLock(), self.ua.GetSourceAddress(), nil, self.ua.BeforeRequestSent)
+        self.ua.BeginNewClientTransaction(req, nil)
         return nil, nil, nil
     default:
         return self.try_other_events(event)
