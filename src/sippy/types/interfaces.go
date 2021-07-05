@@ -292,6 +292,8 @@ type UA interface {
     BeginNewClientTransaction(SipRequest, ResponseReceiver)
     BeginClientTransaction(SipRequest, ClientTransaction)
     RegConsumer(UA, string)
+    GetDlgHeaders() []sippy_header.SipHeader
+    SetDlgHeaders([]sippy_header.SipHeader)
 }
 
 type baseTransaction interface {
@@ -314,6 +316,7 @@ type ClientTransaction interface {
     TransmitData()
     SetOnSendComplete(func())
     CheckRSeq(*sippy_header.SipRSeq) bool
+    SetDlgHeaders([]sippy_header.SipHeader)
 }
 
 type ServerTransaction interface {

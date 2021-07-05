@@ -55,6 +55,7 @@ type clientTransaction struct {
     ack_rparams_present bool
     ack_rTarget     *sippy_header.SipURL
     ack_routes      []*sippy_header.SipRoute
+    dlg_headers     []sippy_header.SipHeader
     on_send_complete func()
     seen_rseqs      map[sippy_header.RTID]bool
     last_rseq       int
@@ -313,6 +314,9 @@ func (self *clientTransaction) process_final_response(checksum string, resp sipp
             } else {
                 rAddr, rTarget, routes = self.ack_rAddr, self.ack_rTarget, self.ack_routes
             }
+            for _, h := range self.dlg_headers {
+                self.ack.AppendHeader(h)
+            }
             self.ack.SetRoutes(routes)
         }
         if code >= 200 && code < 300 {
@@ -354,10 +358,11 @@ func (self *clientTransaction) Cancel(extra_headers ...sippy_header.SipHeader) {
     if self.state != RINGING {
         self.cancelPending = true
     } else {
-        if extra_headers != nil {
-            for _, h := range extra_headers {
-                self.cancel.AppendHeader(h)
-            }
+        for _, h := range extra_headers {
+            self.cancel.AppendHeader(h)
+        }
+        for _, h := range self.dlg_headers {
+            self.cancel.AppendHeader(h)
         }
         sip_tm.BeginNewClientTransaction(self.cancel, nil, self.lock, nil, self.userv, self.before_request_sent)
     }
@@ -417,4 +422,8 @@ func (self *clientTransaction) CheckRSeq(rseq *sippy_header.SipRSeq) bool {
     }
     self.last_rseq = rseq.Number
     return true
+}
+
+func (self *clientTransaction) SetDlgHeaders(hdrs []sippy_header.SipHeader) {
+    self.dlg_headers = hdrs
 }

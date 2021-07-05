@@ -72,6 +72,7 @@ type Ua struct {
     username        string
     password        string
     extra_headers   []sippy_header.SipHeader
+    dlg_headers     []sippy_header.SipHeader
     reqs            map[int]*sipRequest
     tr              sippy_types.ClientTransaction
     source_address  *sippy_net.HostPort
@@ -401,6 +402,9 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, challenge si
     }
     if extra_headers != nil {
         req.appendHeaders(extra_headers)
+    }
+    if self.dlg_headers != nil {
+        req.appendHeaders(self.dlg_headers)
     }
     self.reqs[self.lCSeq] = req
     self.lCSeq++
@@ -1283,6 +1287,7 @@ func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) b
         self.logError("UA::processChallenge: cannot prepare client transaction: " + err.Error())
         return false
     }
+    self.tr.SetDlgHeaders(self.dlg_headers)
     self.BeginClientTransaction(req, self.tr)
     delete(self.reqs, cseq)
     return true
@@ -1320,4 +1325,12 @@ func (self *Ua) RegConsumer(consumer sippy_types.UA, call_id string) {
         return
     }
     sip_tm.RegConsumer(consumer, call_id)
+}
+
+func (self *Ua) GetDlgHeaders() []sippy_header.SipHeader {
+    return self.dlg_headers
+}
+
+func (self *Ua) SetDlgHeaders(hdrs []sippy_header.SipHeader) {
+    self.dlg_headers = hdrs
 }
