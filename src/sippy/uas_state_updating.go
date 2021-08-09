@@ -144,7 +144,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
     return nil, nil, nil
 }
 
-func (self *UasStateUpdating) Cancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
+func (self *UasStateUpdating) RecvCancel(rtime *sippy_time.MonoTime, inreq sippy_types.SipRequest) {
     req, err := self.ua.GenRequest("BYE", nil, nil)
     if err != nil {
         self.config.ErrorLogger().Error("UasStateUpdating::Cancel: #1: " + err.Error())

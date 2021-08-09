@@ -224,7 +224,7 @@ REQ_LOOP:
         }
         return &sippy_types.Ua_context{
             Response : nil,
-            CancelCB : self.state.Cancel,
+            CancelCB : self.state.RecvCancel,
             NoAckCB  : disc_fn,
         }
     } else {

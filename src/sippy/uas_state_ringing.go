@@ -141,7 +141,7 @@ func (self *UasStateRinging) RecvRequest(req sippy_types.SipRequest, t sippy_typ
     return nil, nil
 }
 
-func (self *UasStateRinging) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
+func (self *UasStateRinging) RecvCancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
     event := NewCCEventDisconnect(nil, rtime, self.ua.GetOrigin())
     if req != nil {
         event.SetReason(req.GetReason())

@@ -158,7 +158,7 @@ func (self *UasStatePreConnect) RecvACK(req sippy_types.SipRequest) {
     }
 }
 
-func (self *UasStatePreConnect) Cancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
+func (self *UasStatePreConnect) RecvCancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
     event := NewCCEventDisconnect(nil, rtime, self.ua.GetOrigin())
     if req != nil {
         event.SetReason(req.GetReason())
