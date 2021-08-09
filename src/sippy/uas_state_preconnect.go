@@ -29,7 +29,6 @@ package sippy
 import (
     "sippy/conf"
     "sippy/headers"
-    "sippy/time"
     "sippy/types"
 )
 
@@ -99,6 +98,41 @@ func (self *UasStatePreConnect) try_other_events(event sippy_types.CCEvent) (sip
     return NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(event.GetRtime(), event.GetOrigin(), 0, nil) }, nil
 }
 
+func (self *UasStatePreConnect) RecvRequest(req sippy_types.SipRequest, t sippy_types.ServerTransaction) (sippy_types.UaState, func()) {
+    if req.GetMethod() == "INVITE" {
+        t.SendResponseWithLossEmul(req.GenResponse(491, "Request Pending", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
+        return nil, nil
+    } else if req.GetMethod() == "BYE" {
+        self.ua.SendUasResponse(t, 200, "OK", nil, nil, false)
+        t.SendResponseWithLossEmul(req.GenResponse(200, "OK", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
+        //print "BYE received in the Updating state, going to the Disconnected state"
+        event := NewCCEventDisconnect(nil, req.GetRtime(), self.ua.GetOrigin())
+        event.SetReason(req.GetReason())
+        self.ua.Enqueue(event)
+        self.ua.CancelCreditTimer()
+        self.ua.SetDisconnectTs(req.GetRtime())
+        return NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(req.GetRtime(), self.ua.GetOrigin(), 0, req) }
+    } else if req.GetMethod() == "REFER" {
+        if req.GetReferTo() == nil {
+            t.SendResponseWithLossEmul(req.GenResponse(400, "Bad Request", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
+            return nil, nil
+        }
+        self.ua.SendUasResponse(t, 487, "Request Terminated", nil, nil, false)
+        t.SendResponseWithLossEmul(req.GenResponse(202, "Accepted", nil, self.ua.GetLocalUA().AsSipServer()), false, nil, self.ua.UasLossEmul())
+        refer_to, err := req.GetReferTo().GetBody(self.config)
+        if err != nil {
+            self.config.ErrorLogger().Error("UasStatePreConnect::RecvRequest: #1: " + err.Error())
+            return nil, nil
+        }
+        self.ua.Enqueue(NewCCEventDisconnect(refer_to.GetCopy(), req.GetRtime(), self.ua.GetOrigin()))
+        self.ua.CancelCreditTimer()
+        self.ua.SetDisconnectTs(req.GetRtime())
+        return NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(req.GetRtime(), self.ua.GetOrigin(), 0, req) }
+    }
+    //print "wrong request %s in the state Updating" % req.getMethod()
+    return nil, nil
+}
+
 func (self *UasStatePreConnect) RecvEvent(event sippy_types.CCEvent) (sippy_types.UaState, func(), error) {
     switch ev := event.(type) {
     case *CCEventUpdate:
@@ -156,16 +190,6 @@ func (self *UasStatePreConnect) RecvACK(req sippy_types.SipRequest) {
         self.ua.RecvEvent(self.pending_ev_update)
         self.pending_ev_update = nil
     }
-}
-
-func (self *UasStatePreConnect) RecvCancel(rtime *sippy_time.MonoTime, req sippy_types.SipRequest) {
-    event := NewCCEventDisconnect(nil, rtime, self.ua.GetOrigin())
-    if req != nil {
-        event.SetReason(req.GetReason())
-    }
-    self.ua.SetDisconnectTs(rtime)
-    self.ua.ChangeState(NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(rtime, self.ua.GetOrigin(), 0, req) })
-    self.ua.EmitEvent(event)
 }
 
 func (self *UasStatePreConnect) ID() sippy_types.UaStateID {
