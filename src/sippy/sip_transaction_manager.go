@@ -542,6 +542,7 @@ func (self *sipTransactionManager) new_server_transaction(server sippy_net.Trans
     self.consumers_lock.Unlock()
     if ua != nil {
         t.UpgradeToSessionLock(ua.GetSessionLock())
+        t.UpdateUservFromUA(ua)
         sippy_utils.SafeCall(func() { rval = ua.RecvRequest(req, t) }, nil, self.config.ErrorLogger())
     } else {
         if self.call_map == nil {
