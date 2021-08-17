@@ -562,6 +562,7 @@ func (self *sipTransactionManager) new_server_transaction(server sippy_net.Trans
         } else {
             if ua != nil {
                 t.UpgradeToSessionLock(ua.GetSessionLock())
+                t.UpdateUservFromUA(ua)
             }
             if req_receiver != nil {
                 rval = req_receiver.RecvRequest(req, t)
