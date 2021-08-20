@@ -500,10 +500,3 @@ func (self *serverTransaction) Setup100rel(req sippy_types.SipRequest) {
 func (self *serverTransaction) PrRel() bool {
     return self.pr_rel
 }
-
-func (self *serverTransaction) UpdateUservFromUA(ua sippy_types.UA) {
-    local_addr := ua.GetSourceAddress()
-    if local_addr != nil {
-        self.userv = self.sip_tm.l4r.getServer(local_addr, /*is_local*/ true)
-    }
-}

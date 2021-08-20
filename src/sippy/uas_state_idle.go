@@ -64,7 +64,11 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
     self.ua.SetLCSeq(100) // XXX: 100 for debugging so that incorrect CSeq generation will be easily spotted
     if self.ua.GetLContact() == nil {
-        self.ua.SetLContact(sippy_header.NewSipContact(self.config))
+        if src_addr := self.ua.GetSourceAddress(); src_addr != nil {
+            self.ua.SetLContact(sippy_header.NewSipContactFromHostPort(src_addr.Host, src_addr.Port))
+        } else {
+            self.ua.SetLContact(sippy_header.NewSipContact(self.config))
+        }
     }
     contact, err = req.GetContacts()[0].GetBody(self.config)
     if err != nil {

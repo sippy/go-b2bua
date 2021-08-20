@@ -96,7 +96,11 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         lUri.SetTag(self.ua.GetLTag())
         self.ua.SetLCSeq(200)
         if self.ua.GetLContact() == nil {
-            self.ua.SetLContact(sippy_header.NewSipContact(self.config))
+            if src_addr := self.ua.GetSourceAddress(); src_addr != nil {
+                self.ua.SetLContact(sippy_header.NewSipContactFromHostPort(src_addr.Host, src_addr.Port))
+            } else {
+                self.ua.SetLContact(sippy_header.NewSipContact(self.config))
+            }
         }
         contact, err = self.ua.GetLContact().GetBody(self.config)
         if err != nil {

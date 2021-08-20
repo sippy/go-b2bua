@@ -40,12 +40,16 @@ type SipContact struct {
 var _sip_contact_name compactName = newCompactName("Contact", "m")
 
 func NewSipContact(config sippy_conf.Config) *SipContact {
+    return NewSipContactFromHostPort(config.GetMyAddress(), config.GetMyPort())
+}
+
+func NewSipContactFromHostPort(host *sippy_net.MyAddress, port *sippy_net.MyPort) *SipContact {
     return &SipContact{
         compactName  : _sip_contact_name,
         Asterisk     : false,
         sipAddressHF : newSipAddressHF(
                             NewSipAddress("Anonymous",
-                                NewSipURL("", config.GetMyAddress(), config.GetMyPort(), false))),
+                                NewSipURL("", host, port, false))),
     }
 }
 

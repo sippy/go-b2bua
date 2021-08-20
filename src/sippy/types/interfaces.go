@@ -334,7 +334,6 @@ type ServerTransaction interface {
     SetPrackCBs(func(SipRequest, SipResponse), func(*sippy_time.MonoTime))
     Setup100rel(SipRequest)
     PrRel() bool
-    UpdateUservFromUA(UA)
 }
 
 type SipTransactionManager interface {
