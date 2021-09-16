@@ -77,7 +77,8 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
         t.SendResponse(self.ua.GetUasResp(), false, nil)
         body := req.GetBody()
-        if body != nil && self.ua.GetRSDP().String() == body.String() {
+        rsdp := self.ua.GetRSDP()
+        if body != nil && rsdp != nil && rsdp.String() == body.String() {
             self.ua.SendUasResponse(t, 200, "OK", self.ua.GetLSDP(), self.ua.GetLContacts(), false /*ack_wait*/)
             return nil, nil
         }
