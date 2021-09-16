@@ -35,7 +35,8 @@ type UasStateRingingRel struct {
     prack_received      bool
     prack_wait          bool
     pending_ev_ring     sippy_types.CCEvent
-    pending_ev_connect  sippy_types.CCEvent
+    pending_ev_connect  *CCEventConnect
+    pending_ev_update   *CCEventUpdate
 }
 
 func NewUasStateRingingRel(ua sippy_types.UA, config sippy_conf.Config) *UasStateRingingRel {
@@ -68,9 +69,14 @@ func (self *UasStateRingingRel) RecvEvent(_event sippy_types.CCEvent) (sippy_typ
             // 200 OK received but the last reliable provisional
             // response has not yet been aknowledged. Memorize the event
             // until PRACK is received.
-            self.pending_ev_connect = _event
+            self.pending_ev_connect = event
             return nil, nil, nil
         }
+    case *CCEventUpdate:
+        // 200 OK's been received and re-INVITE has arrived but the last
+        // reliable provisional response is still not aknowledged.
+        // Memorize the event until PRACK is received.
+        self.pending_ev_update = event
     }
     return self.UasStateRinging.RecvEvent(_event)
 }
@@ -92,8 +98,12 @@ func (self *UasStateRingingRel) RecvPRACK(req sippy_types.SipRequest, resp sippy
     if state != nil {
         self.ua.ChangeState(state, cb)
     }
+    if self.pending_ev_update != nil {
+        self.ua.RecvEvent(self.pending_ev_update)
+    }
     self.pending_ev_ring = nil
     self.pending_ev_connect = nil
+    self.pending_ev_update = nil
     body := req.GetBody()
     if body != nil {
         self.ua.SetRSDP(body.GetCopy())
