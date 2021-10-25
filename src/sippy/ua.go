@@ -1031,7 +1031,7 @@ func (self *Ua) GetConnectTs() *sippy_time.MonoTime {
 
 func (self *Ua) SetConnectTs(connect_ts *sippy_time.MonoTime) {
     if self.connect_ts == nil {
-        if self.disconnect_ts != nil && self.connect_ts.After(self.disconnect_ts) {
+        if self.disconnect_ts != nil && connect_ts.After(self.disconnect_ts) {
             self.connect_ts = self.disconnect_ts
         } else {
             self.connect_ts = connect_ts
