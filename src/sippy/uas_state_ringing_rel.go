@@ -77,6 +77,7 @@ func (self *UasStateRingingRel) RecvEvent(_event sippy_types.CCEvent) (sippy_typ
         // reliable provisional response is still not aknowledged.
         // Memorize the event until PRACK is received.
         self.pending_ev_update = event
+        return nil, nil, nil
     }
     return self.UasStateRinging.RecvEvent(_event)
 }
