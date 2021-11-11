@@ -117,8 +117,8 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         self.ua.SendUasResponse(nil, code, reason, body, self.ua.GetLContacts(), true, eh...)
         return NewUasStatePreConnect(self.ua, self.config, false /*confirm_connect*/), nil, nil
     case *CCEventRedirect:
-        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), false, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        self.ua.SendUasResponse(nil, event.scode, event.scode_reason, event.body, event.GetContacts(), true /*ack_wait*/, eh...)
+        return NewUasStatePreConnect(self.ua, self.config, false /*confirm_connect*/), nil, nil
     case *CCEventFail:
         code, reason := event.scode, event.scode_reason
         if code == 0 {
@@ -127,8 +127,8 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         if event.warning != nil {
             eh = append(eh, event.warning)
         }
-        self.ua.SendUasResponse(nil, code, reason, nil, nil, false, eh...)
-        return NewUaStateConnected(self.ua, self.config), nil, nil
+        self.ua.SendUasResponse(nil, code, reason, nil, nil, true /*ack_wait*/, eh...)
+        return NewUasStatePreConnect(self.ua, self.config, false /*confirm_connect*/), nil, nil
     case *CCEventDisconnect:
         self.ua.SendUasResponse(nil, 487, "Request Terminated", nil, nil, false, eh...)
         req, err := self.ua.GenRequest("BYE", nil, nil, eh...)
