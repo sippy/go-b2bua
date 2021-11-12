@@ -132,6 +132,7 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
         }
         event = NewCCEventRedirect(code, reason, body, urls, resp.GetRtime(), self.ua.GetOrigin())
     } else {
+        self.ua.SetLSDP(nil)
         event = NewCCEventFail(code, reason, resp.GetRtime(), self.ua.GetOrigin())
         event.SetReason(reason_rfc3326)
     }

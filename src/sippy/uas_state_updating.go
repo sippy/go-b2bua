@@ -127,6 +127,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
         if event.warning != nil {
             eh = append(eh, event.warning)
         }
+        self.ua.SetRSDP(nil)
         self.ua.SendUasResponse(nil, code, reason, nil, nil, true /*ack_wait*/, eh...)
         return NewUasStatePreConnect(self.ua, self.config, false /*confirm_connect*/), nil, nil
     case *CCEventDisconnect:
