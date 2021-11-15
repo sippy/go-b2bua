@@ -166,7 +166,17 @@ func (self *SipAuthorizationBody) GetUsername() string {
     return self.username
 }
 
-func (self *SipAuthorizationBody) VerifyHA1(HA1, method string, now_mono time.Time) bool {
+func (self *SipAuthorizationBody) Verify(passwd, method string) bool {
+    alg := sippy_security.GetAlgorithm(self.algorithm)
+    if alg == nil {
+        return false
+    }
+    now := time.Now()
+    HA1 := DigestCalcHA1(alg, self.algorithm, self.username, self.realm, passwd, self.nonce, self.cnonce)
+    return self.verifyHA1(HA1, method, now)
+}
+
+func (self *SipAuthorizationBody) verifyHA1(HA1, method string, now_mono time.Time) bool {
     alg := sippy_security.GetAlgorithm(self.algorithm)
     if alg == nil {
         return false

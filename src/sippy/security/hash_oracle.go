@@ -36,7 +36,7 @@ import (
 )
 
 const (
-    VTIME = int64(32000000000)
+    VTIME = int64(32)
 )
 
 type hashOracle struct {
@@ -72,12 +72,12 @@ func newHashOracle() (*hashOracle, error) {
 }
 
 func (self *hashOracle) EmitChallenge(cmask int64, now_mono time.Time) string {
-    ts64 := (now_mono.UnixNano() << NUM_OF_DGSTS) | cmask
+    ts64 := (now_mono.Unix() << NUM_OF_DGSTS) | cmask
     return self.ac.Encrypt(ts64)
 }
 
 func (self *hashOracle) ValidateChallenge(cryptic string, cmask int64, now_mono time.Time) bool {
-    new_ts := now_mono.UnixNano()
+    new_ts := now_mono.Unix()
     decryptic, err := self.ac.Decrypt(cryptic)
     if err != nil || (cmask & decryptic) == 0 {
         return false
