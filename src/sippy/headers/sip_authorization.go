@@ -264,10 +264,7 @@ func DigestCalcHA1(alg *sippy_security.Algorithm, pszAlg, pszUserName, pszRealm,
     hash.Write([]byte(s))
     HA1 := hash.Sum(nil)
     if strings.HasSuffix(pszAlg, "-sess") {
-        s2 := make([]byte, len(HA1))
-        for i, b := range HA1 {
-            s2[i] = b
-        }
+        s2 := []byte(fmt.Sprintf("%x", HA1))
         s2 = append(s2, []byte(":" + pszNonce + ":" + pszCNonce)...)
         hash = alg.NewHash()
         hash.Write([]byte(s2))
