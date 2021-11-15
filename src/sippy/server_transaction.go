@@ -460,7 +460,9 @@ func (self *serverTransaction) retrUasResponse(last_timeout time.Duration, losse
         if sip_tm := self.sip_tm; sip_tm != nil && prov_inflight != nil {
             sip_tm.rtid_del(prov_inflight.rtid)
         }
-        self.noprack_cb(nil)
+        if self.noprack_cb != nil {
+            self.noprack_cb(nil)
+        }
         return
     }
     if sip_tm := self.sip_tm; sip_tm != nil {
