@@ -102,19 +102,14 @@ func (self *StirShaken) GetCert(url string) ([]byte, error) {
 
 func read_all(fd io.Reader) ([]byte, error) {
     buf := make([]byte, 4096)
-    ret := make([]byte, 0)
-    for {
-        n, err := fd.Read(buf)
-        if err == io.EOF {
-            ret = append(ret, buf[:n]...)
-            break
-        }
-        if err != nil {
-            return nil, err
-        }
-        ret = append(ret, buf[:n]...)
+    n, err := fd.Read(buf)
+    if err != nil && err != io.EOF {
+        return nil, err
     }
-    return ret, nil
+    if n == 0 {
+        return nil, errors.New("Empty certificate retrieved")
+    }
+    return buf[:n], nil
 }
 
 func read_file(fname string) ([]byte, error) {
