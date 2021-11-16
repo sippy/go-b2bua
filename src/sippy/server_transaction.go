@@ -219,7 +219,9 @@ func (self *serverTransaction) doCancel(rtime *sippy_time.MonoTime, req sippy_ty
     if self.r487 != nil {
         self.SendResponse(self.r487, true, nil)
     }
-    self.cancel_cb(rtime, req)
+    if self.cancel_cb != nil {
+        self.cancel_cb(rtime, req)
+    }
 }
 
 func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, checksum string) {
@@ -275,7 +277,9 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
             self.prov_inflight_lock.Unlock()
             sip_tm.rtid_del(rskey)
             resp = req.GenResponse(200, "OK", nil /*body*/, nil /*server*/)
-            self.prack_cb(req, resp)
+            if self.prack_cb != nil {
+                self.prack_cb(req, resp)
+            }
         } else {
             self.prov_inflight_lock.Unlock()
             //print('rskey: %s, prov_inflight: %s' % (str(rskey), str(self.prov_inflight)))
