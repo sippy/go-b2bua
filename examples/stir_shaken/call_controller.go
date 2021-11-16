@@ -69,8 +69,8 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
     if ua == self.uaA {
         if ev_try, ok := event.(*sippy.CCEventTry); ok {
 	    self.call_id = ev_try.GetSipCallId().StringBody()
-            if ! self.SshakenVerify(ev_try) {
-                self.uaA.RecvEvent(sippy.NewCCEventFail(608, "Rejected", event.GetRtime(), ""))
+            if self.cmap.config.verify && ! self.SshakenVerify(ev_try) {
+                self.uaA.RecvEvent(sippy.NewCCEventFail(438, "Invalid Identity Header", event.GetRtime(), ""))
                 return
             }
         }

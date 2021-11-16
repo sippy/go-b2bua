@@ -42,6 +42,7 @@ type myconfig struct {
     x5u             string
     crt_file        string
     pkey_file       string
+    verify          bool
 }
 
 func NewMyConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogger) *myconfig {

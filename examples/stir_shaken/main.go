@@ -71,6 +71,7 @@ func main() {
     var crt_roots_file string
     var lport int
     var attest, origid, x5u, crt_file, pkey_file string
+    var verify bool
 
     flag.StringVar(&laddr, "l", "", "Local addr")
     flag.IntVar(&lport, "p", 5060, "Local port")
@@ -82,6 +83,7 @@ func main() {
     flag.StringVar(&crt_file, "c", "", "Certificate file")
     flag.StringVar(&pkey_file, "k", "", "Private key file")
     flag.StringVar(&x5u, "x", "", "STIR/SHAKEN x5u")
+    flag.BoolVar(&verify, "vs", false, "Do verification")
     flag.Parse()
 
     error_logger := sippy_log.NewErrorLogger()
@@ -102,6 +104,7 @@ func main() {
     config.crt_file = crt_file
     config.pkey_file = pkey_file
     config.crt_roots_file = crt_roots_file
+    config.verify = verify
 
     if nh_addr != "" {
         var parts []string
