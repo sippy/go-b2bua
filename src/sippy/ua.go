@@ -392,7 +392,11 @@ func (self *Ua) GenRequest(method string, body sippy_types.MsgBody, challenge si
         return nil, err
     }
     if challenge != nil {
-        auth, err := challenge.GenAuthHF(self.username, self.password, method, self.rTarget.String())
+        entity_body := ""
+        if body != nil {
+            entity_body = body.String()
+        }
+        auth, err := challenge.GenAuthHF(self.username, self.password, method, self.rTarget.String(), entity_body)
         if err == nil {
             req.AppendHeader(auth)
         }

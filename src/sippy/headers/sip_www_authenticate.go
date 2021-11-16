@@ -194,14 +194,14 @@ func (self *SipWWWAuthenticateBody) getCopy() *SipWWWAuthenticateBody {
     return &tmp
 }
 
-func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri string) (SipHeader, error) {
+func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri, entity_body string) (SipHeader, error) {
     body, err := self.GetBody()
     if err != nil {
         return nil, err
     }
     auth := newSipAuthorizationBody(body.realm.String(), body.nonce, uri, username, body.algorithm)
-    if body.qop != nil {
-        auth.qop = "auth"
+    if len(body.qop) > 0 {
+        auth.qop = body.qop[0]
         auth.nc = "00000001"
         buf := make([]byte, 4)
         rand.Read(buf)
@@ -210,7 +210,7 @@ func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri string
     if body.opaque != "" {
         auth.opaque = body.opaque
     }
-    auth.GenResponse(password, method)
+    auth.GenResponse(password, method, entity_body)
     return self.aclass(auth), nil
 }
 

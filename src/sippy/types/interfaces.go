@@ -410,7 +410,7 @@ type RtpProxyUpdateResult interface {
 }
 
 type Challenge interface {
-    GenAuthHF(username, password, method, uri string) (sippy_header.SipHeader, error)
+    GenAuthHF(username, password, method, uri, entity_body string) (sippy_header.SipHeader, error)
     Algorithm() (string, error)
     SupportedAlgorithm() (bool, error)
 }

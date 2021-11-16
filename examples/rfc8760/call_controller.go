@@ -81,12 +81,16 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 self.uaO.SetPassword(self.cmap.config.passwd_out)
             }
             if self.cmap.config.authname_in != "" {
+                entity_body := ""
+                if body := ev_try.GetBody(); body != nil {
+                    entity_body = body.String()
+                }
                 sip_auth := ev_try.GetSipAuthorizationBody()
                 if sip_auth == nil {
                     www_auth := sippy_header.NewSipWWWAuthenticateWithRealm("myrealm", self.cmap.config.hash_alg, time.Now())
                     self.uaA.RecvEvent(sippy.NewCCEventFail(401, "Unauthorized", nil, "", www_auth))
                     return
-                } else if sip_auth.GetUsername() == "" || ! sip_auth.Verify(self.cmap.config.passwd_in, "INVITE") {
+                } else if sip_auth.GetUsername() == "" || ! sip_auth.Verify(self.cmap.config.passwd_in, "INVITE", entity_body) {
                     self.uaA.RecvEvent(sippy.NewCCEventFail(401, "Unauthorized", nil, ""))
                     return
                 }

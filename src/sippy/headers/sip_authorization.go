@@ -166,17 +166,17 @@ func (self *SipAuthorizationBody) GetUsername() string {
     return self.username
 }
 
-func (self *SipAuthorizationBody) Verify(passwd, method string) bool {
+func (self *SipAuthorizationBody) Verify(passwd, method, entity_body string) bool {
     alg := sippy_security.GetAlgorithm(self.algorithm)
     if alg == nil {
         return false
     }
     now := time.Now()
     HA1 := DigestCalcHA1(alg, self.algorithm, self.username, self.realm, passwd, self.nonce, self.cnonce)
-    return self.verifyHA1(HA1, method, now)
+    return self.verifyHA1(HA1, method, entity_body, now)
 }
 
-func (self *SipAuthorizationBody) verifyHA1(HA1, method string, now_mono time.Time) bool {
+func (self *SipAuthorizationBody) verifyHA1(HA1, method, entity_body string, now_mono time.Time) bool {
     alg := sippy_security.GetAlgorithm(self.algorithm)
     if alg == nil {
         return false
@@ -187,7 +187,7 @@ func (self *SipAuthorizationBody) verifyHA1(HA1, method string, now_mono time.Ti
     if ! sippy_security.HashOracle.ValidateChallenge(self.nonce, alg.Mask, now_mono) {
         return false
     }
-    response := DigestCalcResponse(alg, HA1, self.nonce, self.nc, self.cnonce, self.qop, method, self.uri, "")
+    response := DigestCalcResponse(alg, HA1, self.nonce, self.nc, self.cnonce, self.qop, method, self.uri, entity_body)
     return response == self.response
 }
 
@@ -243,7 +243,7 @@ func (self *SipAuthorization) GetUsername() (string, error) {
     return body.GetUsername(), nil
 }
 
-func (self *SipAuthorizationBody) GenResponse(password, method string) {
+func (self *SipAuthorizationBody) GenResponse(password, method, entity_body string) {
     alg := sippy_security.GetAlgorithm(self.algorithm)
     if alg == nil {
         return
@@ -251,7 +251,7 @@ func (self *SipAuthorizationBody) GenResponse(password, method string) {
     HA1 := DigestCalcHA1(alg, self.algorithm, self.username, self.realm, password,
           self.nonce, self.cnonce)
     self.response = DigestCalcResponse(alg, HA1, self.nonce,
-          self.nc, self.cnonce, self.qop, method, self.uri, "")
+          self.nc, self.cnonce, self.qop, method, self.uri, entity_body)
 }
 
 func (self *SipAuthorization) GetCopyAsIface() SipHeader {
@@ -276,7 +276,9 @@ func DigestCalcHA1(alg *sippy_security.Algorithm, pszAlg, pszUserName, pszRealm,
 func DigestCalcResponse(alg *sippy_security.Algorithm, HA1, pszNonce, pszNonceCount, pszCNonce, pszQop, pszMethod, pszDigestUri, pszHEntity string) string {
     s := pszMethod + ":" + pszDigestUri
     if pszQop == "auth-int" {
-        s += ":" + pszHEntity
+        hash := alg.NewHash()
+        hash.Write([]byte(pszHEntity))
+        s += ":" + fmt.Sprintf("%x", hash.Sum(nil))
     }
     hash := alg.NewHash()
     hash.Write([]byte(s))
