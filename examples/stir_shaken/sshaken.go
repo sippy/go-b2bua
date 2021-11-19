@@ -85,7 +85,10 @@ func (self *StirShaken) Verify(identity, orig_tn, dest_tn string, date_ts time.T
 }
 
 func (self *StirShaken) GetCert(url string) ([]byte, error) {
-    resp, err := http.Get(url)
+    client := &http.Client{
+        Timeout : time.Second,
+    }
+    resp, err := client.Get(url)
     if err != nil {
         return nil, err
     }
