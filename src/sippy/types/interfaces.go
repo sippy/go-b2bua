@@ -237,6 +237,7 @@ type UA interface {
     GetKaInterval() time.Duration
     OnDead()
     OnUacSetupComplete()
+    OnReinvite(SipRequest, CCEvent)
     GetGoDeadTimeout() time.Duration
     ChangeState(UaState, func())
     GetLastScode() int

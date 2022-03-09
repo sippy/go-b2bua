@@ -1346,3 +1346,6 @@ func (self *Ua) GetDlgHeaders() []sippy_header.SipHeader {
 func (self *Ua) SetDlgHeaders(hdrs []sippy_header.SipHeader) {
     self.dlg_headers = hdrs
 }
+
+func (self *Ua) OnReinvite(req sippy_types.SipRequest, event_update sippy_types.CCEvent) {
+}
