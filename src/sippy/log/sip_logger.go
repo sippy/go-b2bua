@@ -30,6 +30,7 @@ package sippy_log
 import (
     "os"
     "fmt"
+    "syscall"
     "time"
     "sippy/time"
 )
@@ -66,6 +67,9 @@ func (self *sipLogger) Write(rtime *sippy_time.MonoTime, call_id string, msg str
     buf := fmt.Sprintf("%d %s %02d:%02d:%06.3f/%s/%s: %s\n",
                 t.Day(), t.Month().String()[:3], t.Hour(), t.Minute(), float64(t.Second()) + float64(t.Nanosecond()) / 1e9,
                 call_id, self.id, msg)
+    fileno := int(self.fd.Fd())
+    syscall.Flock(fileno, syscall.LOCK_EX)
+    defer syscall.Flock(fileno, syscall.LOCK_UN)
     self.fd.Write([]byte(buf))
 }
 
