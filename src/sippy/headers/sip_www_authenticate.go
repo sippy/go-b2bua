@@ -72,7 +72,10 @@ func newSipWWWAutenticateBody(realm, algorithm string, now_mono time.Time) *SipW
     self := &SipWWWAuthenticateBody{
         algorithm   : algorithm,
         realm       : sippy_net.NewMyAddress(realm),
-        qop         : []string{ "auth" },
+        qop         : []string{},
+    }
+    if algorithm != "" {
+        self.qop = append(self.qop, "auth")
     }
     alg := sippy_security.GetAlgorithm(algorithm)
     if alg == nil {

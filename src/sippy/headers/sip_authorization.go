@@ -30,10 +30,10 @@ import (
     "errors"
     "fmt"
     "strings"
-    "time"
 
     "sippy/net"
     "sippy/security"
+    "sippy/time"
     "sippy/utils"
 )
 
@@ -171,12 +171,12 @@ func (self *SipAuthorizationBody) Verify(passwd, method, entity_body string) boo
     if alg == nil {
         return false
     }
-    now := time.Now()
     HA1 := DigestCalcHA1(alg, self.algorithm, self.username, self.realm, passwd, self.nonce, self.cnonce)
-    return self.verifyHA1(HA1, method, entity_body, now)
+    return self.VerifyHA1(HA1, method, entity_body)
 }
 
-func (self *SipAuthorizationBody) verifyHA1(HA1, method, entity_body string, now_mono time.Time) bool {
+func (self *SipAuthorizationBody) VerifyHA1(HA1, method, entity_body string) bool {
+    now, _ := sippy_time.NewMonoTime()
     alg := sippy_security.GetAlgorithm(self.algorithm)
     if alg == nil {
         return false
@@ -184,7 +184,7 @@ func (self *SipAuthorizationBody) verifyHA1(HA1, method, entity_body string, now
     if self.qop != "" && self.qop != "auth" {
         return false
     }
-    if ! sippy_security.HashOracle.ValidateChallenge(self.nonce, alg.Mask, now_mono) {
+    if ! sippy_security.HashOracle.ValidateChallenge(self.nonce, alg.Mask, now.Monot()) {
         return false
     }
     response := DigestCalcResponse(alg, HA1, self.nonce, self.nc, self.cnonce, self.qop, method, self.uri, entity_body)
