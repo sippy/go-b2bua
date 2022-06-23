@@ -84,8 +84,8 @@ func (*errorLogger) Reopen() {
 }
 
 func (*errorLogger) write(prefix string, params ...interface{}) {
-    t := time.Now().UTC()
-    buf := []interface{}{ fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d+00", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second()), " ", prefix }
+    t := time.Now()
+    buf := []interface{}{ fmt.Sprintf("%d-%02d-%02d %02d:%02d:%06.3f", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), float64(t.Second()) + float64(t.Nanosecond()) / 1e9), " ", prefix }
     for _, it := range params {
         buf = append(buf, " ", it)
     }
