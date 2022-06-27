@@ -87,7 +87,7 @@ func (*errorLogger) Reopen() {
 
 func (*errorLogger) write(prefix string, params ...interface{}) {
     t := time.Now().UTC()
-    buf := []interface{}{ formatDate(t), " ", prefix }
+    buf := []interface{}{ FormatDate(t), " ", prefix }
     for _, it := range params {
         buf = append(buf, " ", it)
     }

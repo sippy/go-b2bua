@@ -65,7 +65,7 @@ func _fmt0Xd(v, width int) string {
     return ret
 }
 
-func formatDate(t time.Time) string {
+func FormatDate(t time.Time) string {
     return strconv.Itoa(t.Day()) + " " + t.Month().String()[:3] + " " +
         _fmt0Xd(t.Hour(), 2) + ":" + _fmt0Xd(t.Minute(), 2) + ":" + _fmt0Xd(t.Second(), 2) + "." +
         _fmt0Xd(t.Nanosecond() / 1000000, 3)
@@ -79,7 +79,7 @@ func (self *sipLogger) Write(rtime *sippy_time.MonoTime, call_id string, msg str
         t = time.Now()
     }
     //buf := fmt.Sprintf("%d %s %02d:%02d:%06.3f/%s/%s: %s\n",
-    buf := formatDate(t) + "/" + call_id + "/" + self.id + ": " + msg
+    buf := FormatDate(t) + "/" + call_id + "/" + self.id + ": " + msg
     fileno := int(self.fd.Fd())
     syscall.Flock(fileno, syscall.LOCK_EX)
     defer syscall.Flock(fileno, syscall.LOCK_UN)
