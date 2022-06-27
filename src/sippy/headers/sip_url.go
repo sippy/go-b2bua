@@ -28,7 +28,6 @@ package sippy_header
 
 import (
     "errors"
-    "fmt"
     "strconv"
     "strings"
 
@@ -353,7 +352,7 @@ func (self *SipURL) GetParams() []string {
     if self.maddr != ""     { ret = append(ret, "maddr=" + self.maddr) }
     if self.method != ""    { ret = append(ret, "method=" + self.method) }
     if self.tag != ""       { ret = append(ret, "tag=" + self.tag) }
-    if self.ttl != -1       { ret = append(ret, fmt.Sprintf("ttl=%d", self.ttl)) }
+    if self.ttl != -1       { ret = append(ret, "ttl=" + strconv.Itoa(self.ttl)) }
     ret = append(ret, self.other...)
     if self.Lr              { ret = append(ret, "lr") }
     return ret

@@ -34,6 +34,8 @@ import (
     "strings"
     "sync"
     "time"
+
+    "sippy/fmt"
 )
 
 type ErrorLogger interface {
@@ -69,7 +71,7 @@ func (self *errorLogger) Debug(params...interface{}) {
 }
 
 func (self *errorLogger) Debugf(format string, params...interface{}) {
-    self.write("DEBUG:", fmt.Sprintf(format, params...))
+    self.write("DEBUG:", sippy_fmt.Sprintf(format, params...))
 }
 
 func (self *errorLogger) Error(params...interface{}) {
@@ -77,15 +79,15 @@ func (self *errorLogger) Error(params...interface{}) {
 }
 
 func (self *errorLogger) Errorf(format string, params...interface{}) {
-    self.write("ERROR:", fmt.Sprintf(format, params...))
+    self.write("ERROR:", sippy_fmt.Sprintf(format, params...))
 }
 
 func (*errorLogger) Reopen() {
 }
 
 func (*errorLogger) write(prefix string, params ...interface{}) {
-    t := time.Now()
-    buf := []interface{}{ fmt.Sprintf("%d-%02d-%02d %02d:%02d:%06.3f", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), float64(t.Second()) + float64(t.Nanosecond()) / 1e9), " ", prefix }
+    t := time.Now().UTC()
+    buf := []interface{}{ formatDate(t), " ", prefix }
     for _, it := range params {
         buf = append(buf, " ", it)
     }

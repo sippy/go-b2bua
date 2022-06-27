@@ -35,12 +35,12 @@ package sippy_time
 import "C"
 import (
     "errors"
-    "fmt"
     "strings"
     "strconv"
     "time"
 
     "sippy/math"
+    "sippy/fmt"
 )
 
 const (
@@ -164,12 +164,12 @@ func NewMonoTime() (self *MonoTime, err error) {
 
 func (self *MonoTime) Ftime() string {
     t := RoundTime(self.realt).UTC()
-    return fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d+00", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+    return sippy_fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d+00", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
 }
 
 func (self *MonoTime) Fptime() string {
     t := self.realt.UTC()
-    return fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d.%06d+00", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond() / 1000)
+    return sippy_fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d.%06d+00", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond() / 1000)
 }
 
 func (self *MonoTime) Monot() time.Time {

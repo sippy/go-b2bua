@@ -29,7 +29,7 @@ package sippy_header
 
 import (
     "crypto/rand"
-    "fmt"
+    "encoding/hex"
 
     "sippy/conf"
     "sippy/net"
@@ -53,7 +53,7 @@ func CreateSipCallId(body string) []SipHeader {
 func (self *SipCallId) genCallId(config sippy_conf.Config) {
     buf := make([]byte, 16)
     rand.Read(buf)
-    self.CallId = fmt.Sprintf("%x", buf) + "@" + config.GetMyAddress().String()
+    self.CallId = hex.EncodeToString(buf) + "@" + config.GetMyAddress().String()
 }
 
 func NewSipCallIdFromString(call_id string) *SipCallId {

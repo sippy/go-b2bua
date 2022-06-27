@@ -28,10 +28,11 @@ package sippy
 
 import (
     "crypto/rand"
+    "encoding/hex"
     "errors"
-    "fmt"
     "math/big"
     "runtime"
+    "strconv"
     "sync"
 
     "sippy/conf"
@@ -101,7 +102,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     }
     n := len(online_clients)
     if n == 0 {
-        return nil, fmt.Errorf("No online RTP proxy client has been found")
+        return nil, errors.New("No online RTP proxy client has been found")
     }
     if idx, err := rand.Int(rand.Reader, big.NewInt(int64(n))); err != nil {
         self._rtp_proxy_client = online_clients[0]
@@ -111,17 +112,17 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     if self.call_id == "" {
         buf := make([]byte, 16)
         rand.Read(buf)
-        self.call_id = fmt.Sprintf("%x", buf)
+        self.call_id = hex.EncodeToString(buf)
     }
     if from_tag == "" {
         buf := make([]byte, 16)
         rand.Read(buf)
-        self.from_tag = fmt.Sprintf("%x", buf)
+        self.from_tag = hex.EncodeToString(buf)
     }
     if to_tag == "" {
         buf := make([]byte, 16)
         rand.Read(buf)
-        self.to_tag = fmt.Sprintf("%x", buf)
+        self.to_tag = hex.EncodeToString(buf)
     }
     self.caller.from_tag = self.from_tag
     self.caller.to_tag = self.to_tag
@@ -186,16 +187,16 @@ func (self *Rtp_proxy_session) StartRecording(rname/*= nil*/ string, result_call
 
 func (self *Rtp_proxy_session) _start_recording(rname string, result_callback func(string), index int) {
     if rname == "" {
-        command := fmt.Sprintf("R %s-%d %s %s", self.call_id, index, self.from_tag, self.to_tag)
+        command := "R " + self.call_id + "-" + strconv.Itoa(index) + " " + self.from_tag + " " + self.to_tag
         self.send_command(command, func (r string) { self.command_result(r, result_callback) })
         return
     }
-    command := fmt.Sprintf("C %s-%d %s.a %s %s", self.call_id, index, rname, self.from_tag, self.to_tag)
+    command := "C " + self.call_id + "-" + strconv.Itoa(index) + " " + rname + ".a " + self.from_tag + " " + self.to_tag
     self.send_command(command, func(string) { self._start_recording1(rname, result_callback, index) })
 }
 
 func (self *Rtp_proxy_session) _start_recording1(rname string, result_callback func(string), index int) {
-    command := fmt.Sprintf("C %s-%d %s.o %s %s", self.call_id, index, rname, self.to_tag, self.from_tag)
+    command := "C " + self.call_id + "-" + strconv.Itoa(index) + " " + rname + ".o " + self.to_tag + " " + self.from_tag
     self.send_command(command, func (r string) { self.command_result(r, result_callback) })
 }
 
@@ -211,7 +212,7 @@ func (self *Rtp_proxy_session) Delete() {
         return
     }
     for self.max_index >= 0 {
-        command := fmt.Sprintf("D %s-%d %s %s", self.call_id, self.max_index, self.from_tag, self.to_tag)
+        command := "D " + self.call_id + "-" + strconv.Itoa(self.max_index) + " " + self.from_tag + " " + self.to_tag
         self.send_command(command, nil)
         self.max_index--
     }

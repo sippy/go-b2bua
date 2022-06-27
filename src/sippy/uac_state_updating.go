@@ -27,8 +27,6 @@
 package sippy
 
 import (
-    "fmt"
-
     "sippy/conf"
     "sippy/headers"
     "sippy/types"
@@ -93,7 +91,7 @@ func (self *UacStateUpdating) RecvResponse(resp sippy_types.SipResponse, tr sipp
             if self.ua.HasOnRemoteSdpChange() {
                 if err := self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) }); err != nil {
                     ev := NewCCEventFail(502, "Bad Gateway", event.GetRtime(), "")
-                    ev.SetWarning(fmt.Sprintf("Malformed SDP Body received from downstream: \"%s\"", err.Error()))
+                    ev.SetWarning("Malformed SDP Body received from downstream: \"" + err.Error() + "\"")
                     return self.updateFailed(ev)
                 }
                 return NewUaStateConnected(self.ua, self.config), nil

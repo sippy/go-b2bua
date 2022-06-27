@@ -27,7 +27,6 @@ package sippy
 
 import (
     "errors"
-    "fmt"
     "strconv"
     "strings"
     "sync"
@@ -301,11 +300,11 @@ func (self *Rtpp_stats) String() string {
         var rval string
 
         if sname == "total_duration" {
-            rval = fmt.Sprintf("%f", self.total_duration)
+            rval = strconv.FormatFloat(self.total_duration, 'f', -1, 64)
         } else {
             aname := self.spookyprefix + sname
             self.dict_lock.Lock()
-            rval = fmt.Sprintf("%d", self.dict[aname])
+            rval = strconv.FormatInt(self.dict[aname], 10)
             self.dict_lock.Unlock()
         }
         if self.Verbose {

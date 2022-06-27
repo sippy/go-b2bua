@@ -28,11 +28,11 @@ package sippy_utils
 
 import (
     "crypto/rand"
-    "fmt"
+    "encoding/hex"
 )
 
 func GenTag() string {
     ltag := make([]byte, 16)
     rand.Read(ltag)
-    return fmt.Sprintf("%x", ltag)
+    return hex.EncodeToString(ltag)
 }

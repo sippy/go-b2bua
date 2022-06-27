@@ -28,8 +28,8 @@ package sippy
 
 import (
     "crypto/md5"
+    "encoding/hex"
     "errors"
-    "fmt"
     "net"
     "strings"
     "sync"
@@ -175,7 +175,8 @@ func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_ne
         //self.logError("The message is too short from " + address.String() + ":\n" + string(data))
         return
     }
-    checksum := fmt.Sprintf("%x", md5.Sum(data))
+    sum := md5.Sum(data)
+    checksum := hex.EncodeToString(sum[:])
     self.rcache_lock.Lock()
     retrans, ok := self.rcache_get_no_lock(checksum)
     if ok {

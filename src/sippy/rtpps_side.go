@@ -27,7 +27,6 @@
 package sippy
 
 import (
-    "fmt"
     "math"
     "strconv"
     "strings"
@@ -63,7 +62,7 @@ func (self *_rtpps_side) _play(prompt_name string, times int, result_callback fu
 }
 
 func (self *_rtpps_side) __play(prompt_name string, times int, result_callback func(string), index int) {
-    command := fmt.Sprintf("P%d %s-%d %s %s %s %s", times, self.owner.call_id, index, prompt_name, self.codecs, self.from_tag, self.to_tag)
+    command := "P" + strconv.Itoa(times) + " " + self.owner.call_id + "-" + strconv.Itoa(index) + " " + prompt_name + " " + self.codecs + " " + self.from_tag + " " + self.to_tag
     self.owner.send_command(command, func(r string) { self.owner.command_result(r, result_callback) })
 }
 
@@ -85,9 +84,9 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     if sbind_supported {
         if self.raddress != nil {
             //if self.owner.IsLocal() && atype == "IP4" {
-            //    options += fmt.Sprintf("L%s", self.laddress)
+            //    options += "L" + self.laddress
             //} else if ! self.owner.IsLocal() {
-            //    options += fmt.Sprintf("R%s", self.raddress.Host.String())
+            //    options += "R" + self.raddress.Host.String()
             //}
             options += "R" + self.raddress.Host.String()
         } else if self.laddress != "" && is_local {
@@ -96,12 +95,12 @@ func (self *_rtpps_side) update(remote_ip string, remote_port string, result_cal
     }
     command += options
     if self.otherside.session_exists {
-        command += fmt.Sprintf(" %s-%d %s %s %s %s", self.owner.call_id, index, remote_ip, remote_port, self.from_tag, self.to_tag)
+        command += " " + self.owner.call_id + "-" + strconv.Itoa(index) + " " + remote_ip + " " + remote_port + " " + self.from_tag + " " + self.to_tag
     } else {
-        command += fmt.Sprintf(" %s-%d %s %s %s", self.owner.call_id, index, remote_ip, remote_port, self.from_tag)
+        command += " " + self.owner.call_id + "-" + strconv.Itoa(index) + " " + remote_ip + " " + remote_port + " " + self.from_tag
     }
     if self.owner.notify_socket != "" && index == 0 && tnot_supported {
-        command += fmt.Sprintf(" %s %s", self.owner.notify_socket, self.owner.notify_tag)
+        command += " " + self.owner.notify_socket + " " + self.owner.notify_tag
     }
     self.owner.send_command(command, func(r string) { self.update_result(r, remote_ip, atype, result_callback) })
 }
@@ -172,7 +171,7 @@ func (self *_rtpps_side) _on_sdp_change(sdp_body sippy_types.MsgBody, result_cal
     self.codecs = strings.Join(formats, ",")
     options := ""
     if self.repacketize > 0 {
-        options = fmt.Sprintf("z%d", self.repacketize)
+        options = "z" + strconv.Itoa(self.repacketize)
     }
     sections_left := int64(len(sects))
     for i, sect := range sects {
@@ -205,7 +204,7 @@ func (self *_rtpps_side) _sdp_change_finish(cb_args *rtpproxy_update_result, sdp
         }
         if self.repacketize > 0 {
             sect.RemoveAHeader("ptime:")
-            sect.AddHeader("a", fmt.Sprintf("ptime:%d", self.repacketize))
+            sect.AddHeader("a", "ptime:" + strconv.Itoa(self.repacketize))
         }
     }
     if atomic.AddInt64(sections_left, -1) > 0 {
@@ -235,6 +234,6 @@ func (self *_rtpps_side) _stop_play(cb func(string), index int) {
     if ! self.otherside.session_exists {
         return
     }
-    command := fmt.Sprintf("S %s-%d %s %s", self.owner.call_id, index, self.from_tag, self.to_tag)
+    command := "S " + self.owner.call_id + "-" + strconv.Itoa(index) + " " + self.from_tag + " " + self.to_tag
     self.owner.send_command(command, func(r string) { self.owner.command_result(r, cb) })
 }

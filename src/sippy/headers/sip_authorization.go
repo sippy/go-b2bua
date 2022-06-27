@@ -27,8 +27,8 @@
 package sippy_header
 
 import (
+    "encoding/hex"
     "errors"
-    "fmt"
     "strings"
 
     "sippy/net"
@@ -264,13 +264,13 @@ func DigestCalcHA1(alg *sippy_security.Algorithm, pszAlg, pszUserName, pszRealm,
     hash.Write([]byte(s))
     HA1 := hash.Sum(nil)
     if strings.HasSuffix(pszAlg, "-sess") {
-        s2 := []byte(fmt.Sprintf("%x", HA1))
+        s2 := []byte(hex.EncodeToString(HA1))
         s2 = append(s2, []byte(":" + pszNonce + ":" + pszCNonce)...)
         hash = alg.NewHash()
         hash.Write([]byte(s2))
         HA1 = hash.Sum(nil)
     }
-    return fmt.Sprintf("%x", HA1)
+    return hex.EncodeToString(HA1)
 }
 
 func DigestCalcResponse(alg *sippy_security.Algorithm, HA1, pszNonce, pszNonceCount, pszCNonce, pszQop, pszMethod, pszDigestUri, pszHEntity string) string {
@@ -278,11 +278,13 @@ func DigestCalcResponse(alg *sippy_security.Algorithm, HA1, pszNonce, pszNonceCo
     if pszQop == "auth-int" {
         hash := alg.NewHash()
         hash.Write([]byte(pszHEntity))
-        s += ":" + fmt.Sprintf("%x", hash.Sum(nil))
+        sum := hash.Sum(nil)
+        s += ":" + hex.EncodeToString(sum[:])
     }
     hash := alg.NewHash()
     hash.Write([]byte(s))
-    HA2 := fmt.Sprintf("%x", hash.Sum(nil))
+    sum := hash.Sum(nil)
+    HA2 := hex.EncodeToString(sum[:])
     s = HA1 + ":" + pszNonce + ":"
     if pszNonceCount != "" && pszCNonce != "" { // pszQop:
         s += pszNonceCount + ":" + pszCNonce + ":" + pszQop + ":"
@@ -290,6 +292,6 @@ func DigestCalcResponse(alg *sippy_security.Algorithm, HA1, pszNonce, pszNonceCo
     s += HA2
     hash = alg.NewHash()
     hash.Write([]byte(s))
-    ret := fmt.Sprintf("%x", hash.Sum(nil))
-    return ret
+    sum = hash.Sum(nil)
+    return hex.EncodeToString(sum[:])
 }

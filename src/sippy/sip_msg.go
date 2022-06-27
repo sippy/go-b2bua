@@ -28,11 +28,11 @@ package sippy
 
 import (
     "errors"
-    "fmt"
     "strconv"
     "strings"
 
     "sippy/conf"
+    "sippy/fmt"
     "sippy/headers"
     "sippy/log"
     "sippy/net"
@@ -265,7 +265,7 @@ func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) error {
         } else if self.__mbody == nil {
             // XXX: Should generate 400 Bad Request if such condition
             // happens with request
-            return &ESipParseException{ msg : fmt.Sprintf("Missed SIP body, %d bytes expected", blen) }
+            return &ESipParseException{ msg : sippy_fmt.Sprintf("Missed SIP body, %d bytes expected", blen) }
         } else if blen > mblen {
             if blen - mblen < 7 && mblen > 7 && (*self.__mbody)[len(*self.__mbody)-4:] == "\r\n\r\n" {
                 // XXX: we should not really be doing this, but it appears to be
@@ -290,7 +290,7 @@ func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) error {
             } else {
                 // XXX: Should generate 400 Bad Request if such condition
                 // happens with request
-                return &ESipParseException{ msg : fmt.Sprintf("Truncated SIP body, %d bytes expected, %d received", blen, mblen) }
+                return &ESipParseException{ msg : sippy_fmt.Sprintf("Truncated SIP body, %d bytes expected, %d received", blen, mblen) }
             }
         } else if blen < mblen {
             *self.__mbody = (*self.__mbody)[:blen]
@@ -357,10 +357,10 @@ func (self *sipMsg) localStr(hostport *sippy_net.HostPort, compact bool /*= Fals
         mbody := self.body.LocalStr(hostport)
         bmbody := []byte(mbody)
         if compact {
-            s += fmt.Sprintf("l: %d\r\n", len(bmbody))
+            s += "l: " + strconv.Itoa(len(bmbody)) + "\r\n"
             s += "c: " + self.body.GetMtype() + "\r\n\r\n"
         } else {
-            s += fmt.Sprintf("Content-Length: %d\r\n", len(bmbody))
+            s += "Content-Length: " + strconv.Itoa(len(bmbody)) + "\r\n"
             s += "Content-Type: " + self.body.GetMtype() + "\r\n\r\n"
         }
         s += mbody

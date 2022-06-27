@@ -1,6 +1,4 @@
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2015 Sippy Software, Inc. All rights reserved.
-// Copyright (c) 2015 Andrii Pylypenko. All rights reserved.
+// Copyright (c) 2022 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,33 +22,18 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy_header
+
+package sippy_fmt
 
 import (
-    "sippy/fmt"
+    "fmt"
+    "sync"
 )
 
-type TID struct {
-    CallId      string
-    CSeq        string
-    CSeqMethod  string
-    FromTag     string
-    ToTag       string
-    Branch      string
-}
+var global_lock sync.Mutex
 
-func NewTID(call_id, cseq, cseq_method, from_tag, to_tag, via_branch string) *TID {
-    self := &TID{
-        CallId      : call_id,
-        CSeq        : cseq,
-        CSeqMethod  : cseq_method,
-        FromTag     : from_tag,
-        ToTag       : to_tag,
-        Branch      : via_branch,
-    }
-    return self
-}
-
-func (self *TID) String() string {
-    return sippy_fmt.Sprintf("callid: '%s', cseq: '%s', cseq_method: '%s', from_tag: '%s', to_tag: '%s', branch: '%s'", self.CallId, self.CSeq, self.CSeqMethod, self.FromTag, self.ToTag, self.Branch)
+func Sprintf(format string, args ...interface{}) string {
+    global_lock.Lock()
+    defer global_lock.Unlock()
+    return fmt.Sprintf(format, args...)
 }

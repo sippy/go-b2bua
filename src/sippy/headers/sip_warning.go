@@ -27,7 +27,7 @@
 package sippy_header
 
 import (
-    "fmt"
+    "errors"
     "os"
     "strings"
 
@@ -61,7 +61,7 @@ func CreateSipWarning(body string) []SipHeader {
 func (self *SipWarning) parse() error {
     arr := sippy_utils.FieldsN(self.string_body, 3)
     if len(arr) != 3 {
-        return fmt.Errorf("Malformed Warning field")
+        return errors.New("Malformed Warning field")
     }
     self.body = &sipWarningBody{
         code    : arr[0],
@@ -108,7 +108,7 @@ func (self *SipWarning) StringBody() string {
 }
 
 func (self *sipWarningBody) String() string {
-    return fmt.Sprintf("%s %s \"%s\"", self.code, self.agent, self.text)
+    return self.code + " " + self.agent + " \"" + self.text + "\""
 }
 
 func (self *SipWarning) GetCopy() *SipWarning {

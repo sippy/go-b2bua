@@ -28,8 +28,8 @@ package sippy_header
 
 import (
     "crypto/rand"
+    "encoding/hex"
     "errors"
-    "fmt"
     "strings"
     "time"
 
@@ -81,7 +81,7 @@ func newSipWWWAutenticateBody(realm, algorithm string, now_mono time.Time) *SipW
     if alg == nil {
         buf := make([]byte, 20)
         rand.Read(buf)
-        self.nonce = fmt.Sprintf("%x", buf)
+        self.nonce = hex.EncodeToString(buf)
     } else {
         self.nonce = sippy_security.HashOracle.EmitChallenge(alg.Mask, now_mono)
     }
@@ -208,7 +208,7 @@ func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri, entit
         auth.nc = "00000001"
         buf := make([]byte, 4)
         rand.Read(buf)
-        auth.cnonce = fmt.Sprintf("%x", buf)
+        auth.cnonce = hex.EncodeToString(buf)
     }
     if body.opaque != "" {
         auth.opaque = body.opaque

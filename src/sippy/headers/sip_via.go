@@ -28,8 +28,8 @@ package sippy_header
 
 import (
     "crypto/rand"
+    "encoding/hex"
     "errors"
-    "fmt"
     "net"
     "strings"
 
@@ -245,7 +245,7 @@ func (self *SipVia) GetCopyAsIface() SipHeader {
 func (self *SipViaBody) GenBranch() {
     buf := make([]byte, 16)
     rand.Read(buf)
-    tmp := "z9hG4bK" + fmt.Sprintf("%x", buf)
+    tmp := "z9hG4bK" + hex.EncodeToString(buf)
     self.branch = &tmp
     self.branch_exists = true
 }

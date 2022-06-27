@@ -28,7 +28,6 @@ package sippy_header
 
 import (
     "errors"
-    "fmt"
     "strconv"
     "strings"
     "unicode"
@@ -181,7 +180,7 @@ func (self *SipAddress) LocalStr(hostport *sippy_net.HostPort) string {
         }
     }
     if self.q != 1.0 {
-        s += fmt.Sprintf(";q=%g", self.q)
+        s += ";q=" + strconv.FormatFloat(self.q, 'g', -1, 64)
     }
     return s
 }

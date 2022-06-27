@@ -27,7 +27,6 @@
 package sippy_utils
 
 import (
-    "fmt"
     "os"
     "os/exec"
     "os/signal"
@@ -86,7 +85,7 @@ func Daemonize(logfile string, loguid, loggid int, logger sippy_log.ErrorLogger)
         return err
     }
     cmd := exec.Command(os.Args[0], os.Args[1:]...)
-    cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", ENV_VAR, ENV_VAR_VALUE))
+    cmd.Env = append(os.Environ(), ENV_VAR + "=" + ENV_VAR_VALUE)
     cmd.Stderr = os.Stderr
     cmd.Stdout = os.Stdout
     cmd.SysProcAttr = &syscall.SysProcAttr{ Setsid : true }

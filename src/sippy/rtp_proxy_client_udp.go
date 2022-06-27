@@ -28,13 +28,15 @@ package sippy
 
 import (
     "crypto/rand"
-    "fmt"
+    "encoding/hex"
+    "errors"
     "net"
     "time"
     "strings"
     "sync"
 
     "sippy/conf"
+    "sippy/fmt"
     "sippy/math"
     "sippy/net"
     "sippy/time"
@@ -80,7 +82,7 @@ func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *Timeout, comman
 
 func getnretrans(first_retr, timeout float64) (int64, error) {
     if first_retr < 0 {
-        return 0, fmt.Errorf("getnretrans(%f, %f)", first_retr, timeout)
+        return 0, errors.New(sippy_fmt.Sprintf("getnretrans(%f, %f)", first_retr, timeout))
     }
     var n int64 = 0
     for {
@@ -156,7 +158,7 @@ func (self *Rtp_proxy_client_udp) address() net.Addr {
 func (self *Rtp_proxy_client_udp) send_command(command string, result_callback func(string)) {
     buf := make([]byte, 16)
     rand.Read(buf)
-    cookie := fmt.Sprintf("%x", buf)
+    cookie := hex.EncodeToString(buf)
     next_retr := self.delay_flt.GetLastval() * 4.0
     exp_time := 3.0
     if command[0] == 'I' {
