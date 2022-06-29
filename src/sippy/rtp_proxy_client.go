@@ -259,7 +259,6 @@ func (self *Rtp_proxy_client_base) Shutdown() {
     }
     self.shut_down = true
     self.transport.shutdown()
-    self.transport = nil
 }
 
 func (self *Rtp_proxy_client_base) IsShutDown() bool {
