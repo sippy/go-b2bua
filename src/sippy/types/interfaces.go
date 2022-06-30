@@ -317,7 +317,7 @@ type ClientTransaction interface {
     TransmitData()
     SetOnSendComplete(func())
     CheckRSeq(*sippy_header.SipRSeq) bool
-    SetDlgHeaders([]sippy_header.SipHeader)
+    SetTxnHeaders([]sippy_header.SipHeader)
 }
 
 type ServerTransaction interface {

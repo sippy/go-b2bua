@@ -1299,7 +1299,7 @@ func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) b
         self.logError("UA::processChallenge: cannot prepare client transaction: " + err.Error())
         return false
     }
-    self.tr.SetDlgHeaders(self.dlg_headers)
+    self.tr.SetTxnHeaders(self.dlg_headers)
     self.BeginClientTransaction(req, self.tr)
     delete(self.reqs, cseq)
     return true
