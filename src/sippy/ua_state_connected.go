@@ -225,7 +225,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil, err
         }
         self.ua.SetLSDP(body)
-        tr, err = self.ua.PrepTr(req)
+        tr, err = self.ua.PrepTr(req, nil)
         if err != nil {
             return nil, nil, err
         }

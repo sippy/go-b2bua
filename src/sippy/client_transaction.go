@@ -56,12 +56,17 @@ type clientTransaction struct {
     ack_rTarget     *sippy_header.SipURL
     ack_routes      []*sippy_header.SipRoute
     txn_headers     []sippy_header.SipHeader
+    req_extra_hdrs  []sippy_header.SipHeader
     on_send_complete func()
     seen_rseqs      map[sippy_header.RTID]bool
     last_rseq       int
 }
 
-func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, userv sippy_net.Transport, data []byte, sip_tm *sipTransactionManager, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, address *sippy_net.HostPort, req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
+func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID,
+        userv sippy_net.Transport, data []byte, sip_tm *sipTransactionManager,
+        resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker,
+        address *sippy_net.HostPort, eh []sippy_header.SipHeader,
+        req_out_cb func(sippy_types.SipRequest)) (*clientTransaction, error) {
     var r408 sippy_types.SipResponse = nil
     var err error
 
@@ -99,6 +104,7 @@ func NewClientTransactionObj(req sippy_types.SipRequest, tid *sippy_header.TID, 
         ack_rparams_present : false,
         seen_rseqs      : make(map[sippy_header.RTID]bool),
         last_rseq       : 0,
+        req_extra_hdrs  : eh,
     }
     self.baseTransaction = newBaseTransaction(session_lock, tid, userv, sip_tm, address, data, needack)
     return self, nil
@@ -426,4 +432,8 @@ func (self *clientTransaction) CheckRSeq(rseq *sippy_header.SipRSeq) bool {
 
 func (self *clientTransaction) SetTxnHeaders(hdrs []sippy_header.SipHeader) {
     self.txn_headers = hdrs
+}
+
+func (self *clientTransaction) GetReqExtraHeaders() []sippy_header.SipHeader {
+    return self.req_extra_hdrs
 }

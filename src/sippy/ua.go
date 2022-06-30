@@ -248,9 +248,9 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     code, _ := resp.GetSCode()
     orig_req, cseq_found := self.reqs[cseq_body.CSeq]
     if cseq_body.Method == "INVITE" && !self.pass_auth && cseq_found {
-        if code == 401 && self.processWWWChallenge(resp, cseq_body.CSeq, orig_req) {
+        if code == 401 && self.processWWWChallenge(resp, cseq_body.CSeq, orig_req, tr.GetReqExtraHeaders()) {
             return
-        } else if code == 407 && self.processProxyChallenge(resp, cseq_body.CSeq, orig_req) {
+        } else if code == 407 && self.processProxyChallenge(resp, cseq_body.CSeq, orig_req, tr.GetReqExtraHeaders()) {
             return
         }
     }
@@ -264,12 +264,12 @@ func (self *Ua) RecvResponse(resp sippy_types.SipResponse, tr sippy_types.Client
     self.emitPendingEvents()
 }
 
-func (self *Ua) PrepTr(req sippy_types.SipRequest) (sippy_types.ClientTransaction, error) {
+func (self *Ua) PrepTr(req sippy_types.SipRequest, eh []sippy_header.SipHeader) (sippy_types.ClientTransaction, error) {
     sip_tm := self.get_sip_tm()
     if sip_tm == nil {
         return nil, errors.New("UA already dead")
     }
-    tr, err := sip_tm.CreateClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, self.me().BeforeRequestSent)
+    tr, err := sip_tm.CreateClientTransaction(req, self.me(), self.session_lock, /*laddress*/ self.source_address, /*udp_server*/ nil, eh, self.me().BeforeRequestSent)
     if err != nil {
         return nil, err
     }
@@ -1237,7 +1237,7 @@ func (self *Ua) PrRel() bool {
     return self.pr_rel
 }
 
-func (self *Ua) processProxyChallenge(resp sippy_types.SipResponse, cseq int, orig_req sippy_types.SipRequest) bool {
+func (self *Ua) processProxyChallenge(resp sippy_types.SipResponse, cseq int, orig_req sippy_types.SipRequest, eh []sippy_header.SipHeader) bool {
     if self.username == "" || self.password == "" || orig_req.GetSipProxyAuthorization() != nil {
         return false
     }
@@ -1246,10 +1246,10 @@ func (self *Ua) processProxyChallenge(resp sippy_types.SipResponse, cseq int, or
     for i, hdr := range auths {
         challenges[i] = hdr
     }
-    return self.processChallenge(challenges, cseq)
+    return self.processChallenge(challenges, cseq, eh)
 }
 
-func (self *Ua) processWWWChallenge(resp sippy_types.SipResponse, cseq int, orig_req sippy_types.SipRequest) bool {
+func (self *Ua) processWWWChallenge(resp sippy_types.SipResponse, cseq int, orig_req sippy_types.SipRequest, eh []sippy_header.SipHeader) bool {
     if self.username == "" || self.password == "" || orig_req.GetSipAuthorization() != nil {
         return false
     }
@@ -1258,10 +1258,10 @@ func (self *Ua) processWWWChallenge(resp sippy_types.SipResponse, cseq int, orig
     for i, hdr := range auths {
         challenges[i] = hdr
     }
-    return self.processChallenge(challenges, cseq)
+    return self.processChallenge(challenges, cseq, eh)
 }
 
-func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) bool {
+func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int, eh []sippy_header.SipHeader) bool {
     var challenge sippy_types.Challenge
     found := false
     for _, challenge = range challenges {
@@ -1288,13 +1288,13 @@ func (self *Ua) processChallenge(challenges []sippy_types.Challenge, cseq int) b
         // no supported challenge has been found
         return false
     }
-    req, err := self.GenRequest("INVITE", self.lSDP, challenge)
+    req, err := self.GenRequest("INVITE", self.lSDP, challenge, eh...)
     if err != nil {
         self.logError("UA::processChallenge: cannot create INVITE: " + err.Error())
         return false
     }
     self.lCSeq += 1
-    self.tr, err = self.me().PrepTr(req)
+    self.tr, err = self.me().PrepTr(req, eh)
     if err != nil {
         self.logError("UA::processChallenge: cannot prepare client transaction: " + err.Error())
         return false

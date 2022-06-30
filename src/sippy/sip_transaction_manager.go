@@ -351,7 +351,10 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
 }
 
 // 1. Client transaction methods
-func (self *sipTransactionManager) CreateClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_net.HostPort, userv sippy_net.Transport, req_out_cb func(sippy_types.SipRequest)) (sippy_types.ClientTransaction, error) {
+func (self *sipTransactionManager) CreateClientTransaction(req sippy_types.SipRequest,
+        resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker,
+        laddress *sippy_net.HostPort, userv sippy_net.Transport,
+        eh []sippy_header.SipHeader, req_out_cb func(sippy_types.SipRequest)) (sippy_types.ClientTransaction, error) {
     var tid *sippy_header.TID
     var err error
     var t *clientTransaction
@@ -385,7 +388,7 @@ func (self *sipTransactionManager) CreateClientTransaction(req sippy_types.SipRe
         return nil, errors.New("BUG: Attempt to initiate transaction with the same TID as existing one!!!")
     }
     data := []byte(req.LocalStr(userv.GetLAddress(), false /* compact */))
-    t, err = NewClientTransactionObj(req, tid, userv, data, self, resp_receiver, session_lock, target, req_out_cb)
+    t, err = NewClientTransactionObj(req, tid, userv, data, self, resp_receiver, session_lock, target, eh, req_out_cb)
     if err != nil {
         return nil, err
     }
@@ -401,7 +404,7 @@ func (self *sipTransactionManager) BeginClientTransaction(req sippy_types.SipReq
 }
 
 func (self *sipTransactionManager) BeginNewClientTransaction(req sippy_types.SipRequest, resp_receiver sippy_types.ResponseReceiver, session_lock sync.Locker, laddress *sippy_net.HostPort, userv sippy_net.Transport, req_out_cb func(sippy_types.SipRequest)) {
-    tr, err := self.CreateClientTransaction(req, resp_receiver, session_lock, laddress, userv, req_out_cb)
+    tr, err := self.CreateClientTransaction(req, resp_receiver, session_lock, laddress, userv, nil, req_out_cb)
     if err != nil {
         self.config.ErrorLogger().Error(err.Error())
     } else {

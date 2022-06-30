@@ -118,7 +118,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         if err != nil {
             return nil, nil, err
         }
-        tr, err = self.ua.PrepTr(req)
+        tr, err = self.ua.PrepTr(req, eh)
         if err != nil {
             return nil, nil, err
         }

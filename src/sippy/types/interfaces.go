@@ -283,7 +283,7 @@ type UA interface {
     UasLossEmul() int
     BeforeRequestSent(SipRequest)
     BeforeResponseSent(SipResponse)
-    PrepTr(SipRequest) (ClientTransaction, error)
+    PrepTr(SipRequest, []sippy_header.SipHeader) (ClientTransaction, error)
     Cleanup()
     OnEarlyUasDisconnect(CCEvent) (int, string)
     SetExpireStartsOnSetup(bool)
@@ -318,6 +318,7 @@ type ClientTransaction interface {
     SetOnSendComplete(func())
     CheckRSeq(*sippy_header.SipRSeq) bool
     SetTxnHeaders([]sippy_header.SipHeader)
+    GetReqExtraHeaders() []sippy_header.SipHeader
 }
 
 type ServerTransaction interface {
@@ -341,7 +342,8 @@ type SipTransactionManager interface {
     RegConsumer(UA, string)
     UnregConsumer(UA, string)
     BeginNewClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort, sippy_net.Transport, func(SipRequest))
-    CreateClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort, sippy_net.Transport, func(SipRequest)) (ClientTransaction, error)
+    CreateClientTransaction(SipRequest, ResponseReceiver, sync.Locker, *sippy_net.HostPort,
+        sippy_net.Transport, []sippy_header.SipHeader, func(SipRequest)) (ClientTransaction, error)
     BeginClientTransaction(SipRequest, ClientTransaction)
     SendResponse(resp SipResponse, lock bool, ack_cb func(SipRequest))
     SendResponseWithLossEmul(resp SipResponse, lock bool, ack_cb func(SipRequest), lossemul int)
