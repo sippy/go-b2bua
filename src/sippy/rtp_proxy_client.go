@@ -195,7 +195,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
                 ptransmitted, _ = strconv.ParseInt(strings.TrimSpace(line_parts[1]), 10, 64)
             }
         }
-        self.UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
+        self.me().UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
     StartTimeoutWithSpread(self.heartbeat, nil, self.opts.hrtb_ival, 1, self.opts.logger, 0.1)
 }
