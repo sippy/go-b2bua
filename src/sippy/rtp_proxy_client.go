@@ -109,6 +109,7 @@ func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, opts *rtpProxyCli
         caps_done       : false,
         shut_down       : false,
         opts            : opts,
+        active_sessions : -1,
     }
 }
 
@@ -170,7 +171,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         return
     }
     if stats == "" {
-        self.active_sessions = 0
+        self.active_sessions = -1
         self.me().GoOffline()
     } else {
         sessions_created := int64(0)
