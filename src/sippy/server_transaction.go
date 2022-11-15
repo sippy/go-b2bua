@@ -222,14 +222,20 @@ func (self *serverTransaction) IncomingRequest(req sippy_types.SipRequest, check
         if self.state == COMPLETED {
             self.state = CONFIRMED
             self.cancelTeA()
-            self.cancelTeD()
+            self.prov_inflight_lock.Lock()
+            if self.prov_inflight == nil {
+                // We have done with the transaction, no need to wait for timeout
+                self.cancelTeD()
+                sip_tm.tserver_del(self.tid)
+            }
             if self.ack_cb != nil {
                 self.ack_cb(req)
             }
-            // We have done with the transaction, no need to wait for timeout
-            sip_tm.tserver_del(self.tid)
             sip_tm.rcache_set_call_id(checksum, self.tid.CallId)
-            self.cleanup()
+            if self.prov_inflight == nil {
+                self.cleanup()
+            }
+            self.prov_inflight_lock.Unlock()
         }
     case "PRACK":
         var resp sippy_types.SipResponse
@@ -428,7 +434,7 @@ func (self *serverTransaction) retrUasResponse(last_timeout time.Duration, losse
         if sip_tm := self.sip_tm; sip_tm != nil && prov_inflight != nil {
             sip_tm.rtid_del(prov_inflight.rtid)
         }
-        if self.noprack_cb != nil {
+        if self.noprack_cb != nil && self.state == RINGING {
             self.noprack_cb(nil)
         }
         return

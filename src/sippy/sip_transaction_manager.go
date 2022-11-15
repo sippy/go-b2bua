@@ -484,17 +484,7 @@ func (self *sipTransactionManager) incomingRequest(req *sipRequest, checksum str
             self.logBadMessage("Cannot parse Via: " + err.Error(), data)
             return
         }
-        // Here the transaction ID has been matched but the transaction itself has already
-        // been destroyed which most probably means the following events have occured:
-        //
-        // 1. INVITE's been received.
-        // 2. 1xx with no SDP has been sent.
-        // 3. PRACK was expected to arrive but instead we've decided to send 200 OK to the INVITE.
-        // 4. The PRACK for the 1xx from step 2 has finally arrived.
-        //
-        // So at this stage it's safe to send 200 OK to PRACK as RFC3262 mandates.
-        //
-        resp := req.GenResponse(200, "OK", /*body*/ nil, /*server*/ nil)
+        resp := req.GenResponse(481, "Huh?", /*body*/ nil, /*server*/ nil)
         self.transmitMsg(server, resp, via0.GetTAddr(self.config), checksum, tid.CallId)
     case "CANCEL":
         var via0 *sippy_header.SipViaBody
