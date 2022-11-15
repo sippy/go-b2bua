@@ -59,7 +59,6 @@ type sipTransactionManager struct {
     req_consumers   map[string][]sippy_types.UA
     consumers_lock  sync.Mutex
     pass_t_to_cb    bool
-    provisional_retr time.Duration
     before_response_sent func(sippy_types.SipResponse)
     rtid2tid        map[sippy_header.RTID]*sippy_header.TID
     rtid2tid_lock   sync.Mutex
@@ -87,7 +86,6 @@ func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.Cal
         nat_traversal   : false,
         req_consumers   : make(map[string][]sippy_types.UA),
         pass_t_to_cb    : false,
-        provisional_retr : 0,
         rtid2tid        : make(map[sippy_header.RTID]*sippy_header.TID),
     }
     self.l4r, err = NewLocal4Remote(config, self.handleIncoming)

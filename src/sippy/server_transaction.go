@@ -46,7 +46,6 @@ type serverTransaction struct {
     lock            sync.Mutex
     checksum        string
     teD             *Timeout
-    teF             *Timeout
     teE             *Timeout
     r487            sippy_types.SipResponse
     cancel_cb       func(*sippy_time.MonoTime, sippy_types.SipRequest)
@@ -115,7 +114,6 @@ func (self *serverTransaction) cleanup() {
     self.cancel_cb = nil
     if self.teD != nil { self.teD.Cancel(); self.teD = nil }
     if self.teE != nil { self.teE.Cancel(); self.teE = nil }
-    if self.teF != nil { self.teF.Cancel(); self.teF = nil }
     self.noack_cb = nil
     self.ack_cb = nil
     self.prack_cb = nil
@@ -124,13 +122,6 @@ func (self *serverTransaction) cleanup() {
 
 func (self *serverTransaction) startTeE(t time.Duration) {
     self.teE = StartTimeout(self.timerE, self, t, 1, self.logger)
-}
-
-func (self *serverTransaction) startTeF(t time.Duration) {
-    if self.teF != nil {
-        self.teF.Cancel()
-    }
-    self.teF = StartTimeout(self.timerF, self, t, 1, self.logger)
 }
 
 func (self *serverTransaction) cancelTeE() {
@@ -144,13 +135,6 @@ func (self *serverTransaction) cancelTeD() {
     if self.teD != nil {
         self.teD.Cancel()
         self.teD = nil
-    }
-}
-
-func (self *serverTransaction) cancelTeF() {
-    if self.teF != nil {
-        self.teF.Cancel()
-        self.teF = nil
     }
 }
 
@@ -180,27 +164,11 @@ func (self *serverTransaction) timerE() {
     }
     //print("timerE", t.GetTID())
     self.cancelTeE()
-    self.cancelTeF()
     if self.state == TRYING || self.state == RINGING {
         if self.r487 != nil {
             self.r487.SetSCodeReason("Request Expired")
         }
         self.doCancel(/*rtime*/nil, /*req*/nil)
-    }
-}
-
-// Timer to retransmit the last provisional reply every
-// 2 seconds
-func (self *serverTransaction) timerF() {
-    sip_tm := self.sip_tm
-    if sip_tm == nil {
-        return
-    }
-    //print("timerF", t.GetTID())
-    self.cancelTeF()
-    if self.state == RINGING && sip_tm.provisional_retr > 0 {
-        sip_tm.transmitData(self.userv, self.data, self.address, /*checksum*/ "", self.tid.CallId, 0)
-        self.startTeF(sip_tm.provisional_retr)
     }
 }
 
@@ -367,13 +335,9 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
     need_cleanup := false
     if resp.GetSCodeNum() < 200 {
         self.state = RINGING
-        if sip_tm.provisional_retr > 0 && resp.GetSCodeNum() > 100 {
-            self.startTeF(sip_tm.provisional_retr)
-        }
     } else {
         self.state = COMPLETED
         self.cancelTeE()
-        self.cancelTeF()
         if self.needack {
             // Schedule removal of the transaction
             self.ack_cb = ack_cb
@@ -420,7 +384,7 @@ func (self *serverTransaction) SendResponseWithLossEmul(resp sippy_types.SipResp
 }
 
 func (self *serverTransaction) TimersAreActive() bool {
-    return self.teA != nil || self.teD != nil || self.teE != nil || self.teF != nil
+    return self.teA != nil || self.teD != nil || self.teE != nil
 }
 
 func (self *serverTransaction) Lock() {
