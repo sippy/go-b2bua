@@ -119,7 +119,7 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
     return self, nil
 }
 
-func (self *UpdateLookupOpts) Getstr(call_id string/*, swaptags bool*/) string {
+func (self *UpdateLookupOpts) Getstr(call_id string, swaptags, skipnotify bool) (string, error) {
     s := ""
     if self.DestinationIP != "" {
         s += "R" + self.DestinationIP
@@ -138,28 +138,28 @@ func (self *UpdateLookupOpts) Getstr(call_id string/*, swaptags bool*/) string {
     if self.RemotePort != "" {
         s += " " + self.RemotePort
     }
-    /*
-    from_tag, to_tag := self.FromTag, self.to_tag
+    FromTag, ToTag := self.FromTag, self.ToTag
     if swaptags {
-        if self.to_tag == "" {
-            return "", errors.New('UpdateLookupOpts::Getstr(swaptags = True): to_tag is not set')
+        if ToTag == "" {
+            return "", errors.New("UpdateLookupOpts::Getstr(swaptags = True): ToTag is not set")
         }
-        to_tag, from_tag = self.FromTag, self.to_tag
+        ToTag, FromTag = FromTag, ToTag
     }
-    */
-    if self.FromTag != "" {
-        s += " " + self.FromTag
+    if FromTag != "" {
+        s += " " + FromTag
     }
-    if self.ToTag != "" {
-        s += " " + self.ToTag
+    if ToTag != "" {
+        s += " " + ToTag
     }
-    if self.NotifySocket != "" {
-        s += " " + self.NotifySocket
+    if ! skipnotify {
+        if self.NotifySocket != "" {
+            s += " " + self.NotifySocket
+        }
+        if self.NotifyTag != "" {
+            s += " " + self.NotifyTag
+        }
     }
-    if self.NotifyTag != "" {
-        s += " " + self.NotifyTag
-    }
-    return s
+    return s, nil
 }
 
 type Rtp_proxy_cmd struct {
@@ -222,7 +222,11 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
 func (self *Rtp_proxy_cmd) String() string {
     s := string([]byte{ self.Type })
     if self.ULOpts != nil {
-        s += self.ULOpts.Getstr(self.CallId)
+        _s, err := self.ULOpts.Getstr(self.CallId, false, false)
+        if err != nil {
+            panic(err)
+        }
+        s += _s
     } else {
         if self.CommandOpts != "" {
             s += self.CommandOpts
