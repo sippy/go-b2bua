@@ -167,9 +167,15 @@ func (self *sipTransactionManager) rcache_set_call_id(checksum, call_id string) 
     }
 }
 
+func (self *sipTransactionManager) logMsg(rtime *sippy_time.MonoTime, call_id string,
+  direction string, address *sippy_net.HostPort, data []byte) {
+    msg := direction + " message from " + address.String() + ":\n" + string(data) + "\n"
+    self.config.SipLogger().Write(rtime, call_id, msg)
+}
+
 func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_net.HostPort, server sippy_net.Transport, rtime *sippy_time.MonoTime) {
     if len(data) < 32 {
-        //self.config.SipLogger().Write(rtime, retrans.call_id, "RECEIVED message from " + address.String() + ":\n" + string(data))
+        //self.logMsg(rtime, retrans.call_id, "RECEIVED", address, data)
         //self.logError("The message is too short from " + address.String() + ":\n" + string(data))
         return
     }
@@ -179,7 +185,7 @@ func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_ne
     retrans, ok := self.rcache_get_no_lock(checksum)
     if ok {
         self.rcache_lock.Unlock()
-        self.config.SipLogger().Write(rtime, retrans.call_id, "RECEIVED message from " + address.String() + ":\n" + string(data))
+        self.logMsg(rtime, retrans.call_id, "RECEIVED", address, data)
         if retrans.data == nil {
             return
         }
@@ -207,17 +213,17 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
 
     resp, err = ParseSipResponse(data, rtime, self.config)
     if err != nil {
-        self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
+        self.logMsg(rtime, "", "RECEIVED", address, data)
         self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
         return
     }
     tid, err = resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
     if err != nil {
-        self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
+        self.logMsg(rtime, "", "RECEIVED", address, data)
         self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
         return
     }
-    self.config.SipLogger().Write(rtime, tid.CallId, "RECEIVED message from " + address.String() + ":\n" + string(data))
+    self.logMsg(rtime, tid.CallId, "RECEIVED", address, data)
 
     if resp.scode < 100 || resp.scode > 999 {
         self.logBadMessage("invalid status code in SIP response" + address.String() + ":\n" + string(data), data)
@@ -300,17 +306,17 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
                 self.transmitMsg(server, errt.sip_response, address, checksum, errt.sip_response.GetCallId().CallId)
             }
         }
-        self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
+        self.logMsg(rtime, "", "RECEIVED", address, data)
         self.logBadMessage("can't parse SIP request from " + address.String() + ": " + err.Error(), data)
         return
     }
     tids, err = req.getTIds()
     if err != nil {
-        self.config.SipLogger().Write(rtime, "", "RECEIVED message from " + address.String() + ":\n" + string(data))
+        self.logMsg(rtime, "", "RECEIVED", address, data)
         self.logBadMessage(err.Error(), data)
         return
     }
-    self.config.SipLogger().Write(rtime, tids[0].CallId, "RECEIVED message from " + address.String() + ":\n" + string(data))
+    self.logMsg(rtime, tids[0].CallId, "RECEIVED", address, data)
     via0, err = req.vias[0].GetBody()
     if err != nil {
         self.logBadMessage(err.Error(), data)
@@ -659,7 +665,7 @@ func (self *sipTransactionManager) transmitDataWithCb(userv sippy_net.Transport,
     } else {
         logop = "DISCARDING"
     }
-    self.config.SipLogger().Write(nil, call_id, logop + " message to " + address.String() + ":\n" + string(data))
+    self.logMsg(nil, call_id, logop, address, data)
     if len(cachesum) > 0 {
         if lossemul > 0 {
             lossemul--
