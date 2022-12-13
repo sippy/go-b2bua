@@ -62,6 +62,7 @@ func CreateSipAddressHFs(body string) []*sipAddressHF {
         if idx == -1 {
             break
         }
+        idx += pidx
         onum, cnum, qnum := 0, 0, 0
         for _, r := range body[:idx] {
             switch r {
