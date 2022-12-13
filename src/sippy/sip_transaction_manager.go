@@ -169,7 +169,13 @@ func (self *sipTransactionManager) rcache_set_call_id(checksum, call_id string) 
 
 func (self *sipTransactionManager) logMsg(rtime *sippy_time.MonoTime, call_id string,
   direction string, address *sippy_net.HostPort, data []byte) {
-    msg := direction + " message from " + address.String() + ":\n" + string(data) + "\n"
+    var ft string
+    if direction == "SENDING" {
+        ft = " message to "
+    } else {
+        ft = " message from "
+    }
+    msg := direction + ft + address.String() + ":\n" + string(data) + "\n"
     self.config.SipLogger().Write(rtime, call_id, msg)
 }
 
