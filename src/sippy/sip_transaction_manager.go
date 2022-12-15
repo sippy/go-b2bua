@@ -88,6 +88,10 @@ func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.Cal
         pass_t_to_cb    : false,
         rtid2tid        : make(map[sippy_header.RTID]*sippy_header.TID),
     }
+    // Lock the lock here, otherwise we might get request in too
+    // early for us to start processing it
+    self.rcache_lock.Lock()
+    defer self.rcache_lock.Unlock()
     self.l4r, err = NewLocal4Remote(config, self.handleIncoming)
     if err != nil {
         return nil, err
