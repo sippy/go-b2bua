@@ -49,5 +49,5 @@ func NewRTID(call_id, from_tag string, rseq, cseq int, method string) *RTID {
 }
 
 func (self *RTID) String() string {
-    return sippy_fmt.Sprintf("callid: '%s', cseq: '%s', method: '%s', from_tag: '%s', '%s', rseq: '%s'", self.CallId, self.CSeq, self.Method, self.FromTag, self.RSeq)
+    return sippy_fmt.Sprintf("callid: '%s', cseq: '%d', method: '%s', from_tag: '%s', rseq: '%d'", self.CallId, self.CSeq, self.Method, self.FromTag, self.RSeq)
 }
