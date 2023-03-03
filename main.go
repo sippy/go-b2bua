@@ -40,11 +40,11 @@ import (
     "syscall"
     "time"
 
-    "sippy"
-    "sippy/conf"
-    "sippy/log"
-    "sippy/net"
-    "sippy/types"
+    "github.com/sippy/go-b2bua/sippy"
+    "github.com/sippy/go-b2bua/sippy/conf"
+    "github.com/sippy/go-b2bua/sippy/log"
+    "github.com/sippy/go-b2bua/sippy/net"
+    "github.com/sippy/go-b2bua/sippy/types"
 )
 
 var next_cc_id chan int64

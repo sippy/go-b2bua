@@ -1,11 +1,26 @@
-GOPATH=/usr/local/share/go
-all: b2bua_simple
+ALL_TARGERS=	b2bua_simple b2bua_radius call_transfer rfc8760 stir_shaken
 
-b2bua_simple: *.go src/sippy/*.go src/sippy/conf/*.go src/sippy/time/*.go src/sippy/log/*.go src/sippy/utils/*.go src/sippy/headers/*.go src/sippy/types/*.go src/sippy/sdp/*.go src/sippy/security/*.go
-	GOPATH=$(CURDIR):$(GOPATH) GO111MODULE=off go build -o b2bua_simple
+all: ${ALL_TARGERS}
+
+SIPPY_DEPS=	sippy/*.go sippy/conf/*.go sippy/time/*.go sippy/log/*.go sippy/utils/*.go sippy/headers/*.go sippy/types/*.go sippy/sdp/*.go sippy/security/*.go
+
+b2bua_simple: *.go ${SIPPY_DEPS}
+	go build -o b2bua_simple
+
+b2bua_radius: cmd/b2bua_radius/*.go internal/b2bua_radius/*.go ${SIPPY_DEPS}
+	go build -o b2bua_radius cmd/b2bua_radius/main.go
+
+call_transfer: examples/call_transfer/*.go internal/call_transfer/*.go ${SIPPY_DEPS}
+	go build -o call_transfer examples/call_transfer/main.go
+
+rfc8760: examples/rfc8760/*.go internal/rfc8760/*.go ${SIPPY_DEPS}
+	go build -o rfc8760 examples/rfc8760/main.go
+
+stir_shaken: examples/stir_shaken/*.go internal/stir_shaken/*.go ${SIPPY_DEPS}
+	go build -o stir_shaken examples/stir_shaken/main.go
 
 clean:
-	-rm b2bua_simple
+	-rm ${ALL_TARGERS}
 
 test:
-	cd $(CURDIR)/src/sippy; GOPATH=$(CURDIR):$(GOPATH) GO111MODULE=off go test
+	go test ./...

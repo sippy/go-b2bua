@@ -36,99 +36,26 @@ import (
     "runtime"
     "strings"
     "strconv"
-    "sync"
     "syscall"
     "time"
 
-    "sippy"
-    "sippy/conf"
-    "sippy/log"
-    "sippy/net"
-    "sippy/types"
+    "github.com/sippy/go-b2bua/sippy"
+    "github.com/sippy/go-b2bua/sippy/conf"
+    "github.com/sippy/go-b2bua/sippy/log"
+    "github.com/sippy/go-b2bua/sippy/net"
+
+    "github.com/sippy/go-b2bua/internal/call_transfer"
 )
 
-var next_cc_id chan int64
-
 func init() {
-    next_cc_id = make(chan int64)
+    call_transfer.Next_cc_id = make(chan int64)
     go func() {
         var id int64 = 1
         for {
-            next_cc_id <- id
+            call_transfer.Next_cc_id <- id
             id++
         }
     }()
-}
-
-type callMap struct {
-    config *myconfig
-    logger          sippy_log.ErrorLogger
-    sip_tm          sippy_types.SipTransactionManager
-    proxy           sippy_types.StatefulProxy
-    ccmap           map[int64]*callController
-    ccmap_lock      sync.Mutex
-}
-
-func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) *callMap {
-    return &callMap{
-        logger          : logger,
-        config          : config,
-        ccmap           : make(map[int64]*callController),
-    }
-}
-
-func (self *callMap) OnNewDialog(req sippy_types.SipRequest, tr sippy_types.ServerTransaction) (sippy_types.UA, sippy_types.RequestReceiver, sippy_types.SipResponse) {
-    to_body, err := req.GetTo().GetBody(self.config)
-    if err != nil {
-        self.logger.Error("CallMap::OnNewDialog: #1: " + err.Error())
-        return nil, nil, req.GenResponse(500, "Internal Server Error", nil, nil)
-    }
-    if to_body.GetTag() != "" {
-        // Request within dialog, but no such dialog
-        return nil, nil, req.GenResponse(481, "Call Leg/Transaction Does Not Exist", nil, nil)
-    }
-    if req.GetMethod() == "INVITE" {
-        // New dialog
-        cc := NewCallController(self)
-        self.ccmap_lock.Lock()
-        self.ccmap[cc.id] = cc
-        self.ccmap_lock.Unlock()
-        return cc.uaA, cc.uaA, nil
-    }
-    if req.GetMethod() == "REGISTER" {
-        // Registration
-        return nil, self.proxy, nil
-    }
-    if req.GetMethod() == "NOTIFY" || req.GetMethod() == "PING" {
-        // Whynot?
-        return nil, nil, req.GenResponse(200, "OK", nil, nil)
-    }
-    return nil, nil, req.GenResponse(501, "Not Implemented", nil, nil)
-}
-
-func (self *callMap) Remove(ccid int64) {
-    self.ccmap_lock.Lock()
-    defer self.ccmap_lock.Unlock()
-    delete(self.ccmap, ccid)
-}
-
-func (self *callMap) Shutdown() {
-    acalls := []*callController{}
-    self.ccmap_lock.Lock()
-    for _, cc := range self.ccmap {
-        //println(cc.String())
-        acalls = append(acalls, cc)
-    }
-    self.ccmap_lock.Unlock()
-    for _, cc := range acalls {
-        cc.Shutdown()
-    }
-}
-
-type myconfig struct {
-    sippy_conf.Config
-
-    nh_addr *sippy_net.HostPort
 }
 
 func main() {
@@ -158,9 +85,9 @@ func main() {
         error_logger.Error(err)
         return
     }
-    config := &myconfig{
+    config := &call_transfer.Myconfig{
         Config : sippy_conf.NewConfig(error_logger, sip_logger),
-        nh_addr      : sippy_net.NewHostPort("192.168.0.102", "5060"), // next hop address
+        Nh_addr      : sippy_net.NewHostPort("192.168.0.102", "5060"), // next hop address
     }
     //config.SetIPV6Enabled(false)
     if nh_addr != "" {
@@ -181,7 +108,7 @@ func main() {
         if len(parts) == 2 {
             port = parts[1]
         }
-        config.nh_addr = sippy_net.NewHostPort(addr, port)
+        config.Nh_addr = sippy_net.NewHostPort(addr, port)
     }
     config.SetMyUAName("Sippy B2BUA (Simple)")
     config.SetAllowFormats([]int{ 0, 8, 18, 100, 101 })
@@ -193,14 +120,14 @@ func main() {
         config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     }
     config.SetSipPort(config.GetMyPort())
-    cmap := NewCallMap(config, error_logger)
+    cmap := call_transfer.NewCallMap(config, error_logger)
     sip_tm, err := sippy.NewSipTransactionManager(config, cmap)
     if err != nil {
         error_logger.Error(err)
         return
     }
-    cmap.sip_tm = sip_tm
-    cmap.proxy = sippy.NewStatefulProxy(sip_tm, config.nh_addr, config)
+    cmap.Sip_tm = sip_tm
+    cmap.Proxy = sippy.NewStatefulProxy(sip_tm, config.Nh_addr, config)
     go sip_tm.Run()
 
     signal_chan := make(chan os.Signal, 1)

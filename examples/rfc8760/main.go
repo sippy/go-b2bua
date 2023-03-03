@@ -39,19 +39,19 @@ import (
     "syscall"
     "time"
 
-    "sippy"
-    "sippy/log"
-    "sippy/net"
+    "github.com/sippy/go-b2bua/sippy"
+    "github.com/sippy/go-b2bua/sippy/log"
+    "github.com/sippy/go-b2bua/sippy/net"
+
+    "github.com/sippy/go-b2bua/internal/rfc8760"
 )
 
-var next_cc_id chan int64
-
 func init() {
-    next_cc_id = make(chan int64)
+    rfc8760.Next_cc_id = make(chan int64)
     go func() {
         var id int64 = 1
         for {
-            next_cc_id <- id
+            rfc8760.Next_cc_id <- id
             id++
         }
     }()
@@ -89,12 +89,12 @@ func main() {
         error_logger.Error(err)
         return
     }
-    config := NewMyConfig(error_logger, sip_logger)
-    config.authname_in = authname_in
-    config.authname_out = authname_out
-    config.passwd_in = passwd_in
-    config.passwd_out = passwd_out
-    config.hash_alg = hash_alg
+    config := rfc8760.NewMyConfig(error_logger, sip_logger)
+    config.Authname_in = authname_in
+    config.Authname_out = authname_out
+    config.Passwd_in = passwd_in
+    config.Passwd_out = passwd_out
+    config.Hash_alg = hash_alg
 
     if nh_addr != "" {
         var parts []string
@@ -114,7 +114,7 @@ func main() {
         if len(parts) == 2 {
             port = parts[1]
         }
-        config.nh_addr = sippy_net.NewHostPort(addr, port)
+        config.Nh_addr = sippy_net.NewHostPort(addr, port)
     }
     config.SetMyUAName("Sippy B2BUA (Simple)")
     config.SetAllowFormats([]int{ 0, 8, 18, 100, 101 })
@@ -126,7 +126,7 @@ func main() {
         config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     }
     config.SetSipPort(config.GetMyPort())
-    cmap, err := NewCallMap(config, error_logger)
+    cmap, err := rfc8760.NewCallMap(config, error_logger)
     if err != nil {
         error_logger.Error(err)
         return
@@ -136,8 +136,8 @@ func main() {
         error_logger.Error(err)
         return
     }
-    cmap.sip_tm = sip_tm
-    cmap.proxy = sippy.NewStatefulProxy(sip_tm, config.nh_addr, config)
+    cmap.Sip_tm = sip_tm
+    cmap.Proxy = sippy.NewStatefulProxy(sip_tm, config.Nh_addr, config)
     go sip_tm.Run()
 
     signal_chan := make(chan os.Signal, 1)
