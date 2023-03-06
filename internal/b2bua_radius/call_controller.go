@@ -155,7 +155,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 event = sippy.NewCCEventTry(self.cId, self.cGUID, self.cli, self.cld, body, auth, self.caller_name)
             }
 */
-            if len(*self.cmap.rtp_proxy_clients) > 0 {
+            if len(self.cmap.rtp_proxy_clients) > 0 {
                 var err error
                 self.rtp_proxy_session, err = sippy.NewRtp_proxy_session(self.global_config, self.cmap.rtp_proxy_clients, self.cId.CallId, "", "", self.global_config.B2bua_socket, /*notify_tag*/ fmt.Sprintf("r%%20%d", self.id), self.lock)
                 if err != nil {

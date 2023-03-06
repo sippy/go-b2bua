@@ -160,7 +160,7 @@ func main() {
 */
     global_config.SetMyUAName("Sippy B2BUA (RADIUS)")
 
-    cmap := b2bua_radius.NewCallMap(global_config, &rtp_proxy_clients, static_route)
+    cmap := b2bua_radius.NewCallMap(global_config, rtp_proxy_clients, static_route)
 /*
     if global_config.getdefault('xmpp_b2bua_id', nil) != nil:
         global_config['_xmpp_mode'] = true

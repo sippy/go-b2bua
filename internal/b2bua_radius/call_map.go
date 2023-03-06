@@ -54,7 +54,7 @@ type CallMap struct {
     Proxy           sippy_types.StatefulProxy
     cc_id           int64
     cc_id_lock      sync.Mutex
-    rtp_proxy_clients *[]sippy_types.RtpProxyClient
+    rtp_proxy_clients []sippy_types.RtpProxyClient
     static_route    *B2BRoute
 }
 
@@ -67,7 +67,7 @@ class CallMap(object):
     //rc2 = nil
 */
 
-func NewCallMap(global_config *myConfigParser, rtp_proxy_clients *[]sippy_types.RtpProxyClient,
+func NewCallMap(global_config *myConfigParser, rtp_proxy_clients []sippy_types.RtpProxyClient,
   static_route *B2BRoute) *CallMap {
     self := &CallMap{
         global_config   : global_config,

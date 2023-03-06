@@ -75,7 +75,7 @@ func (self *rtpproxy_update_result) Address() string {
     return self.rtpproxy_address
 }
 
-func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients *[]sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker) (*Rtp_proxy_session, error) {
+func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker) (*Rtp_proxy_session, error) {
     self := &Rtp_proxy_session{
         notify_socket   : notify_socket,
         notify_tag      : notify_tag,
@@ -95,7 +95,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients *[]sippy_t
     self.caller.session_exists = false
     self.callee.session_exists = false
     online_clients := []sippy_types.RtpProxyClient{}
-    for _, cl := range *rtp_proxy_clients {
+    for _, cl := range rtp_proxy_clients {
         if cl.IsOnline() {
             online_clients = append(online_clients, cl)
         }
