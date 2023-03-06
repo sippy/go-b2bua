@@ -75,6 +75,8 @@ func NewCallMap(global_config *myConfigParser, rtp_proxy_clients []sippy_types.R
         gc_timeout      : time.Minute,
         debug_mode      : false,
         safe_restart    : false,
+        rtp_proxy_clients: rtp_proxy_clients,
+        static_route    : static_route,
     }
     go func() {
         sighup_ch := make(chan os.Signal, 1)
