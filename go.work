@@ -6,5 +6,5 @@ use (
   ./examples/call_transfer
   ./examples/rfc8760
   ./examples/stir_shaken
-  ./
+  ./sippy
 )
