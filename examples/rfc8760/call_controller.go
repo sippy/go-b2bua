@@ -24,7 +24,7 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package stir_shaken
+package main
 
 import (
     "sync"
@@ -34,8 +34,6 @@ import (
     "github.com/sippy/go-b2bua/sippy/headers"
     "github.com/sippy/go-b2bua/sippy/types"
 )
-
-var Next_cc_id chan int64
 
 type callController struct {
     uaA             sippy_types.UA
@@ -47,6 +45,8 @@ type callController struct {
     date_hf         *sippy_header.SipDate
     call_id	string
 }
+
+var Next_cc_id chan int64
 
 func NewCallController(cmap *callMap, identity_hf sippy_header.SipHeader, date_hf *sippy_header.SipDate) *callController {
     self := &callController{
@@ -69,13 +69,6 @@ func (self *callController) Error(msg string) {
 
 func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.UA) {
     if ua == self.uaA {
-        if ev_try, ok := event.(*sippy.CCEventTry); ok {
-	    self.call_id = ev_try.GetSipCallId().StringBody()
-            if self.cmap.config.Verify && ! self.SshakenVerify(ev_try) {
-                self.uaA.RecvEvent(sippy.NewCCEventFail(438, "Invalid Identity Header", event.GetRtime(), ""))
-                return
-            }
-        }
         if self.uaO == nil {
             ev_try, ok := event.(*sippy.CCEventTry)
             if ! ok {
@@ -83,47 +76,32 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 return
             }
             self.uaO = sippy.NewUA(self.cmap.Sip_tm, self.cmap.config, self.cmap.config.Nh_addr, self, self.lock, nil)
-            identity, date, err := self.SshakenAuth(ev_try.GetCLI(), ev_try.GetCLD())
-            if err == nil {
-                extra_headers := []sippy_header.SipHeader{
-                    sippy_header.NewSipDate(date),
-                    sippy_header.NewSipGenericHF("Identity", identity),
-                }
-                self.uaO.SetExtraHeaders(extra_headers)
-            }
             self.uaO.SetDeadCb(self.oDead)
             self.uaO.SetRAddr(self.cmap.config.Nh_addr)
+            if self.cmap.config.Authname_out != "" {
+                self.uaO.SetUsername(self.cmap.config.Authname_out)
+                self.uaO.SetPassword(self.cmap.config.Passwd_out)
+            }
+            if self.cmap.config.Authname_in != "" {
+                entity_body := ""
+                if body := ev_try.GetBody(); body != nil {
+                    entity_body = body.String()
+                }
+                sip_auth := ev_try.GetSipAuthorizationBody()
+                if sip_auth == nil {
+                    www_auth := sippy_header.NewSipWWWAuthenticateWithRealm("myrealm", self.cmap.config.Hash_alg, time.Now())
+                    self.uaA.RecvEvent(sippy.NewCCEventFail(401, "Unauthorized", nil, "", www_auth))
+                    return
+                } else if sip_auth.GetUsername() == "" || ! sip_auth.Verify(self.cmap.config.Passwd_in, "INVITE", entity_body) {
+                    self.uaA.RecvEvent(sippy.NewCCEventFail(401, "Unauthorized", nil, ""))
+                    return
+                }
+            }
         }
         self.uaO.RecvEvent(event)
     } else {
         self.uaA.RecvEvent(event)
     }
-}
-
-func (self *callController) SshakenVerify(ev_try *sippy.CCEventTry) bool {
-    if self.identity_hf == nil || self.date_hf == nil {
-        self.Error("Verification failure: no identity provided")
-        return false
-    }
-    identity := self.identity_hf.StringBody()
-    date_ts, err := self.date_hf.GetTime()
-    if err != nil {
-        self.Error("Error parsing Date: header: " + err.Error())
-        return false
-    }
-    orig_tn := ev_try.GetCLI()
-    dest_tn := ev_try.GetCLD()
-    err = self.cmap.sshaken.Verify(identity, orig_tn, dest_tn, date_ts)
-    if err != nil {
-	    self.Error("Verification failure: " + err.Error())
-    }
-    return err == nil
-}
-
-func (self *callController) SshakenAuth(cli, cld string) (string, time.Time, error) {
-    date_ts := time.Now()
-    identity, err := self.cmap.sshaken.Authenticate(date_ts, cli, cld)
-    return identity, date_ts, err
 }
 
 func (self *callController) aDead() {

@@ -1,0 +1,10 @@
+go 1.19
+
+use (
+  ./cmd/b2bua_simple
+  ./cmd/b2bua_radius
+  ./examples/call_transfer
+  ./examples/rfc8760
+  ./examples/stir_shaken
+  ./
+)

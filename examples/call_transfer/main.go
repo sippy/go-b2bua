@@ -43,16 +43,14 @@ import (
     "github.com/sippy/go-b2bua/sippy/conf"
     "github.com/sippy/go-b2bua/sippy/log"
     "github.com/sippy/go-b2bua/sippy/net"
-
-    "github.com/sippy/go-b2bua/internal/call_transfer"
 )
 
 func init() {
-    call_transfer.Next_cc_id = make(chan int64)
+    Next_cc_id = make(chan int64)
     go func() {
         var id int64 = 1
         for {
-            call_transfer.Next_cc_id <- id
+            Next_cc_id <- id
             id++
         }
     }()
@@ -85,7 +83,7 @@ func main() {
         error_logger.Error(err)
         return
     }
-    config := &call_transfer.Myconfig{
+    config := &Myconfig{
         Config : sippy_conf.NewConfig(error_logger, sip_logger),
         Nh_addr      : sippy_net.NewHostPort("192.168.0.102", "5060"), // next hop address
     }
@@ -120,7 +118,7 @@ func main() {
         config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     }
     config.SetSipPort(config.GetMyPort())
-    cmap := call_transfer.NewCallMap(config, error_logger)
+    cmap := NewCallMap(config, error_logger)
     sip_tm, err := sippy.NewSipTransactionManager(config, cmap)
     if err != nil {
         error_logger.Error(err)

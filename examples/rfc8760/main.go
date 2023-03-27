@@ -42,16 +42,14 @@ import (
     "github.com/sippy/go-b2bua/sippy"
     "github.com/sippy/go-b2bua/sippy/log"
     "github.com/sippy/go-b2bua/sippy/net"
-
-    "github.com/sippy/go-b2bua/internal/rfc8760"
 )
 
 func init() {
-    rfc8760.Next_cc_id = make(chan int64)
+    Next_cc_id = make(chan int64)
     go func() {
         var id int64 = 1
         for {
-            rfc8760.Next_cc_id <- id
+            Next_cc_id <- id
             id++
         }
     }()
@@ -89,7 +87,7 @@ func main() {
         error_logger.Error(err)
         return
     }
-    config := rfc8760.NewMyConfig(error_logger, sip_logger)
+    config := NewMyConfig(error_logger, sip_logger)
     config.Authname_in = authname_in
     config.Authname_out = authname_out
     config.Passwd_in = passwd_in
@@ -126,7 +124,7 @@ func main() {
         config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     }
     config.SetSipPort(config.GetMyPort())
-    cmap, err := rfc8760.NewCallMap(config, error_logger)
+    cmap, err := NewCallMap(config, error_logger)
     if err != nil {
         error_logger.Error(err)
         return

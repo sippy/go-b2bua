@@ -1,5 +1,6 @@
 //
-// Copyright (c) 2006-2021 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
+// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -23,30 +24,23 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+package main
 
-package stir_shaken
-
-import (
-    "github.com/sippy/go-b2bua/sippy/conf"
-    "github.com/sippy/go-b2bua/sippy/log"
-    "github.com/sippy/go-b2bua/sippy/net"
-)
-
-type myconfig struct {
-    sippy_conf.Config
-
-    Nh_addr         *sippy_net.HostPort
-    Crt_roots_file  string
-    Attest          string
-    Origid          string
-    X5u             string
-    Crt_file        string
-    Pkey_file       string
-    Verify          bool
+type fakeAccounting struct {
 }
 
-func NewMyConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogger) *myconfig {
-    return &myconfig{
-        Config      : sippy_conf.NewConfig(error_logger, sip_logger),
+func NewFakeAccounting() *fakeAccounting {
+    return &fakeAccounting{
     }
 }
+/*
+class FakeAccounting(object):
+    def __init__(self, *args):
+        pass
+
+    def conn(self, *args):
+        pass
+
+    def disc(self, *args):
+        pass
+*/

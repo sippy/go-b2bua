@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2019 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,14 +24,14 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-package call_transfer
+package main
 
 import (
     "sync"
+    "time"
 
     "github.com/sippy/go-b2bua/sippy"
-    //"github.com/sippy/go-b2bua/sippy/net"
+    "github.com/sippy/go-b2bua/sippy/headers"
     "github.com/sippy/go-b2bua/sippy/types"
 )
 
@@ -42,18 +42,20 @@ type callController struct {
     uaO             sippy_types.UA
     lock            *sync.Mutex // this must be a reference to prevent memory leak
     id              int64
-    cmap            *CallMap
-    evTry           *sippy.CCEventTry
-    transfer_is_in_progress bool
+    cmap            *callMap
+    identity_hf     sippy_header.SipHeader
+    date_hf         *sippy_header.SipDate
+    call_id	string
 }
 
-func NewCallController(cmap *CallMap) *callController {
+func NewCallController(cmap *callMap, identity_hf sippy_header.SipHeader, date_hf *sippy_header.SipDate) *callController {
     self := &callController{
         id              : <-Next_cc_id,
         uaO             : nil,
         lock            : new(sync.Mutex),
         cmap            : cmap,
-        transfer_is_in_progress : false,
+        identity_hf     : identity_hf,
+        date_hf         : date_hf,
     }
     self.uaA = sippy.NewUA(cmap.Sip_tm, cmap.config, cmap.config.Nh_addr, self, self.lock, nil)
     self.uaA.SetDeadCb(self.aDead)
@@ -61,80 +63,74 @@ func NewCallController(cmap *CallMap) *callController {
     return self
 }
 
-func (self *callController) handle_transfer(event sippy_types.CCEvent, ua sippy_types.UA) {
-    switch ua {
-    case self.uaA:
-        if _, ok := event.(*sippy.CCEventConnect); ok {
-            // Transfer is completed.
-            self.transfer_is_in_progress = false
-        }
-        self.uaO.RecvEvent(event)
-    case self.uaO:
-        if _, ok := event.(*sippy.CCEventPreConnect); ok {
-            //
-            // Convert into CCEventUpdate.
-            //
-            // Here 200 OK response from the new callee has been received
-            // and now re-INVITE will be sent to the caller.
-            //
-            // The CCEventPreConnect is here because the outgoing call to the
-            // new destination has been sent using the late offer model, i.e.
-            // the outgoing INVITE was body-less.
-            //
-            event = sippy.NewCCEventUpdate(event.GetRtime(), event.GetOrigin(), event.GetReason(),
-                event.GetMaxForwards(), event.GetBody().GetCopy())
-        }
-        self.uaA.RecvEvent(event)
-    }
+func (self *callController) Error(msg string) {
+	self.cmap.logger.Error(self.call_id + ": " + msg)
 }
 
 func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.UA) {
-    if self.transfer_is_in_progress {
-        self.handle_transfer(event, ua)
-        return
-    }
     if ua == self.uaA {
+        if ev_try, ok := event.(*sippy.CCEventTry); ok {
+	    self.call_id = ev_try.GetSipCallId().StringBody()
+            if self.cmap.config.Verify && ! self.SshakenVerify(ev_try) {
+                self.uaA.RecvEvent(sippy.NewCCEventFail(438, "Invalid Identity Header", event.GetRtime(), ""))
+                return
+            }
+        }
         if self.uaO == nil {
             ev_try, ok := event.(*sippy.CCEventTry)
             if ! ok {
-                // Some weird event received
                 self.uaA.RecvEvent(sippy.NewCCEventDisconnect(nil, event.GetRtime(), ""))
                 return
             }
             self.uaO = sippy.NewUA(self.cmap.Sip_tm, self.cmap.config, self.cmap.config.Nh_addr, self, self.lock, nil)
+            identity, date, err := self.SshakenAuth(ev_try.GetCLI(), ev_try.GetCLD())
+            if err == nil {
+                extra_headers := []sippy_header.SipHeader{
+                    sippy_header.NewSipDate(date),
+                    sippy_header.NewSipGenericHF("Identity", identity),
+                }
+                self.uaO.SetExtraHeaders(extra_headers)
+            }
+            self.uaO.SetDeadCb(self.oDead)
             self.uaO.SetRAddr(self.cmap.config.Nh_addr)
-            self.evTry = ev_try
         }
         self.uaO.RecvEvent(event)
     } else {
-        if ev_disc, ok := event.(*sippy.CCEventDisconnect); ok {
-            redirect_url := ev_disc.GetRedirectURL()
-            if redirect_url != nil {
-                //
-                // Either REFER or a BYE with Also: has been received from the callee.
-                //
-                // Do not interrupt the caller call leg and create a new call leg
-                // to the new destination.
-                //
-                cld := redirect_url.GetUrl().Username
-
-                //nh_addr := &sippy_net.HostPort{ redirect_url.GetUrl().Host, redirect_url.GetUrl().Port }
-                nh_addr := self.cmap.config.Nh_addr
-
-                self.uaO = sippy.NewUA(self.cmap.Sip_tm, self.cmap.config, nh_addr, self, self.lock, nil)
-                ev_try, _ := sippy.NewCCEventTry(self.evTry.GetSipCallId(),
-                    self.evTry.GetCLI(), cld, nil /*body*/, nil /*auth*/, self.evTry.GetCallerName(),
-                    ev_disc.GetRtime(), self.evTry.GetOrigin())
-                self.transfer_is_in_progress = true
-                self.uaO.RecvEvent(ev_try)
-                return
-            }
-        }
         self.uaA.RecvEvent(event)
     }
 }
 
+func (self *callController) SshakenVerify(ev_try *sippy.CCEventTry) bool {
+    if self.identity_hf == nil || self.date_hf == nil {
+        self.Error("Verification failure: no identity provided")
+        return false
+    }
+    identity := self.identity_hf.StringBody()
+    date_ts, err := self.date_hf.GetTime()
+    if err != nil {
+        self.Error("Error parsing Date: header: " + err.Error())
+        return false
+    }
+    orig_tn := ev_try.GetCLI()
+    dest_tn := ev_try.GetCLD()
+    err = self.cmap.sshaken.Verify(identity, orig_tn, dest_tn, date_ts)
+    if err != nil {
+	    self.Error("Verification failure: " + err.Error())
+    }
+    return err == nil
+}
+
+func (self *callController) SshakenAuth(cli, cld string) (string, time.Time, error) {
+    date_ts := time.Now()
+    identity, err := self.cmap.sshaken.Authenticate(date_ts, cli, cld)
+    return identity, date_ts, err
+}
+
 func (self *callController) aDead() {
+    self.cmap.Remove(self.id)
+}
+
+func (self *callController) oDead() {
     self.cmap.Remove(self.id)
 }
 
@@ -151,4 +147,3 @@ func (self *callController) String() string {
     }
     return res
 }
-

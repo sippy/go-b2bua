@@ -25,7 +25,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package rfc8760
+package main
 
 import (
     "sync"
@@ -41,6 +41,7 @@ type callMap struct {
     Proxy           sippy_types.StatefulProxy
     ccmap           map[int64]*callController
     ccmap_lock      sync.Mutex
+    sshaken         *StirShaken
 }
 
 func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) (*callMap, error) {
@@ -51,6 +52,7 @@ func NewCallMap(config *myconfig, logger sippy_log.ErrorLogger) (*callMap, error
         config          : config,
         ccmap           : make(map[int64]*callController),
     }
+    ret.sshaken, err = NewStirShaken(config)
     if err != nil {
         return nil, err
     }

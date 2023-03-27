@@ -24,7 +24,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package rfc8760
+package main
 
 import (
     "github.com/sippy/go-b2bua/sippy/conf"
@@ -36,11 +36,13 @@ type myconfig struct {
     sippy_conf.Config
 
     Nh_addr         *sippy_net.HostPort
-    Authname_in	    string
-    Authname_out    string
-    Passwd_in       string
-    Passwd_out      string
-    Hash_alg        string
+    Crt_roots_file  string
+    Attest          string
+    Origid          string
+    X5u             string
+    Crt_file        string
+    Pkey_file       string
+    Verify          bool
 }
 
 func NewMyConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogger) *myconfig {

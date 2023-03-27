@@ -42,16 +42,14 @@ import (
     "github.com/sippy/go-b2bua/sippy"
     "github.com/sippy/go-b2bua/sippy/log"
     "github.com/sippy/go-b2bua/sippy/net"
-
-    "github.com/sippy/go-b2bua/internal/stir_shaken"
 )
 
 func init() {
-    stir_shaken.Next_cc_id = make(chan int64)
+    Next_cc_id = make(chan int64)
     go func() {
         var id int64 = 1
         for {
-            stir_shaken.Next_cc_id <- id
+            Next_cc_id <- id
             id++
         }
     }()
@@ -96,7 +94,7 @@ func main() {
         flag.Usage()
         return
     }
-    config := stir_shaken.NewMyConfig(error_logger, sip_logger)
+    config := NewMyConfig(error_logger, sip_logger)
     //config.SetIPV6Enabled(false)
     config.Attest = attest
     config.Origid = origid
@@ -136,7 +134,7 @@ func main() {
         config.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(lport)))
     }
     config.SetSipPort(config.GetMyPort())
-    cmap, err := stir_shaken.NewCallMap(config, error_logger)
+    cmap, err := NewCallMap(config, error_logger)
     if err != nil {
         error_logger.Error(err)
         return

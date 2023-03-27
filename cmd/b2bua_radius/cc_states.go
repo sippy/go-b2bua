@@ -24,23 +24,33 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package b2bua_radius
+package main
 
-type fakeAccounting struct {
-}
+type CCState int
 
-func NewFakeAccounting() *fakeAccounting {
-    return &fakeAccounting{
+const (
+    CCStateIdle = CCState(iota)
+    CCStateWaitRoute
+    CCStateARComplete
+    CCStateConnected
+    CCStateDead
+    CCStateDisconnecting
+)
+
+func (self CCState) String() string {
+    switch self {
+    case CCStateIdle:
+        return "Idle"
+    case CCStateWaitRoute:
+        return "WaitRoute"
+    case CCStateARComplete:
+        return "ARComplete"
+    case CCStateConnected:
+        return "Connected"
+    case CCStateDead:
+        return "Dead"
+    case CCStateDisconnecting:
+        return "Disconnecting"
     }
+    return "Unknown"
 }
-/*
-class FakeAccounting(object):
-    def __init__(self, *args):
-        pass
-
-    def conn(self, *args):
-        pass
-
-    def disc(self, *args):
-        pass
-*/

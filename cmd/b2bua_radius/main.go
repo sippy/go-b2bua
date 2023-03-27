@@ -34,8 +34,6 @@ import (
     "github.com/sippy/go-b2bua/sippy/cli"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/types"
-
-    "github.com/sippy/go-b2bua/internal/b2bua_radius"
 )
 
 /*
@@ -110,16 +108,16 @@ def usage(global_config, brief = false):
 */
 
 func main() {
-    global_config := b2bua_radius.NewMyConfigParser()
+    global_config := NewMyConfigParser()
     err := global_config.Parse()
     if err != nil {
         println(err.Error())
         return
     }
 
-    var static_route *b2bua_radius.B2BRoute
+    var static_route *B2BRoute
     if global_config.Static_route != "" {
-        static_route, err = b2bua_radius.NewB2BRoute(global_config.Static_route, global_config)
+        static_route, err = NewB2BRoute(global_config.Static_route, global_config)
         if err != nil {
             println("Error parsing the static route")
             println(err.Error())
@@ -160,7 +158,7 @@ func main() {
 */
     global_config.SetMyUAName("Sippy B2BUA (RADIUS)")
 
-    cmap := b2bua_radius.NewCallMap(global_config, rtp_proxy_clients, static_route)
+    cmap := NewCallMap(global_config, rtp_proxy_clients, static_route)
 /*
     if global_config.getdefault('xmpp_b2bua_id', nil) != nil:
         global_config['_xmpp_mode'] = true

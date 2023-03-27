@@ -1,6 +1,5 @@
 //
-// Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2021 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,33 +23,28 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package b2bua_radius
 
-type CCState int
+package main
 
-const (
-    CCStateIdle = CCState(iota)
-    CCStateWaitRoute
-    CCStateARComplete
-    CCStateConnected
-    CCStateDead
-    CCStateDisconnecting
+import (
+    "github.com/sippy/go-b2bua/sippy/conf"
+    "github.com/sippy/go-b2bua/sippy/log"
+    "github.com/sippy/go-b2bua/sippy/net"
 )
 
-func (self CCState) String() string {
-    switch self {
-    case CCStateIdle:
-        return "Idle"
-    case CCStateWaitRoute:
-        return "WaitRoute"
-    case CCStateARComplete:
-        return "ARComplete"
-    case CCStateConnected:
-        return "Connected"
-    case CCStateDead:
-        return "Dead"
-    case CCStateDisconnecting:
-        return "Disconnecting"
+type myconfig struct {
+    sippy_conf.Config
+
+    Nh_addr         *sippy_net.HostPort
+    Authname_in	    string
+    Authname_out    string
+    Passwd_in       string
+    Passwd_out      string
+    Hash_alg        string
+}
+
+func NewMyConfig(error_logger sippy_log.ErrorLogger, sip_logger sippy_log.SipLogger) *myconfig {
+    return &myconfig{
+        Config      : sippy_conf.NewConfig(error_logger, sip_logger),
     }
-    return "Unknown"
 }
