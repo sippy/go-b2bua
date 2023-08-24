@@ -63,6 +63,7 @@ type UpdateLookupOpts struct {
     ToTag           string
     NotifySocket    string
     NotifyTag       string
+    SubArgs         string
 }
 
 func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
@@ -158,6 +159,9 @@ func (self *UpdateLookupOpts) Getstr(call_id string, swaptags, skipnotify bool) 
         if self.NotifyTag != "" {
             s += " " + self.NotifyTag
         }
+        if self.SubArgs != "" {
+            s += " && " + self.SubArgs
+        }
     }
     return s, nil
 }
@@ -197,6 +201,11 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
             self.ULOpts, err = NewUpdateLookupOpts(command_opts[1:], args)
             if err != nil {
                 return nil, err
+            }
+            if strings.Contains(args, " && ") {
+                splitArgs := strings.SplitN(args, " && ", 2)
+                args = splitArgs[0]
+                self.ULOpts.SubArgs = splitArgs[1]
             }
         default:
             self.Args = args
