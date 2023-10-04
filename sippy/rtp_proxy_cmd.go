@@ -158,9 +158,9 @@ func (self *UpdateLookupOpts) Getstr(call_id string, swaptags, skipnotify bool) 
         if self.NotifyTag != "" {
             s += " " + self.NotifyTag
         }
-        if self.SubArgs != "" {
-            s += " && " + self.SubArgs
-        }
+    }
+    if self.SubArgs != "" {
+        s += " && " + self.SubArgs
     }
     return s, nil
 }
