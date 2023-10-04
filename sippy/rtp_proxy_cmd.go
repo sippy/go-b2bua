@@ -90,14 +90,13 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
     }
     for len(s) > 0 {
         var val string
-        if s[0] == 'R' {
+        switch s[0] {
+        case 'R':
             val, s = extract_to_next_token(s[1:], "1234567890.", false)
             val = strings.TrimSpace(val)
             if len(val) > 0 {
                 self.DestinationIP = val
             }
-        }
-        switch s[0] {
         case 'L':
             val, s = extract_to_next_token(s[1:], "1234567890.", false)
             val = strings.TrimSpace(val)
