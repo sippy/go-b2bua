@@ -67,6 +67,12 @@ type UpdateLookupOpts struct {
 }
 
 func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
+    var subargs *string
+    if strings.Contains(args, " && ") {
+        splitArgs := strings.SplitN(args, " && ", 2)
+        args = splitArgs[0]
+        subargs = &splitArgs[1]
+    }
     arr := sippy_utils.FieldsN(args, 3)
     if len(arr) != 3 {
         return nil, errors.New("The lookup opts must have at least three arguments")
@@ -115,6 +121,9 @@ func NewUpdateLookupOpts(s, args string) (*UpdateLookupOpts, error) {
                 self.Otherparams += val
             }
         }
+    }
+    if subargs != nil {
+        self.SubArgs = *subargs
     }
     return self, nil
 }
@@ -200,11 +209,6 @@ func NewRtp_proxy_cmd(cmd string) (*Rtp_proxy_cmd, error) {
             self.ULOpts, err = NewUpdateLookupOpts(command_opts[1:], args)
             if err != nil {
                 return nil, err
-            }
-            if strings.Contains(args, " && ") {
-                splitArgs := strings.SplitN(args, " && ", 2)
-                args = splitArgs[0]
-                self.ULOpts.SubArgs = splitArgs[1]
             }
         default:
             self.Args = args
