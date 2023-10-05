@@ -246,6 +246,9 @@ func (self *Rtp_proxy_client_udp) reconnect(address net.Addr, bind_address *sipp
 }
 
 func (self *Rtp_proxy_client_udp) shutdown() {
+    if self.worker == nil {
+        return
+    }
     self.worker.Shutdown()
     self.worker = nil
 }
