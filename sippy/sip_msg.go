@@ -668,3 +668,7 @@ func (self *sipMsg) GetSipSupported() []*sippy_header.SipSupported {
 func (self *sipMsg) GetSipDate() *sippy_header.SipDate {
     return self.sip_date
 }
+
+func (self *sipMsg) GetConfig() *sippy_conf.Config {
+    return self.config
+}
