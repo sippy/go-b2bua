@@ -109,7 +109,7 @@ func ParseSipURL(url string, relaxedparser bool, config sippy_conf.Config) (*Sip
         return nil, err
     }
     if self.Scheme == "tel" {
-        if config.AutoConvertTelUrl() {
+        if config != nil && config.AutoConvertTelUrl() {
             self.convertTelUrl(relaxedparser, config)
         } else {
             return nil, errors.New("unsupported scheme: " + self.Scheme + ":")
