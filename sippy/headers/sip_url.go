@@ -54,31 +54,31 @@ func init() {
 
 type SipURL struct {
     Username    string
-    password    string
-    ttl         int
+    Password    string
+    Ttl         int
     Host        *sippy_net.MyAddress
     Port        *sippy_net.MyPort
-    usertype    string
-    transport   string
-    maddr       string
-    method      string
-    tag         string
+    Usertype    string
+    Transport   string
+    Maddr       string
+    Method      string
+    Tag         string
     Lr          bool
-    other       []string
-    userparams  []string
-    headers     map[string]string
-    scheme      string
+    Other       []string
+    Userparams  []string
+    Headers     map[string]string
+    Scheme      string
 }
 
 func NewSipURL(username string, host *sippy_net.MyAddress, port *sippy_net.MyPort, lr bool /* false */) *SipURL {
     self := &SipURL{
-        scheme      : "sip",
-        other       : make([]string, 0),
-        userparams  : make([]string, 0),
+        Scheme      : "sip",
+        Other       : make([]string, 0),
+        Userparams  : make([]string, 0),
         Username    : username,
-        headers     : make(map[string]string),
+        Headers     : make(map[string]string),
         Lr          : lr,
-        ttl         : -1,
+        Ttl         : -1,
         Host        : host,
         Port        : port,
     }
@@ -91,8 +91,8 @@ func ParseURL(url string, relaxedparser bool) (*SipURL, error) {
         return nil, errors.New("scheme is not present")
     }
     self := NewSipURL("", nil, nil, false)
-    self.scheme = strings.ToLower(parts[0])
-    switch self.scheme {
+    self.Scheme = strings.ToLower(parts[0])
+    switch self.Scheme {
     case "sip": fallthrough
     case "sips":
         return self, self.parseSipURL(parts[1], relaxedparser)
@@ -100,7 +100,7 @@ func ParseURL(url string, relaxedparser bool) (*SipURL, error) {
         self.parseTelUrl(parts[1])
         return self, nil
     }
-    return nil, errors.New("unsupported scheme: " + self.scheme + ":")
+    return nil, errors.New("unsupported scheme: " + self.Scheme + ":")
 }
 
 func ParseSipURL(url string, relaxedparser bool, config sippy_conf.Config) (*SipURL, error) {
@@ -108,18 +108,18 @@ func ParseSipURL(url string, relaxedparser bool, config sippy_conf.Config) (*Sip
     if err != nil {
         return nil, err
     }
-    if self.scheme == "tel" {
+    if self.Scheme == "tel" {
         if config.AutoConvertTelUrl() {
             self.convertTelUrl(relaxedparser, config)
         } else {
-            return nil, errors.New("unsupported scheme: " + self.scheme + ":")
+            return nil, errors.New("unsupported scheme: " + self.Scheme + ":")
         }
     }
     return self, nil
 }
 
 func (self *SipURL) convertTelUrl(relaxedparser bool, config sippy_conf.Config) {
-    self.scheme = "sip"
+    self.Scheme = "sip"
     if relaxedparser {
         self.Host = sippy_net.NewMyAddress("")
     } else {
@@ -138,9 +138,9 @@ func (self *SipURL) parseTelUrl(url string) {
             // be converted to lower case.
             arr := strings.SplitN(part, "=", 2)
             if len(arr) == 2 {
-                self.userparams = append(self.userparams, strings.ToLower(arr[0]) + "=" + arr[1])
+                self.Userparams = append(self.Userparams, strings.ToLower(arr[0]) + "=" + arr[1])
             } else {
-                self.userparams = append(self.userparams, part)
+                self.Userparams = append(self.Userparams, part)
             }
         }
     }
@@ -166,7 +166,7 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
         for _, header := range strings.Split(headers, "&") {
             arr = strings.SplitN(header, "=", 2)
             if len(arr) == 2 {
-                self.headers[strings.ToLower(arr[0])], _ = hnv_enc.Unescape(arr[1])
+                self.Headers[strings.ToLower(arr[0])], _ = hnv_enc.Unescape(arr[1])
             }
         }
     }
@@ -175,11 +175,11 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
         hostport = userdomain[ear:]
         upparts := strings.SplitN(userpass, ":", 2)
         if len(upparts) > 1 {
-            self.password, _ = passw_enc.Unescape(upparts[1])
+            self.Password, _ = passw_enc.Unescape(upparts[1])
         }
         uparts := strings.Split(upparts[0], ";")
         if len(uparts) > 1 {
-            self.userparams = uparts[1:]
+            self.Userparams = uparts[1:]
         }
         self.Username, _ = user_enc.Unescape(uparts[0])
     } else {
@@ -243,11 +243,11 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
         params[len(params) - 1] = arr[0]
         self.SetParams(params)
         if len(arr) == 2 {
-            self.headers = make(map[string]string)
+            self.Headers = make(map[string]string)
             headers := arr[1]
             for _, header := range strings.Split(headers, "&") {
                 if arr := strings.SplitN(header, "=", 2); len(arr) == 2 {
-                    self.headers[strings.ToLower(arr[0])], _ = hnv_enc.Unescape(arr[1])
+                    self.Headers[strings.ToLower(arr[0])], _ = hnv_enc.Unescape(arr[1])
                 }
             }
         }
@@ -256,13 +256,13 @@ func (self *SipURL) parseSipURL(url string, relaxedparser bool) error {
 }
 
 func (self *SipURL) SetParams(params []string) {
-    self.usertype = ""
-    self.transport = ""
-    self.maddr = ""
-    self.method = ""
-    self.tag = ""
-    self.ttl = -1
-    self.other = []string{}
+    self.Usertype = ""
+    self.Transport = ""
+    self.Maddr = ""
+    self.Method = ""
+    self.Tag = ""
+    self.Ttl = -1
+    self.Other = []string{}
     self.Lr = false
 
     for _, p := range params {
@@ -271,7 +271,7 @@ func (self *SipURL) SetParams(params []string) {
             if p == "lr" {
                 self.Lr = true
             } else {
-                self.other = append(self.other, p)
+                self.Other = append(self.Other, p)
             }
             continue
         }
@@ -279,25 +279,25 @@ func (self *SipURL) SetParams(params []string) {
         value := nv[1]
         switch name {
         case "user":
-            self.usertype = value
+            self.Usertype = value
         case "transport":
-            self.transport = value
+            self.Transport = value
         case "ttl":
             if v, err := strconv.Atoi(value); err == nil {
-                self.ttl = v
+                self.Ttl = v
             }
         case "maddr":
-            self.maddr = value
+            self.Maddr = value
         case "method":
-            self.method = value
+            self.Method = value
         case "tag":
-            self.tag = value
+            self.Tag = value
         case "lr":
             // RFC 3261 doesn't allow lr parameter to have a value,
             // but many stupid implementation do it anyway
             self.Lr = true
         default:
-            self.other = append(self.other, p)
+            self.Other = append(self.Other, p)
         }
     }
 }
@@ -307,15 +307,15 @@ func (self *SipURL) String() string {
 }
 
 func (self *SipURL) LocalStr(hostport *sippy_net.HostPort) string {
-    l := self.scheme + ":"
+    l := self.Scheme + ":"
     if self.Username != "" {
         username := user_enc.Escape(self.Username)
         l += username
-        for _, v := range self.userparams {
+        for _, v := range self.Userparams {
             l += ";" + v
         }
-        if self.password != "" {
-            l += ":" + passw_enc.Escape(self.password)
+        if self.Password != "" {
+            l += ":" + passw_enc.Escape(self.Password)
         }
         l += "@"
     }
@@ -334,10 +334,10 @@ func (self *SipURL) LocalStr(hostport *sippy_net.HostPort) string {
     for _, p := range self.GetParams() {
         l += ";" + p
     }
-    if len(self.headers) > 0 {
+    if len(self.Headers) > 0 {
         l += "?"
         arr := []string{}
-        for k, v := range self.headers {
+        for k, v := range self.Headers {
             arr = append(arr, strings.Title(k) + "=" + hnv_enc.Escape(v))
         }
         l += strings.Join(arr, "&")
@@ -347,13 +347,13 @@ func (self *SipURL) LocalStr(hostport *sippy_net.HostPort) string {
 
 func (self *SipURL) GetParams() []string {
     ret := []string{}
-    if self.usertype != ""  { ret = append(ret, "user=" + self.usertype) }
-    if self.transport != "" { ret = append(ret, "transport=" + self.transport) }
-    if self.maddr != ""     { ret = append(ret, "maddr=" + self.maddr) }
-    if self.method != ""    { ret = append(ret, "method=" + self.method) }
-    if self.tag != ""       { ret = append(ret, "tag=" + self.tag) }
-    if self.ttl != -1       { ret = append(ret, "ttl=" + strconv.Itoa(self.ttl)) }
-    ret = append(ret, self.other...)
+    if self.Usertype != ""  { ret = append(ret, "user=" + self.Usertype) }
+    if self.Transport != "" { ret = append(ret, "transport=" + self.Transport) }
+    if self.Maddr != ""     { ret = append(ret, "maddr=" + self.Maddr) }
+    if self.Method != ""    { ret = append(ret, "method=" + self.Method) }
+    if self.Tag != ""       { ret = append(ret, "tag=" + self.Tag) }
+    if self.Ttl != -1       { ret = append(ret, "ttl=" + strconv.Itoa(self.Ttl)) }
+    ret = append(ret, self.Other...)
     if self.Lr              { ret = append(ret, "lr") }
     return ret
 }
@@ -368,12 +368,4 @@ func (self *SipURL) GetAddr(config sippy_conf.Config) *sippy_net.HostPort {
         return sippy_net.NewHostPort(self.Host.String(), self.Port.String())
     }
     return sippy_net.NewHostPort(self.Host.String(), config.DefaultPort().String())
-}
-
-func (self *SipURL) SetUserparams(userparams []string) {
-    self.userparams = userparams
-}
-
-func (self *SipURL) GetUserparams() []string {
-    return self.userparams
 }
