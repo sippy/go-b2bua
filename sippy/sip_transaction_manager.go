@@ -139,6 +139,12 @@ func check1918(host string) bool {
     return false
 }
 
+const invalidSuffix = ".invalid"
+
+func check7118(host string) bool {
+    return strings.HasSuffix(host, invalidSuffix)
+}
+
 func (self *sipTransactionManager) rcache_put(checksum string, entry *sipTMRetransmitO) {
     self.rcache_lock.Lock()
     defer self.rcache_lock.Unlock()
@@ -334,7 +340,7 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     }
     ahost, aport := via0.GetAddr(self.config)
     rhost, rport := address.Host.String(), address.Port.String()
-    if self.nat_traversal && rport != aport && check1918(ahost) {
+    if self.nat_traversal && rport != aport && (check1918(ahost) || check7118(ahost)) {
         req.nated = true
     }
     if ahost != rhost {
@@ -755,4 +761,8 @@ func (self *sipTransactionManager) rtid_put(key *sippy_header.RTID, value *sippy
     self.rtid2tid_lock.Lock()
     defer self.rtid2tid_lock.Unlock()
     self.rtid2tid[*key] = value
+}
+
+func (self *sipTransactionManager) SetNatTraversal(nat_traversal bool) {
+    self.nat_traversal = nat_traversal
 }
