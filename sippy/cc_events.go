@@ -256,6 +256,7 @@ type CCEventInfo struct {
 func NewCCEventInfo(rtime *sippy_time.MonoTime, origin string, msg_body sippy_types.MsgBody, extra_headers ...sippy_header.SipHeader) *CCEventInfo {
     return &CCEventInfo{
         CCEventGeneric : newCCEventGeneric(rtime, origin, extra_headers...),
+        body: msg_body,
     }
 }
 
