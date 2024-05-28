@@ -23,4 +23,4 @@ clean:
 	-rm ${ALL_TARGERS}
 
 test:
-	go test ./...
+	go test ./sippy
