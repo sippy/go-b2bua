@@ -98,8 +98,12 @@ func NewSipTransactionManager(config sippy_conf.Config, call_map sippy_types.Cal
     }
     go func() {
         for {
-            time.Sleep(32 * time.Second)
-            self.rCachePurge()
+            select {
+            case <-self.shutdown_chan:
+                return
+            case <-time.After(32 * time.Second):
+                self.rCachePurge()
+            }
         }
     }()
     return self, nil
@@ -730,7 +734,7 @@ func (self *sipTransactionManager) tserver_replace(old_tid, new_tid *sippy_heade
 }
 
 func (self *sipTransactionManager) Shutdown() {
-    self.shutdown_chan <- 1
+    close(self.shutdown_chan)
 }
 
 func (self *sipTransactionManager) beforeResponseSent(resp sippy_types.SipResponse) {
