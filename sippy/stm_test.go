@@ -20,6 +20,7 @@ func Test_SipTransactionManager(t *testing.T) {
     cmap := NewTestCallMap(config)
     tfactory := NewTestSipTransportFactory()
     config.SetSipTransportFactory(tfactory)
+    time.Sleep(100 * time.Millisecond)
     numGoroutinesBefore := runtime.NumGoroutine()
     cmap.sip_tm, err = NewSipTransactionManager(config, cmap)
     if err != nil {
