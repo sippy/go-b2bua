@@ -3,6 +3,7 @@ package sippy
 import (
     "testing"
     "runtime"
+    "time"
 
     "github.com/sippy/go-b2bua/sippy/conf"
     "github.com/sippy/go-b2bua/sippy/log"
@@ -26,6 +27,7 @@ func Test_SipTransactionManager(t *testing.T) {
     }
     go cmap.sip_tm.Run()
     cmap.sip_tm.Shutdown()
+    time.Sleep(100 * time.Millisecond)
     numGoroutinesAfter := runtime.NumGoroutine()
     if numGoroutinesBefore != numGoroutinesAfter {
         t.Fatalf("numGoroutinesBefore = %d, numGoroutinesAfter = %d\n", numGoroutinesBefore, numGoroutinesAfter)
