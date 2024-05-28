@@ -1,3 +1,5 @@
+[![Go Build](https://github.com/sippy/go-b2bua/actions/workflows/go.yml/badge.svg)](https://github.com/sippy/go-b2bua/actions/workflows/go.yml)
+
 # The go-b2bua is a GO port of the [Sippy B2BUA](https://github.com/sippy/b2bua)
 ## The main differences from the Python B2BUA are:
 
