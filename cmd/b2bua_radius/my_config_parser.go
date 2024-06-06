@@ -64,8 +64,6 @@ type myConfigParser struct {
     B2bua_socket        string
     Foreground          bool
     Hide_call_id        bool
-    Hrtb_retr_ival      int
-    Hrtb_ival           int
     Keepalive_ans       int
     Keepalive_orig      int
     Logfile             string
@@ -302,8 +300,8 @@ func (self *myConfigParser) Parse() error {
     if err != nil {
         return err
     }
-    self.Hrtb_ival_dur = time.Duration(self.Hrtb_ival) * time.Second
-    self.Hrtb_retr_ival_dur = time.Duration(self.Hrtb_retr_ival) * time.Second
+    self.Hrtb_ival_dur = time.Duration(self.Rtpp_hrtb_ival) * time.Second
+    self.Hrtb_retr_ival_dur = time.Duration(self.Rtpp_hrtb_retr_ival) * time.Second
     self.Config = sippy_conf.NewConfig(error_logger, sip_logger)
     self.SetMyPort(sippy_net.NewMyPort(strconv.Itoa(self.Sip_port)))
     if auth_disable {
