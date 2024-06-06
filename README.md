@@ -7,7 +7,3 @@
 - All available CPU cores are utilized.
 - Runs faster (approx 4x per one CPU core).
 - The configuration object is not global thus allowing to run several B2BUA instances inside one executable.
-
-## Known problems:
-
-- No RADIUS support.

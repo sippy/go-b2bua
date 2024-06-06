@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2024 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -56,19 +56,12 @@ type CallMap struct {
     cc_id_lock      sync.Mutex
     rtp_proxy_clients []sippy_types.RtpProxyClient
     static_route    *B2BRoute
+    radius_client   *RadiusClient
+    radius_auth     *RadiusAuthorisation
 }
 
-/*
-class CallMap(object):
-    ccmap = nil
-    el = nil
-    global_config = nil
-    //rc1 = nil
-    //rc2 = nil
-*/
-
 func NewCallMap(global_config *myConfigParser, rtp_proxy_clients []sippy_types.RtpProxyClient,
-  static_route *B2BRoute) *CallMap {
+  static_route *B2BRoute, radius_client *RadiusClient, radius_auth *RadiusAuthorisation) *CallMap {
     self := &CallMap{
         global_config   : global_config,
         ccmap           : make(map[int64]*callController),
@@ -77,6 +70,8 @@ func NewCallMap(global_config *myConfigParser, rtp_proxy_clients []sippy_types.R
         safe_restart    : false,
         rtp_proxy_clients: rtp_proxy_clients,
         static_route    : static_route,
+        radius_client   : radius_client,
+        radius_auth     : radius_auth,
     }
     go func() {
         sighup_ch := make(chan os.Signal, 1)
@@ -149,27 +144,24 @@ func (self *CallMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
         if ! self.global_config.checkIP(source.Host.String())  {
             return nil, nil, req.GenResponse(403, "Forbidden", nil, nil)
         }
-/*
         var challenge *sippy_header.SipWWWAuthenticate
-        if self.global_config.auth_enable {
+        if self.global_config.Auth_enable {
             // Prepare challenge if no authorization header is present.
             // Depending on configuration, we might try remote ip auth
             // first and then challenge it or challenge immediately.
-            if self.global_config["digest_auth"] && req.countHFs("authorization") == 0 {
-                challenge = NewSipWWWAuthenticate()
-                challenge.getBody().realm = req.getRURI().host
+            if self.global_config.Digest_auth && req.GetFirstHF("authorization") == nil {
+                challenge = sippy_header.NewSipWWWAuthenticateWithRealm(req.GetRURI().Host.String(), "", req.GetRtime().Realt())
             }
             // Send challenge immediately if digest is the
             // only method of authenticating
-            if challenge != nil && self.global_config.getdefault("digest_auth_only", false) {
-                resp = req.GenResponse(401, "Unauthorized")
-                resp.appendHeader(challenge)
-                return resp, nil, nil
+            if challenge != nil && self.global_config.Digest_auth_only {
+                resp := req.GenResponse(401, "Unauthorized", nil, nil)
+                resp.AppendHeader(challenge)
+                return nil, nil, resp
             }
         }
-*/
         pass_headers := []sippy_header.SipHeader{}
-        for _, header := range self.global_config.pass_headers {
+        for _, header := range self.global_config.Pass_headers_arr {
             hfs := req.GetHFs(header)
             pass_headers = append(pass_headers, hfs...)
         }
@@ -185,8 +177,8 @@ func (self *CallMap) OnNewDialog(req sippy_types.SipRequest, sip_t sippy_types.S
             cguid = sippy_header.NewSipCiscoGUID()
         }
         cc := NewCallController(id, remote_ip, source, self.global_config, pass_headers, self.Sip_tm, cguid, self)
-        //cc.challenge = challenge
-        //rval := cc.uaA.RecvRequest(req, sip_t)
+        cc.challenge = challenge
+//        rval := cc.uaA.RecvRequest(req, sip_t) // this call is made by SipTransactionManager. It's necessary for for proper locking.
         self.ccmap_lock.Lock()
         self.ccmap[id] = cc
         self.ccmap_lock.Unlock()

@@ -1,5 +1,5 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2024 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -24,45 +24,81 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
-/*
-from Radius_client import Radius_client
-from time import time
 
-class RadiusAuthorisation(Radius_client):
-    def do_auth(self, username, caller, callee, h323_cid, sip_cid, remote_ip, res_cb, \
-      realm = nil, nonce = nil, uri = nil, response = nil, extra_attributes = nil):
-        sip_cid = str(sip_cid)
-        attributes = nil
-        if nil not in (realm, nonce, uri, response):
-            attributes = [('User-Name', username), ('Digest-Realm', realm), \
-              ('Digest-Nonce', nonce), ('Digest-Method', 'INVITE'), ('Digest-URI', uri), \
-              ('Digest-Algorithm', 'MD5'), ('Digest-User-Name', username), ('Digest-Response', response)]
-        else:
-            attributes = [('User-Name', remote_ip), ('Password', 'cisco')]
-        if caller == nil:
-            caller = ''
-        attributes.extend((('Calling-Station-Id', caller), ('Called-Station-Id', callee), ('h323-conf-id', h323_cid), \
-          ('call-id', sip_cid), ('h323-remote-address', remote_ip), ('h323-session-protocol', 'sipv2')))
-        if extra_attributes != nil:
-            for a, v in extra_attributes:
-                attributes.append((a, v))
-        message = 'sending AAA request:\n' 
-        message += reduce(lambda x, y: x + y, ['%-32s = \'%s\'\n' % (x[0], str(x[1])) for x in attributes])
-        self.global_config['_sip_logger'].write(message, call_id = sip_cid)
-        Radius_client.do_auth(self, attributes, self._process_result, res_cb, sip_cid, time())
+import (
+    "fmt"
+    "time"
 
-    def _process_result(self, results, res_cb, sip_cid, btime):
-        delay = time() - btime
-        rcode = results[1]
-        if rcode in (0, 1):
-            if rcode == 0:
-                message = 'AAA request accepted (delay is %.3f), processing response:\n' % delay
-            else:
-                message = 'AAA request rejected (delay is %.3f), processing response:\n' % delay
-            if len(results[0]) > 0:
-                message += reduce(lambda x, y: x + y, ['%-32s = \'%s\'\n' % x for x in results[0]])
-        else:
-            message = 'Error sending AAA request (delay is %.3f)\n' % delay
-        self.global_config['_sip_logger'].write(message, call_id = sip_cid)
-        res_cb(results)
-*/
+    "github.com/sippy/go-b2bua/sippy/headers"
+    "github.com/sippy/go-b2bua/sippy/net"
+)
+
+type RadiusAuthorisation struct {
+    radius_client   *RadiusClient
+    global_config   *myConfigParser
+}
+
+func NewRadiusAuthorisation(radius_client *RadiusClient, global_config *myConfigParser) *RadiusAuthorisation {
+    return &RadiusAuthorisation{
+        radius_client   : radius_client,
+        global_config   : global_config,
+    }
+}
+
+func (self *RadiusAuthorisation) Do_auth(username, caller, callee string, h323_cid *sippy_header.SipCiscoGUID,
+      sip_cid *sippy_header.SipCallId, remote_ip *sippy_net.MyAddress, res_cb func(*RadiusResult),
+      realm, nonce, uri, response string, extra_attributes ...RadiusAttribute) Cancellable {
+    var attributes []RadiusAttribute
+    if realm != "" && nonce != "" && uri != "" && response != "" {
+        attributes = []RadiusAttribute{
+            { "User-Name", username },
+            { "Digest-Realm", realm },
+            { "Digest-Nonce", nonce },
+            { "Digest-Method", "INVITE" },
+            { "Digest-URI", uri },
+            { "Digest-Algorithm", "MD5" },
+            { "Digest-User-Name", username },
+            { "Digest-Response", response},
+        }
+    } else {
+        attributes = []RadiusAttribute{
+            { "User-Name", remote_ip.String() },
+            { "Password", "cisco" },
+        }
+    }
+    attributes = append(attributes, []RadiusAttribute{
+        { "Calling-Station-Id", caller },
+        { "Called-Station-Id", callee },
+        { "h323-conf-id", h323_cid.StringBody() },
+        { "call-id", sip_cid.StringBody() },
+        { "h323-remote-address", remote_ip.String() },
+        { "h323-session-protocol", "sipv2"},
+    }...)
+    attributes = append(attributes, extra_attributes...)
+    message := "sending AAA request:\n"
+    for _, attr := range attributes {
+        message += fmt.Sprintf("%-32s = '%s'\n", attr.name, attr.value)
+    }
+    self.global_config.SipLogger().Write(nil, sip_cid.StringBody(), message)
+    return self.radius_client.do_auth(attributes, func(results *RadiusResult) { self._process_result(results, res_cb, sip_cid.StringBody(), time.Now()) })
+}
+
+func (self *RadiusAuthorisation) _process_result(results *RadiusResult, res_cb func(*RadiusResult), sip_cid string, btime time.Time) {
+    var message string
+
+    delay := time.Now().Sub(btime)
+    if results != nil && results.Rcode == 0 || results.Rcode == 1 {
+        if results.Rcode == 0 {
+            message = fmt.Sprintf("AAA request accepted (delay is %.3f), processing response:\n", delay.Seconds())
+        } else {
+            message = fmt.Sprintf("AAA request rejected (delay is %.3f), processing response:\n", delay.Seconds())
+        }
+        for _, res := range results.Avps {
+            message += fmt.Sprintf("%-32s = '%s'\n", res.name, res.value)
+        }
+    } else {
+        message = fmt.Sprintf("Error sending AAA request (delay is %.3f)\n", delay.Seconds())
+    }
+    self.global_config.SipLogger().Write(nil, sip_cid, message)
+    res_cb(results)
+}

@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2024 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2024 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -26,21 +26,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
 
-import (
-    "github.com/sippy/go-b2bua/sippy/time"
-    "github.com/sippy/go-b2bua/sippy/types"
-)
-
-type fakeAccounting struct {
-}
-
-func NewFakeAccounting() *fakeAccounting {
-    return &fakeAccounting{
-    }
-}
-
-func (self *fakeAccounting) Conn(sippy_types.UA, *sippy_time.MonoTime, string) {
-}
-
-func (self *fakeAccounting) Disc(sippy_types.UA, *sippy_time.MonoTime, string, int) {
+type RadiusAttribute struct {
+    name    string
+    value   string
 }

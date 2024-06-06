@@ -162,8 +162,24 @@ func (self *SipAuthorizationBody) GetCopy() *SipAuthorizationBody {
     return &rval
 }
 
+func (self *SipAuthorizationBody) GetNonce() string {
+    return self.nonce
+}
+
+func (self *SipAuthorizationBody) GetRealm() string {
+    return self.realm
+}
+
+func (self *SipAuthorizationBody) GetResponse() string {
+    return self.response
+}
+
 func (self *SipAuthorizationBody) GetUsername() string {
     return self.username
+}
+
+func (self *SipAuthorizationBody) GetUri() string {
+    return self.uri
 }
 
 func (self *SipAuthorizationBody) Verify(passwd, method, entity_body string) bool {

@@ -27,20 +27,66 @@
 package main
 
 import (
-    "github.com/sippy/go-b2bua/sippy/time"
-    "github.com/sippy/go-b2bua/sippy/types"
+    "strings"
+    "regexp"
 )
 
-type fakeAccounting struct {
+type re_sub_once struct {
+    done    bool
+    repl    string
 }
 
-func NewFakeAccounting() *fakeAccounting {
-    return &fakeAccounting{
+func new_re_sub_once(repl string) *re_sub_once {
+    return &re_sub_once{
+        done    : false,
+        repl    : repl,
     }
 }
 
-func (self *fakeAccounting) Conn(sippy_types.UA, *sippy_time.MonoTime, string) {
+func (self *re_sub_once) repl_fn(s string) string {
+    if self.done {
+        return s
+    }
+    self.done = true
+    return self.repl
 }
 
-func (self *fakeAccounting) Disc(sippy_types.UA, *sippy_time.MonoTime, string, int) {
+func re_replace(ptrn, s string) (string, error) {
+    s = strings.SplitN(s, "#", 2)[0]
+    ptrn_arr := strings.Split(ptrn, "/")
+    for len(ptrn_arr) >= 4 {
+        p := ptrn_arr[1]
+        r := ptrn_arr[2]
+        mod := ptrn_arr[3]
+        mod = strings.TrimSpace(mod)
+        if len(mod) > 0 && mod[0] != ';' {
+            ptrn_arr[3] = mod[1:]
+            mod = strings.ToLower(mod[:1])
+        } else {
+            ptrn_arr[3] = mod
+        }
+        global_replace := false
+        for _, c := range mod {
+            if c == 'g' {
+                global_replace = true
+                break
+            }
+        }
+        re, err := regexp.CompilePOSIX(p)
+        if err != nil {
+            return s, err
+        }
+        if global_replace {
+            s = re.ReplaceAllString(s, r)
+        } else {
+            re_sub := new_re_sub_once(r)
+            s = re.ReplaceAllStringFunc(s, re_sub.repl_fn)
+        }
+        if len(ptrn_arr) == 4 && ptrn_arr[3] == "" {
+            break
+        }
+        ptrn_arr = ptrn_arr[3:]
+    }
+    return s, nil
 }
+

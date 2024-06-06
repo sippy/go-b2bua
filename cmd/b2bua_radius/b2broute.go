@@ -1,5 +1,5 @@
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2016 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2024 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -69,20 +69,8 @@ type B2BRoute struct {
     rtpp            bool
     outbound_proxy  *sippy_net.HostPort
     rnum            int
+    params          map[string]string
 }
-/*
-from sippy.SipHeader import SipHeader
-from sippy.SipConf import SipConf
-
-from urllib import unquote
-from socket import getaddrinfo, SOCK_STREAM, AF_INET, AF_INET6
-
-class B2BRoute(object):
-    rnum = nil
-    addrinfo = nil
-    params = nil
-    ainfo = nil
-*/
 
 func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, error) {
     var hostport []string
@@ -96,6 +84,9 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
         cli_set         : false,
         extra_headers   : []sippy_header.SipHeader{},
         rtpp            : true,
+        params          : make(map[string]string),
+        credit_time     : -1,
+        expires         : -1,
     }
     route := strings.Split(sroute, ";")
     if strings.IndexRune(route[0], '@') != -1 {
@@ -141,27 +132,31 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
         }
         self.ainfo = append(self.ainfo, &ainfo_item{ ip, port.String() })
     }
-    //self.params = []string{}
     for _, x := range route[1:] {
         av := strings.SplitN(x, "=", 2)
-        switch av[0] {
+        if len(av) != 2 {
+            continue
+        }
+        a := av[0]
+        s_v := av[1]
+        switch a {
         case "credit-time":
-            v, err := strconv.Atoi(av[1])
+            v, err := strconv.Atoi(s_v)
             if err != nil {
-                return nil, errors.New("Error parsing credit-time '" + av[1] + "': " + err.Error())
+                return nil, errors.New("Error parsing credit-time '" + s_v + "': " + err.Error())
             }
             if v < 0 { v = 0 }
             self.credit_time = time.Duration(v * int(time.Second))
             self.crt_set = true
         case "expires":
-            v, err := strconv.Atoi(av[1])
+            v, err := strconv.Atoi(s_v)
             if err != nil {
-                return nil, errors.New("Error parsing the expires '" + av[1] + "': " + err.Error())
+                return nil, errors.New("Error parsing the expires '" + s_v + "': " + err.Error())
             }
             if v < 0 { v = 0 }
             self.expires = time.Duration(v * int(time.Second))
         case "hs_scodes":
-            for _, s := range strings.Split(av[1], ",") {
+            for _, s := range strings.Split(s_v, ",") {
                 s = strings.TrimSpace(s)
                 if s == "" { continue }
                 scode, err := strconv.Atoi(s)
@@ -171,54 +166,53 @@ func NewB2BRoute(sroute string, global_config sippy_conf.Config) (*B2BRoute, err
                 self.huntstop_scodes = append(self.huntstop_scodes, scode)
             }
         case "np_expires":
-            v, err := strconv.Atoi(av[1])
+            v, err := strconv.Atoi(s_v)
             if err != nil {
-                return nil, errors.New("Error parsing the no_progress_expires '" + av[1] + "': " + err.Error())
+                return nil, errors.New("Error parsing the no_progress_expires '" + s_v + "': " + err.Error())
             }
             if v < 0 { v = 0 }
             self.no_progress_expires = time.Duration(v * int(time.Second))
         case "forward_on_fail":
             self.forward_on_fail = true
         case "auth":
-            tmp := strings.SplitN(av[1], ":", 2)
+            tmp := strings.SplitN(s_v, ":", 2)
             if len(tmp) != 2 {
-                return nil, errors.New("Error parsing the auth (no colon) '" + av[1] + "': " + err.Error())
+                return nil, errors.New("Error parsing the auth (no colon) '" + s_v + "': " + err.Error())
             }
             self.user, self.passw = tmp[0], tmp[1]
         case "cli":
-            self.cli = av[1]
+            self.cli = s_v
             self.cli_set = true
         case "cnam":
-            self.caller_name, err = url.QueryUnescape(av[1])
+            self.caller_name, err = url.QueryUnescape(s_v)
             if err != nil {
-                return nil, errors.New("Error parsing the cnam '" + av[1] + "': " + err.Error())
+                return nil, errors.New("Error parsing the cnam '" + s_v + "': " + err.Error())
             }
         case "ash":
-            var v string
             var ash []sippy_header.SipHeader
-            v, err = url.QueryUnescape(av[1])
+            s_v, err = url.QueryUnescape(s_v)
             if err == nil {
-                ash, err = sippy.ParseSipHeader(v)
+                ash, err = sippy.ParseSipHeader(s_v)
             }
             if err != nil {
-                return nil, errors.New("Error parsing the ash '" + av[1] + "': " + err.Error())
+                return nil, errors.New("Error parsing the ash '" + s_v + "': " + err.Error())
             }
             self.extra_headers = append(self.extra_headers, ash...)
         case "rtpp":
-            v, err := strconv.Atoi(av[1])
+            v, err := strconv.Atoi(s_v)
             if err != nil {
-                return nil, errors.New("Error parsing the rtpp '" + av[1] + "': " + err.Error())
+                return nil, errors.New("Error parsing the rtpp '" + s_v + "': " + err.Error())
             }
             self.rtpp = (v != 0)
         case "op":
-            host_port := strings.SplitN(av[1], ":", 2)
+            host_port := strings.SplitN(s_v, ":", 2)
             if len(host_port) == 1 {
-                self.outbound_proxy = sippy_net.NewHostPort(av[1], "5060")
+                self.outbound_proxy = sippy_net.NewHostPort(s_v, "5060")
             } else {
                 self.outbound_proxy = sippy_net.NewHostPort(host_port[0], host_port[1])
             }
-        //default:
-        //    self.params[a] = v
+        default:
+            self.params[a] = s_v
         }
     }
     return self, nil
@@ -235,10 +229,6 @@ func (self *B2BRoute) customize(rnum int, default_cld, default_cli string, defau
     if ! self.crt_set {
         self.credit_time = default_credit_time
     }
-    //if self.params.has_key("gt") {
-    //    timeout, skip = self.params["gt"].split(",", 1)
-    //    self.params["group_timeout"] = (int(timeout), rnum + int(skip))
-    //}
     self.extra_headers = append(self.extra_headers, pass_headers...)
     if max_credit_time != 0 {
         if self.credit_time == 0 || self.credit_time > max_credit_time {

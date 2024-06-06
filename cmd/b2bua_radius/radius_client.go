@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2003-2005 Maxim Sobolev. All rights reserved.
-// Copyright (c) 2006-2014 Sippy Software, Inc. All rights reserved.
+// Copyright (c) 2006-2024 Sippy Software, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -25,58 +25,108 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
-/*
-from External_command import External_command
 
-class Radius_client(External_command):
-    global_config = nil
-    _avpair_names = ('call-id', 'h323-session-protocol', 'h323-ivr-out', 'h323-incoming-conf-id', \
-      'release-source', 'alert-timepoint', 'provisional-timepoint')
-    _cisco_vsa_names = ('h323-remote-address', 'h323-conf-id', 'h323-setup-time', 'h323-call-origin', \
-      'h323-call-type', 'h323-connect-time', 'h323-disconnect-time', 'h323-disconnect-cause', \
-      'h323-voice-quality', 'h323-credit-time', 'h323-return-code', 'h323-redirect-number', \
-      'h323-preferred-lang', 'h323-billing-model', 'h323-currency')
+import (
+    "fmt"
+    "strings"
+)
 
-    def __init__(self, global_config = {}):
-        self.global_config = global_config
-        command = global_config.getdefault('radiusclient', '/usr/local/sbin/radiusclient')
-        config = global_config.getdefault('radiusclient.conf', nil)
-        max_workers = global_config.getdefault('max_radiusclients', 20)
-        if config != nil:
-            External_command.__init__(self, (command, '-f', config, '-s'), max_workers = max_workers)
-        else:
-            External_command.__init__(self, (command, '-s'), max_workers = max_workers)
+type RadiusClient struct {
+    external_command    *ExternalCommand
+    _avpair_names       map[string]bool
+    _cisco_vsa_names    map[string]bool
+}
 
-    def _prepare_attributes(self, type, attributes):
-        data = [type]
-        for a, v in attributes:
-            if a in self._avpair_names:
-                v = '%s=%s' % (str(a), str(v))
-                a = 'Cisco-AVPair'
-            elif a in self._cisco_vsa_names:
-                v = '%s=%s' % (str(a), str(v))
-            data.append('%s="%s"' % (str(a), str(v)))
-        return data
+func NewRadiusClient(global_config *myConfigParser) *RadiusClient {
+    var external_command *ExternalCommand
 
-    def do_auth(self, attributes, result_callback, *callback_parameters):
-        return External_command.process_command(self, self._prepare_attributes('AUTH', attributes), result_callback, *callback_parameters)
+    if global_config.Radiusclient_conf != "" {
+        external_command = newExternalCommand(global_config.Max_radius_clients, global_config.ErrorLogger(), global_config.Radiusclient, "-f", global_config.Radiusclient_conf, "-s")
+    } else {
+        external_command = newExternalCommand(global_config.Max_radius_clients, global_config.ErrorLogger(), global_config.Radiusclient, "-s")
+    }
+    return &RadiusClient{
+        external_command    : external_command,
+        _avpair_names       : map[string]bool {
+            "call-id"                   : true,
+            "h323-session-protocol"     : true,
+            "h323-ivr-out"              : true,
+            "h323-incoming-conf-id"     : true,
+            "release-source"            : true,
+            "alert-timepoint"           : true,
+            "provisional-timepoint"     : true,
+        },
+        _cisco_vsa_names    : map[string]bool {
+            "h323-remote-address"       : true,
+            "h323-conf-id"              : true,
+            "h323-setup-time"           : true,
+            "h323-call-origin"          : true,
+            "h323-call-type"            : true,
+            "h323-connect-time"         : true,
+            "h323-disconnect-time"      : true,
+            "h323-disconnect-cause"     : true,
+            "h323-voice-quality"        : true,
+            "h323-credit-time"          : true,
+            "h323-return-code"          : true,
+            "h323-redirect-number"      : true,
+            "h323-preferred-lang"       : true,
+            "h323-billing-model"        : true,
+            "h323-currency"             : true,
+        },
+    }
+}
 
-    def do_acct(self, attributes, result_callback = nil, *callback_parameters):
-        External_command.process_command(self, self._prepare_attributes('ACCT', attributes), result_callback, *callback_parameters)
+func (self *RadiusClient) _prepare_attributes(typ string, attributes []RadiusAttribute) []string {
+    data := []string{ typ }
+    var a, v string
+    for _, attr := range attributes {
+        if _, ok := self._avpair_names[attr.name]; ok {
+            v = fmt.Sprintf("%s=%s", attr.name, attr.value)
+            a = "Cisco-AVPair"
+        } else if _, ok := self._cisco_vsa_names[attr.name]; ok {
+            v = fmt.Sprintf("%s=%s", attr.name, attr.value)
+            a = attr.name
+        } else {
+            a = attr.name
+            v = attr.value
+        }
+        data = append(data, fmt.Sprintf("%s=\"%s\"", a, v))
+    }
+    return data
+}
 
-    def process_result(self, result_callback, result, *callback_parameters):
-        if result_callback == nil:
-            return
-        nav = []
-        for av in result[:-1]:
-            a, v = [x.strip() for x in av.split(' = ', 1)]
-            v = v.strip('\'')
-            if (a == 'Cisco-AVPair' or a in self._cisco_vsa_names):
-                t = v.split('=', 1)
-                if len(t) > 1:
-                    a, v = t
-            elif v.startswith(a + '='):
-                v = v[len(a) + 1:]
-            nav.append((a, v))
-        External_command.process_result(self, result_callback, (tuple(nav), int(result[-1])), *callback_parameters)
-*/
+func (self *RadiusClient) do_auth(attributes []RadiusAttribute, result_callback func(results *RadiusResult)) Cancellable {
+    return self.external_command.process_command(self._prepare_attributes("AUTH", attributes), func(results []string) { self.process_result(results, result_callback) })
+}
+
+func (self *RadiusClient) do_acct(attributes []RadiusAttribute, result_callback func(results *RadiusResult) /*= nil*/) {
+    self.external_command.process_command(self._prepare_attributes("ACCT", attributes), func (results []string) { self.process_result(results, result_callback) })
+}
+
+func (self *RadiusClient) process_result(results []string, result_callback func(*RadiusResult)) {
+    if result_callback == nil {
+        return
+    }
+    result := NewRadiusResult()
+    if len(results) > 0 {
+        for _, r := range results[:len(results)-1] {
+            av := strings.SplitN(r, " = ", 2)
+            if len(av) != 2 {
+                continue
+            }
+            attr := av[0]
+            val := strings.Trim(av[1], "'")
+            if _, ok := self._cisco_vsa_names[attr]; ok || attr == "Cisco-AVPair" {
+                av = strings.SplitN(val, "=", 2)
+                if len(av) > 1 {
+                    attr = av[0]
+                    val = av[1]
+                }
+            } else if strings.HasPrefix(val, attr + "=") {
+                val = val[len(attr) + 1:]
+            }
+            result.Avps = append(result.Avps, RadiusAttribute{ attr, val })
+        }
+    }
+    result_callback(result)
+}

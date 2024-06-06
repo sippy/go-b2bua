@@ -24,3 +24,4 @@ clean:
 
 test:
 	go test ./sippy
+	go test ./cmd/b2bua_radius
