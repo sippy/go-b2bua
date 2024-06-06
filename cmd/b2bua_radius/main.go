@@ -62,7 +62,7 @@ func main() {
     if ! global_config.Foreground {
         sippy_utils.Daemonize(global_config.Logfile, -1, -1, global_config.ErrorLogger())
     }
-    rtp_proxy_clients := make([]sippy_types.RtpProxyClient, len(global_config.Rtp_proxy_clients))
+    rtp_proxy_clients := make([]sippy_types.RtpProxyClient, len(global_config.Rtp_proxy_clients_arr))
     for i, address := range global_config.Rtp_proxy_clients_arr {
         opts, err := sippy.NewRtpProxyClientOpts(address, nil /*bind_address*/, global_config, global_config.ErrorLogger())
         if err != nil {
