@@ -160,7 +160,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         disconnect_ts, _ := sippy_time.NewMonoTime()
         self.ua.SetDisconnectTs(disconnect_ts)
     }
-    return NewUaStateDead(self.ua, self.config), func() { self.ua.DiscCb(_event.GetRtime(), _event.GetOrigin(), 0, nil) }, nil
+    return NewUaStateDisconnected(self.ua, self.config), func() { self.ua.DiscCb(_event.GetRtime(), _event.GetOrigin(), 0, nil) }, nil
 }
 
 func (self *UacStateIdle) ID() sippy_types.UaStateID {
