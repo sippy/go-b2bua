@@ -35,6 +35,7 @@ import (
     "github.com/sippy/go-b2bua/sippy/cli"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/types"
+    "github.com/sippy/go-b2bua/sippy/rtp_proxy"
     "github.com/sippy/go-b2bua/sippy/utils"
 )
 
@@ -64,14 +65,14 @@ func main() {
     }
     rtp_proxy_clients := make([]sippy_types.RtpProxyClient, len(global_config.Rtp_proxy_clients_arr))
     for i, address := range global_config.Rtp_proxy_clients_arr {
-        opts, err := sippy.NewRtpProxyClientOpts(address, nil /*bind_address*/, global_config, global_config.ErrorLogger())
+        opts, err := rtp_proxy.NewRtpProxyClientOpts(address, nil /*bind_address*/, global_config, global_config.ErrorLogger())
         if err != nil {
             println("Cannot initialize rtpproxy client: " + err.Error())
             return
         }
         opts.SetHeartbeatInterval(global_config.Hrtb_ival_dur)
         opts.SetHeartbeatRetryInterval(global_config.Hrtb_retr_ival_dur)
-        rtpp := sippy.NewRtpProxyClient(opts)
+        rtpp := rtp_proxy.NewRtpProxyClient(opts)
         err = rtpp.Start()
         if err != nil {
             println("Cannot initialize rtpproxy client: " + err.Error())

@@ -24,7 +24,8 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+
+package rtp_proxy_client
 
 import (
     "fmt"
@@ -38,6 +39,7 @@ import (
     "github.com/sippy/go-b2bua/sippy/time"
     "github.com/sippy/go-b2bua/sippy/types"
     "github.com/sippy/go-b2bua/sippy/utils"
+    "github.com/sippy/go-b2bua/sippy/rtp_proxy/types"
 )
 
 const (
@@ -144,7 +146,7 @@ type Rtp_proxy_client_stream struct {
     global_config sippy_conf.Config
 }
 
-func newRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, bind_address *sippy_net.HostPort) (rtp_proxy_transport, error) {
+func NewRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, bind_address *sippy_net.HostPort) (rtp_proxy_types.RtpProxyTransport, error) {
     var err error
     if address == nil {
         address, err = net.ResolveUnixAddr("unix", "/var/run/rtpproxy.sock")
@@ -178,23 +180,23 @@ func newRtp_proxy_client_stream(owner sippy_types.RtpProxyClient, global_config 
     return self, nil
 }
 
-func (self *Rtp_proxy_client_stream) is_local() bool {
+func (self *Rtp_proxy_client_stream) Is_local() bool {
     return self._is_local
 }
 
-func (self *Rtp_proxy_client_stream) address() net.Addr {
+func (self *Rtp_proxy_client_stream) Address() net.Addr {
     return self._address
 }
 
-func (self *Rtp_proxy_client_stream) send_command(command string, result_callback func(string)) {
+func (self *Rtp_proxy_client_stream) Send_command(command string, result_callback func(string)) {
     if command[len(command)-1] != '\n' {
         command += "\n"
     }
     self.wi <- &rtpp_req_stream{ command, result_callback }
 }
 
-func (self *Rtp_proxy_client_stream) reconnect(address net.Addr, bind_addr *sippy_net.HostPort) {
-    self.shutdown()
+func (self *Rtp_proxy_client_stream) Reconnect(address net.Addr, bind_addr *sippy_net.HostPort) {
+    self.Shutdown()
     self._address = address
     self.workers = make([]*_RTPPLWorker, self.nworkers)
     for i := 0; i < self.nworkers; i++ {
@@ -203,7 +205,7 @@ func (self *Rtp_proxy_client_stream) reconnect(address net.Addr, bind_addr *sipp
     self.delay_flt = sippy_math.NewRecFilter(0.95, 0.25)
 }
 
-func (self *Rtp_proxy_client_stream) shutdown() {
+func (self *Rtp_proxy_client_stream) Shutdown() {
     self.wi <- nil
     for _, rworker := range self.workers {
         <-rworker.shutdown_chan
@@ -216,7 +218,7 @@ func (self *Rtp_proxy_client_stream) register_delay(rtpc_delay time.Duration) {
     self.delay_flt.Apply(rtpc_delay.Seconds())
 }
 
-func (self *Rtp_proxy_client_stream) get_rtpc_delay() float64 {
+func (self *Rtp_proxy_client_stream) Get_rtpc_delay() float64 {
     return self.delay_flt.GetLastval()
 }
 /*

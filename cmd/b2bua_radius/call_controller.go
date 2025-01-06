@@ -35,6 +35,7 @@ import (
     "time"
 
     "github.com/sippy/go-b2bua/sippy"
+    "github.com/sippy/go-b2bua/sippy/rtp_proxy/session"
     "github.com/sippy/go-b2bua/sippy/headers"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/time"
@@ -59,7 +60,7 @@ type callController struct {
     cld             string
     caller_name     string
     challenge       *sippy_header.SipWWWAuthenticate
-    rtp_proxy_session *sippy.Rtp_proxy_session
+    rtp_proxy_session *rtp_proxy_session.Rtp_proxy_session
     eTry            *sippy.CCEventTry
     huntstop_scodes []int
     acctA           Accounting
@@ -167,7 +168,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
             }
             if len(self.cmap.rtp_proxy_clients) > 0 {
                 var err error
-                self.rtp_proxy_session, err = sippy.NewRtp_proxy_session(self.global_config, self.cmap.rtp_proxy_clients, self.cId.CallId, "", "", self.global_config.B2bua_socket, /*notify_tag*/ fmt.Sprintf("r%%20%d", self.id), self.lock)
+                self.rtp_proxy_session, err = rtp_proxy_session.NewRtp_proxy_session(self.global_config, self.cmap.rtp_proxy_clients, self.cId.CallId, "", "", self.global_config.B2bua_socket, /*notify_tag*/ fmt.Sprintf("r%%20%d", self.id), self.lock)
                 if err != nil {
                     self.uaA.RecvEvent(sippy.NewCCEventFail(500, "Internal Server Error (4)", event.GetRtime(), ""))
                     self.state = CCStateDead

@@ -24,7 +24,8 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+
+package rtp_proxy
 
 import (
     "net"
@@ -32,6 +33,8 @@ import (
     "time"
 
     "github.com/sippy/go-b2bua/sippy/conf"
+    "github.com/sippy/go-b2bua/sippy/rtp_proxy/client"
+    "github.com/sippy/go-b2bua/sippy/rtp_proxy/types"
     "github.com/sippy/go-b2bua/sippy/log"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/types"
@@ -42,7 +45,7 @@ type rtpProxyClientOpts struct {
     nworkers            *int
     hrtb_retr_ival      time.Duration
     hrtb_ival           time.Duration
-    rtpp_class func(sippy_types.RtpProxyClient, sippy_conf.Config, net.Addr, *sippy_net.HostPort) (rtp_proxy_transport, error)
+    rtpp_class func(sippy_types.RtpProxyClient, sippy_conf.Config, net.Addr, *sippy_net.HostPort) (rtp_proxy_types.RtpProxyTransport, error)
     rtppaddr            net.Addr
     config              sippy_conf.Config
     logger              sippy_log.ErrorLogger
@@ -71,7 +74,7 @@ func NewRtpProxyClientOpts(spath string, bind_address *sippy_net.HostPort, confi
         if err != nil { return nil, err }
         self.proxy_address, _, err = net.SplitHostPort(self.rtppaddr.String())
         if err != nil { return nil, err }
-        self.rtpp_class = newRtp_proxy_client_udp
+        self.rtpp_class = rtp_proxy_client.NewRtp_proxy_client_udp
     } else if strings.HasPrefix(spath, "udp6:") {
         tmp := strings.SplitN(spath, ":", 2)
         spath := tmp[1]
@@ -91,7 +94,7 @@ func NewRtpProxyClientOpts(spath string, bind_address *sippy_net.HostPort, confi
         if err != nil { return nil, err }
         self.proxy_address, _, err = net.SplitHostPort(self.rtppaddr.String())
         if err != nil { return nil, err }
-        self.rtpp_class = newRtp_proxy_client_udp
+        self.rtpp_class = rtp_proxy_client.NewRtp_proxy_client_udp
     } else if strings.HasPrefix(spath, "tcp:") {
         tmp := strings.SplitN(spath, ":", 3)
         if len(tmp) == 2 {
@@ -102,7 +105,7 @@ func NewRtpProxyClientOpts(spath string, bind_address *sippy_net.HostPort, confi
         if err != nil { return nil, err }
         self.proxy_address, _, err = net.SplitHostPort(self.rtppaddr.String())
         if err != nil { return nil, err }
-        self.rtpp_class = newRtp_proxy_client_stream
+        self.rtpp_class = rtp_proxy_client.NewRtp_proxy_client_stream
     } else if strings.HasPrefix(spath, "tcp6:") {
         tmp := strings.SplitN(spath, ":", 2)
         spath := tmp[1]
@@ -122,7 +125,7 @@ func NewRtpProxyClientOpts(spath string, bind_address *sippy_net.HostPort, confi
         if err != nil { return nil, err }
         self.proxy_address, _, err = net.SplitHostPort(self.rtppaddr.String())
         if err != nil { return nil, err }
-        self.rtpp_class = newRtp_proxy_client_stream
+        self.rtpp_class = rtp_proxy_client.NewRtp_proxy_client_stream
     } else {
         if strings.HasPrefix(spath, "unix:") {
             self.rtppaddr, err = net.ResolveUnixAddr("unix", spath[5:])
@@ -133,7 +136,7 @@ func NewRtpProxyClientOpts(spath string, bind_address *sippy_net.HostPort, confi
         }
         if err != nil { return nil, err }
         self.proxy_address = self.config.SipAddress().String()
-        self.rtpp_class = newRtp_proxy_client_stream
+        self.rtpp_class = rtp_proxy_client.NewRtp_proxy_client_stream
     }
     return self, nil
 }

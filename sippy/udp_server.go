@@ -168,23 +168,23 @@ func (self *asyncReceiver) run(userv *UdpServer) {
     self.sem <- 1
 }
 
-type udpServerOpts struct {
-    laddress        *sippy_net.HostPort
+type UdpServerOpts struct {
+    LAddress        *sippy_net.HostPort
     data_callback   sippy_net.DataPacketReceiver
-    nworkers        int
+    NWorkers        int
 }
 
-func NewUdpServerOpts(laddress *sippy_net.HostPort, data_callback sippy_net.DataPacketReceiver) *udpServerOpts {
-    self := &udpServerOpts{
-        laddress        : laddress,
+func NewUdpServerOpts(laddress *sippy_net.HostPort, data_callback sippy_net.DataPacketReceiver) *UdpServerOpts {
+    self := &UdpServerOpts{
+        LAddress        : laddress,
         data_callback   : data_callback,
-        nworkers        : runtime.NumCPU() * 2,
+        NWorkers        : runtime.NumCPU() * 2,
     }
     return self
 }
 
 type UdpServer struct {
-    uopts           udpServerOpts
+    uopts           UdpServerOpts
     skt             net.PacketConn
     wi              chan *write_req
     wi_resolv       chan *resolv_req
@@ -210,14 +210,14 @@ func zoneToUint32(zone string) uint32 {
     return uint32(n)
 }
 
-func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, error) {
+func NewUdpServer(config sippy_conf.Config, uopts *UdpServerOpts) (*UdpServer, error) {
     var laddress *net.UDPAddr
     var err error
     var ip4 net.IP
 
     proto := syscall.AF_INET
-    if uopts.laddress != nil {
-        laddress, err = net.ResolveUDPAddr("udp", uopts.laddress.String())
+    if uopts.LAddress != nil {
+        laddress, err = net.ResolveUDPAddr("udp", uopts.LAddress.String())
         if err != nil {
             return nil, err
         }
@@ -272,15 +272,15 @@ func NewUdpServer(config sippy_conf.Config, uopts *udpServerOpts) (*UdpServer, e
         skt         : skt,
         wi          : make(chan *write_req, 1000),
         wi_resolv   : make(chan *resolv_req, 1000),
-        asenders    : make([]*asyncSender, 0, uopts.nworkers),
-        areceivers  : make([]*asyncReceiver, 0, uopts.nworkers),
-        aresolvers  : make([]*asyncResolver, 0, uopts.nworkers),
+        asenders    : make([]*asyncSender, 0, uopts.NWorkers),
+        areceivers  : make([]*asyncReceiver, 0, uopts.NWorkers),
+        aresolvers  : make([]*asyncResolver, 0, uopts.NWorkers),
     }
-    for n := 0; n < uopts.nworkers; n++ {
+    for n := 0; n < uopts.NWorkers; n++ {
         self.asenders = append(self.asenders, NewAsyncSender(self, n))
         self.areceivers = append(self.areceivers, NewAsyncReciever(self, config.ErrorLogger()))
     }
-    for n:= 0; n < uopts.nworkers; n++ {
+    for n:= 0; n < uopts.NWorkers; n++ {
         self.aresolvers = append(self.aresolvers, NewAsyncResolver(self, config.ErrorLogger()))
     }
     return self, nil
@@ -334,5 +334,5 @@ func (self *UdpServer) Shutdown() {
 }
 
 func (self *UdpServer) GetLAddress() *sippy_net.HostPort {
-    return self.uopts.laddress
+    return self.uopts.LAddress
 }

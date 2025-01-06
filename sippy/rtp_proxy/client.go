@@ -24,7 +24,8 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+
+package rtp_proxy
 
 import (
     "bufio"
@@ -32,6 +33,8 @@ import (
     "strconv"
     "strings"
 
+    "github.com/sippy/go-b2bua/sippy"
+    "github.com/sippy/go-b2bua/sippy/rtp_proxy/types"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/types"
 )
@@ -43,7 +46,7 @@ func NewRtpProxyClient(opts *rtpProxyClientOpts) sippy_types.RtpProxyClient {
 type Rtp_proxy_client_base struct {
     heir            sippy_types.RtpProxyClient
     opts            *rtpProxyClientOpts
-    transport       rtp_proxy_transport
+    transport       rtp_proxy_types.RtpProxyTransport
     online          bool
     sbind_supported bool
     tnot_supported  bool
@@ -59,17 +62,8 @@ type Rtp_proxy_client_base struct {
     ptransmitted    int64
 }
 
-type rtp_proxy_transport interface {
-    address() net.Addr
-    get_rtpc_delay() float64
-    is_local() bool
-    send_command(string, func(string))
-    shutdown()
-    reconnect(net.Addr, *sippy_net.HostPort)
-}
-
 func (self *Rtp_proxy_client_base) IsLocal() bool {
-    return self.transport.is_local()
+    return self.transport.Is_local()
 }
 
 func (self *Rtp_proxy_client_base) IsOnline() bool {
@@ -100,7 +94,7 @@ func (self *Rtp_proxy_client_base) me() sippy_types.RtpProxyClient {
 }
 
 func (self *Rtp_proxy_client_base) Address() net.Addr {
-    return self.transport.address()
+    return self.transport.Address()
 }
 
 func NewRtp_proxy_client_base(heir sippy_types.RtpProxyClient, opts *rtpProxyClientOpts) *Rtp_proxy_client_base {
@@ -130,18 +124,18 @@ func (self *Rtp_proxy_client_base) Start() error {
 }
 
 func (self *Rtp_proxy_client_base) SendCommand(cmd string, cb func(string)) {
-    self.transport.send_command(cmd, cb)
+    self.transport.Send_command(cmd, cb)
 }
 
 func (self *Rtp_proxy_client_base) Reconnect(addr net.Addr, bind_addr *sippy_net.HostPort) {
-    self.transport.reconnect(addr, bind_addr)
+    self.transport.Reconnect(addr, bind_addr)
 }
 
 func (self *Rtp_proxy_client_base) version_check() {
     if self.shut_down {
         return
     }
-    self.transport.send_command("V", self.version_check_reply)
+    self.transport.Send_command("V", self.version_check_reply)
 }
 
 func (self *Rtp_proxy_client_base) version_check_reply(version string) {
@@ -153,7 +147,7 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
     } else if self.online {
         self.me().GoOffline()
     } else {
-        StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.opts.logger, 0.1)
+        sippy.StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.opts.logger, 0.1)
     }
 }
 
@@ -162,7 +156,7 @@ func (self *Rtp_proxy_client_base) heartbeat() {
     if self.shut_down {
         return
     }
-    self.transport.send_command("Ib", self.heartbeat_reply)
+    self.transport.Send_command("Ib", self.heartbeat_reply)
 }
 
 func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
@@ -198,7 +192,7 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
         }
         self.me().UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted)
     }
-    StartTimeoutWithSpread(self.heartbeat, nil, self.opts.hrtb_ival, 1, self.opts.logger, 0.1)
+    sippy.StartTimeoutWithSpread(self.heartbeat, nil, self.opts.hrtb_ival, 1, self.opts.logger, 0.1)
 }
 
 func (self *Rtp_proxy_client_base) GoOnline() {
@@ -222,7 +216,7 @@ func (self *Rtp_proxy_client_base) GoOffline() {
     //print "go_offline", self.address, self.online
     if self.online {
         self.online = false
-        StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.opts.logger, 0.1)
+        sippy.StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.opts.logger, 0.1)
     }
 }
 
@@ -259,7 +253,7 @@ func (self *Rtp_proxy_client_base) Shutdown() {
         return
     }
     self.shut_down = true
-    self.transport.shutdown()
+    self.transport.Shutdown()
 }
 
 func (self *Rtp_proxy_client_base) IsShutDown() bool {
@@ -271,7 +265,7 @@ func (self *Rtp_proxy_client_base) GetOpts() sippy_types.RtpProxyClientOpts {
 }
 
 func (self *Rtp_proxy_client_base) GetRtpcDelay() float64 {
-    return self.transport.get_rtpc_delay()
+    return self.transport.Get_rtpc_delay()
 }
 
 type rtppCapsChecker struct {
@@ -297,7 +291,7 @@ func newRtppCapsChecker(rtpc *Rtp_proxy_client_base) *rtppCapsChecker {
         attr := it.attr // For some reason the it.attr cannot be passed into the following
                         // function directly - the resulting value is always that of the
                         // last 'it.attr' value.
-        rtpc.transport.send_command("VF " + it.vers, func(res string) { self.caps_query_done(res, attr) })
+        rtpc.transport.Send_command("VF " + it.vers, func(res string) { self.caps_query_done(res, attr) })
     }
     return self
 }

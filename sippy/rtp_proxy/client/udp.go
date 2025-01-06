@@ -24,7 +24,8 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+
+package rtp_proxy_client
 
 import (
     "crypto/rand"
@@ -35,6 +36,7 @@ import (
     "strings"
     "sync"
 
+    "github.com/sippy/go-b2bua/sippy"
     "github.com/sippy/go-b2bua/sippy/conf"
     "github.com/sippy/go-b2bua/sippy/fmt"
     "github.com/sippy/go-b2bua/sippy/math"
@@ -42,15 +44,16 @@ import (
     "github.com/sippy/go-b2bua/sippy/time"
     "github.com/sippy/go-b2bua/sippy/types"
     "github.com/sippy/go-b2bua/sippy/utils"
+    "github.com/sippy/go-b2bua/sippy/rtp_proxy/types"
 )
 
 type Rtp_proxy_client_udp struct {
     _address            net.Addr
-    uopts               *udpServerOpts
+    uopts               *sippy.UdpServerOpts
     pending_requests    map[string]*rtpp_req_udp
     global_config       sippy_conf.Config
     delay_flt           sippy_math.RecFilter
-    worker              *UdpServer
+    worker              *sippy.UdpServer
     hostport            *sippy_net.HostPort
     bind_address        *sippy_net.HostPort
     lock                sync.Mutex
@@ -60,14 +63,14 @@ type Rtp_proxy_client_udp struct {
 type rtpp_req_udp struct {
     next_retr       float64
     triesleft       int64
-    timer           *Timeout
+    timer           *sippy.Timeout
     command         string
     result_callback func(string)
     stime           *sippy_time.MonoTime
     retransmits     int
 }
 
-func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *Timeout, command string, result_callback func(string)) *rtpp_req_udp {
+func new_rtpp_req_udp(next_retr float64, triesleft int64, timer *sippy.Timeout, command string, result_callback func(string)) *rtpp_req_udp {
     stime, _ := sippy_time.NewMonoTime()
     return &rtpp_req_udp{
         next_retr       : next_retr,
@@ -96,7 +99,7 @@ func getnretrans(first_retr, timeout float64) (int64, error) {
     return n, nil
 }
 
-func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, bind_address *sippy_net.HostPort) (rtp_proxy_transport, error) {
+func NewRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sippy_conf.Config, address net.Addr, bind_address *sippy_net.HostPort) (rtp_proxy_types.RtpProxyTransport, error) {
     self := &Rtp_proxy_client_udp{
         owner               : owner,
         pending_requests    : make(map[string]*rtpp_req_udp),
@@ -108,13 +111,13 @@ func newRtp_proxy_client_udp(owner sippy_types.RtpProxyClient, global_config sip
     if err != nil {
         return nil, err
     }
-    self.uopts = NewUdpServerOpts(laddress, self.process_reply)
+    self.uopts = sippy.NewUdpServerOpts(laddress, self.process_reply)
     //self.uopts.ploss_out_rate = self.ploss_out_rate
     //self.uopts.pdelay_out_max = self.pdelay_out_max
     if owner.GetOpts().GetNWorkers() != nil {
-        self.uopts.nworkers = *owner.GetOpts().GetNWorkers()
+        self.uopts.NWorkers = *owner.GetOpts().GetNWorkers()
     }
-    self.worker, err = NewUdpServer(global_config, self.uopts)
+    self.worker, err = sippy.NewUdpServer(global_config, self.uopts)
     return self, err
 }
 
@@ -147,15 +150,15 @@ func (self *Rtp_proxy_client_udp) _setup_addr(address net.Addr, bind_address *si
     return bind_address, nil
 }
 
-func (*Rtp_proxy_client_udp) is_local() bool {
+func (*Rtp_proxy_client_udp) Is_local() bool {
     return false
 }
 
-func (self *Rtp_proxy_client_udp) address() net.Addr {
+func (self *Rtp_proxy_client_udp) Address() net.Addr {
     return self._address
 }
 
-func (self *Rtp_proxy_client_udp) send_command(command string, result_callback func(string)) {
+func (self *Rtp_proxy_client_udp) Send_command(command string, result_callback func(string)) {
     buf := make([]byte, 16)
     rand.Read(buf)
     cookie := hex.EncodeToString(buf)
@@ -172,7 +175,7 @@ func (self *Rtp_proxy_client_udp) send_command(command string, result_callback f
         return
     }
     command = cookie + " " + command
-    timer := StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
+    timer := sippy.StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
     preq := new_rtpp_req_udp(next_retr, nretr - 1, timer, command, result_callback)
     self.worker.SendTo([]byte(command), self.hostport)
     self.lock.Lock()
@@ -199,7 +202,7 @@ func (self *Rtp_proxy_client_udp) retransmit(cookie string) {
     self.lock.Unlock()
     req.next_retr *= 2
     req.retransmits += 1
-    req.timer = StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
+    req.timer = sippy.StartTimeout(func() { self.retransmit(cookie) }, nil, time.Duration(req.next_retr * float64(time.Second)), 1, self.global_config.ErrorLogger())
     req.stime, _ = sippy_time.NewMonoTime()
     self.worker.SendTo([]byte(req.command), self.hostport)
     req.triesleft -= 1
@@ -236,16 +239,16 @@ func (self *Rtp_proxy_client_udp) process_reply(data []byte, address *sippy_net.
     }
 }
 
-func (self *Rtp_proxy_client_udp) reconnect(address net.Addr, bind_address *sippy_net.HostPort) {
+func (self *Rtp_proxy_client_udp) Reconnect(address net.Addr, bind_address *sippy_net.HostPort) {
     if self._address.String() != address.String() || bind_address.String() != self.bind_address.String() {
-        self.uopts.laddress, _ = self._setup_addr(address, bind_address)
+        self.uopts.LAddress, _ = self._setup_addr(address, bind_address)
         self.worker.Shutdown()
-        self.worker, _ = NewUdpServer(self.global_config, self.uopts)
+        self.worker, _ = sippy.NewUdpServer(self.global_config, self.uopts)
         self.delay_flt = sippy_math.NewRecFilter(0.95, 0.25)
     }
 }
 
-func (self *Rtp_proxy_client_udp) shutdown() {
+func (self *Rtp_proxy_client_udp) Shutdown() {
     if self.worker == nil {
         return
     }
@@ -253,7 +256,7 @@ func (self *Rtp_proxy_client_udp) shutdown() {
     self.worker = nil
 }
 
-func (self *Rtp_proxy_client_udp) get_rtpc_delay() float64 {
+func (self *Rtp_proxy_client_udp) Get_rtpc_delay() float64 {
     return self.delay_flt.GetLastval()
 }
 
