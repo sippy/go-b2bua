@@ -59,21 +59,10 @@ type Rtp_proxy_session struct {
     rtpp_wi                 chan *rtpp_cmd
 }
 
-type rtpproxy_update_result struct {
-    rtpproxy_address    string
-    rtpproxy_port       string
-    family              string
-    sendonly            bool
-}
-
 type rtpp_cmd struct {
     cmd         string
     cb          func(string)
     rtp_proxy_client sippy_types.RtpProxyClient
-}
-
-func (self *rtpproxy_update_result) Address() string {
-    return self.rtpproxy_address
 }
 
 func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_types.RtpProxyClient, call_id, from_tag, to_tag, notify_socket, notify_tag string, session_lock sync.Locker) (*Rtp_proxy_session, error) {
@@ -91,8 +80,6 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
     }
     self.caller.otherside = &self.callee
     self.callee.otherside = &self.caller
-    self.caller.owner = self
-    self.callee.owner = self
     self.caller.session_exists = false
     self.callee.session_exists = false
     online_clients := []sippy_types.RtpProxyClient{}
@@ -140,7 +127,7 @@ func NewRtp_proxy_session(config sippy_conf.Config, rtp_proxy_clients []sippy_ty
         result_callback(result)
 */
 func (self *Rtp_proxy_session) PlayCaller(prompt_name string, times int/*= 1*/, result_callback func(string)/*= nil*/, index int /*= 0*/) {
-    self.caller._play(prompt_name, times, result_callback, index)
+    self.caller._play(prompt_name, times, result_callback, index, self)
 }
 
 func (self *Rtp_proxy_session) send_command(cmd string, cb func(string)) {
@@ -175,12 +162,14 @@ func (self *Rtp_proxy_session) cmd_done(res string) {
 }
 
 func (self *Rtp_proxy_session) StopPlayCaller(result_callback func(string)/*= nil*/, index int/*= 0*/) {
-    self.caller._stop_play(result_callback, index)
+    self.caller._stop_play(result_callback, index, self)
 }
 
 func (self *Rtp_proxy_session) StartRecording(rname/*= nil*/ string, result_callback func(string)/*= nil*/, index int/*= 0*/) {
     if ! self.caller.session_exists {
-        self.caller.update("0.0.0.0", "0", func(*rtpproxy_update_result) { self._start_recording(rname, result_callback, index) }, "", index, "IP4")
+        up_cb := func(*UpdateResult, *Rtp_proxy_session, sippy_types.SipHandlingError) { self._start_recording(rname, result_callback, index) }
+        up := NewUpdateParams(self, index, up_cb)
+        self.caller.update(up)
         return
     }
     self._start_recording(rname, result_callback, index)
@@ -220,12 +209,12 @@ func (self *Rtp_proxy_session) Delete() {
     self._rtp_proxy_client = nil
 }
 
-func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
-    return self.caller._on_sdp_change(sdp_body, result_callback)
+func (self *Rtp_proxy_session) OnCallerSdpChange(sdp_body sippy_types.MsgBody, result_callback sippy_types.OnDelayedCB) error {
+    return self.caller._on_sdp_change(self, sdp_body, result_callback)
 }
 
-func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, result_callback func(sippy_types.MsgBody)) error {
-    return self.callee._on_sdp_change(sdp_body, result_callback)
+func (self *Rtp_proxy_session) OnCalleeSdpChange(sdp_body sippy_types.MsgBody, result_callback sippy_types.OnDelayedCB) error {
+    return self.callee._on_sdp_change(self, sdp_body, result_callback)
 }
 
 func rtp_proxy_session_destructor(self *Rtp_proxy_session) {
