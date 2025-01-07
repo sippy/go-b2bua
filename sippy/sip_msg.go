@@ -32,6 +32,7 @@ import (
     "strings"
 
     "github.com/sippy/go-b2bua/sippy/conf"
+    "github.com/sippy/go-b2bua/sippy/exceptions"
     "github.com/sippy/go-b2bua/sippy/fmt"
     "github.com/sippy/go-b2bua/sippy/headers"
     "github.com/sippy/go-b2bua/sippy/log"
@@ -96,7 +97,7 @@ func NewSipMsg(rtime *sippy_time.MonoTime, config sippy_conf.Config) *sipMsg {
     return self
 }
 
-func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipMsg, error) {
+func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipMsg, sippy_types.SipHandlingError) {
     self := NewSipMsg(rtime, config)
     buf := string(_buf)
     // Locate a body
@@ -147,19 +148,19 @@ func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Conf
         }
     }
     if len(self.vias) == 0 {
-        return nil, errors.New("Via HF is missed")
+        return nil, sippy_exceptions.NewSipParseError("Via HF is missed")
     }
     if self.to == nil {
-        return nil, errors.New("To HF is missed")
+        return nil, sippy_exceptions.NewSipParseError("To HF is missed")
     }
     if self.from == nil {
-        return nil, errors.New("From HF is missed")
+        return nil, sippy_exceptions.NewSipParseError("From HF is missed")
     }
     if self.cseq == nil {
-        return nil, errors.New("CSeq HF is missed")
+        return nil, sippy_exceptions.NewSipParseError("CSeq HF is missed")
     }
     if self.call_id == nil {
-        return nil, errors.New("Call-ID HF is missed")
+        return nil, sippy_exceptions.NewSipParseError("Call-ID HF is missed")
     }
     return self, nil
 }
@@ -248,7 +249,7 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
     self.headers = append(self.headers, hdr)
 }
 
-func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) error {
+func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) sippy_types.SipHandlingError {
     var blen_hf *sippy_header.SipNumericHF
     if self.content_length != nil {
         blen_hf, _ = self.content_length.GetBody()
@@ -265,7 +266,8 @@ func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) error {
         } else if self.__mbody == nil {
             // XXX: Should generate 400 Bad Request if such condition
             // happens with request
-            return &ESipParseException{ msg : sippy_fmt.Sprintf("Missed SIP body, %d bytes expected", blen) }
+            emsg := sippy_fmt.Sprintf("Missed SIP body, %d bytes expected", blen)
+            return sippy_exceptions.NewSipParseError(emsg)
         } else if blen > mblen {
             if blen - mblen < 7 && mblen > 7 && (*self.__mbody)[len(*self.__mbody)-4:] == "\r\n\r\n" {
                 // XXX: we should not really be doing this, but it appears to be
@@ -290,7 +292,8 @@ func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) error {
             } else {
                 // XXX: Should generate 400 Bad Request if such condition
                 // happens with request
-                return &ESipParseException{ msg : sippy_fmt.Sprintf("Truncated SIP body, %d bytes expected, %d received", blen, mblen) }
+                emsg := sippy_fmt.Sprintf("Truncated SIP body, %d bytes expected, %d received", blen, mblen)
+                return sippy_exceptions.NewSipParseError(emsg)
             }
         } else if blen < mblen {
             *self.__mbody = (*self.__mbody)[:blen]

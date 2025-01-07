@@ -313,21 +313,18 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
 }
 
 func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, data []byte, checksum string, address *sippy_net.HostPort, server sippy_net.Transport) {
-    var req *sipRequest
     var err error
     var tids []*sippy_header.TID
     var via0 *sippy_header.SipViaBody
 
-    req, err = ParseSipRequest(data, rtime, self.config)
-    if err != nil {
-        switch errt := err.(type) {
-        case *ESipParseException:
-            if errt.sip_response != nil {
-                self.transmitMsg(server, errt.sip_response, address, checksum, errt.sip_response.GetCallId().CallId)
-            }
+    req, perr := ParseSipRequest(data, rtime, self.config)
+    if perr != nil {
+        if req != nil {
+            sip_response := perr.GetResponse(req)
+            self.transmitMsg(server, sip_response, address, checksum, sip_response.GetCallId().CallId)
         }
         self.logMsg(rtime, "", "RECEIVED", address, data)
-        self.logBadMessage("can't parse SIP request from " + address.String() + ": " + err.Error(), data)
+        self.logBadMessage("can't parse SIP request from " + address.String() + ": " + perr.Error(), data)
         return
     }
     tids, err = req.getTIds()

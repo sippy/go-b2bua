@@ -86,7 +86,7 @@ func (self *UaStateConnected) RecvRequest(req sippy_types.SipRequest, t sippy_ty
         self.ua.OnReinvite(req, event)
         if body != nil {
             if self.ua.HasOnRemoteSdpChange() {
-                self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody) { self.ua.DelayedRemoteSdpUpdate(event, x) })
+                self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody, ex sippy_types.SipHandlingError) { self.ua.DelayedRemoteSdpUpdate(event, x, ex) })
                 return NewUasStateUpdating(self.ua, self.config), nil
             } else {
                 self.ua.SetRSDP(body.GetCopy())
@@ -195,7 +195,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
             return nil, nil, nil
         }
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            err := self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            err := self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
             if err != nil {
                 ev := NewCCEventFail(400, "Malformed SDP Body", event.GetRtime(), "")
                 ev.SetWarning(err.Error())
@@ -247,7 +247,7 @@ func (self *UaStateConnected) RecvEvent(event sippy_types.CCEvent) (sippy_types.
         self.ua.CancelExpireTimer()
         body := _event.GetBody()
         if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
-            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
             return nil, nil, nil
         }
         self.ua.CancelCreditTimer() // prevent timer leak

@@ -47,9 +47,11 @@ type sipResponse struct {
 
 func ParseSipResponse(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipResponse, error) {
     var scode string
+    var err error
+    var super *sipMsg
 
     self := &sipResponse{}
-    super, err := ParseSipMsg(buf, rtime, config)
+    super, err = ParseSipMsg(buf, rtime, config)
     if err != nil {
         return nil, err
     }

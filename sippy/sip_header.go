@@ -27,10 +27,12 @@
 package sippy
 
 import (
-    "fmt"
     "strings"
 
+    "github.com/sippy/go-b2bua/sippy/exceptions"
+    "github.com/sippy/go-b2bua/sippy/fmt"
     "github.com/sippy/go-b2bua/sippy/headers"
+    "github.com/sippy/go-b2bua/sippy/types"
 )
 
 var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader) {
@@ -77,10 +79,11 @@ var sip_header_name_map = map[string]func(body string) ([]sippy_header.SipHeader
     "date"              : sippy_header.CreateSipDate,
 }
 
-func ParseSipHeader(s string) ([]sippy_header.SipHeader, error) {
+func ParseSipHeader(s string) ([]sippy_header.SipHeader, sippy_types.SipHandlingError) {
     res := strings.SplitN(s, ":", 2)
     if len(res) != 2 {
-        return nil, fmt.Errorf("Bad header line: '%s'", s)
+        emsg := sippy_fmt.Sprintf("Bad header line: '%s'", s)
+        return nil, sippy_exceptions.NewSipParseError(emsg)
     }
     name := strings.TrimSpace(res[0])
     body := strings.TrimSpace(res[1])

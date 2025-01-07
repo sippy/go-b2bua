@@ -24,17 +24,45 @@
 // ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-package sippy
+
+package sippy_exceptions
 
 import (
+    "strconv"
+
     "github.com/sippy/go-b2bua/sippy/types"
+    "github.com/sippy/go-b2bua/sippy/headers"
 )
 
-type ESipParseException struct {
-    sip_response    sippy_types.SipResponse
-    msg             string
+type SipParseError struct {
+    code  int
+    scode string
+    msg   string
 }
 
-func (self *ESipParseException) Error() string {
+func NewSipParseError(msg string) *SipParseError {
+    return &SipParseError{msg: msg, code: 400, scode: "Bad Request - " + msg}
+}
+
+func (self *SipParseError) Error() string {
     return self.msg
+}
+
+func (self *SipParseError) GetResponse(req sippy_types.SipRequest) sippy_types.SipResponse {
+    resp := req.GenResponse(self.code, self.scode, nil, nil)
+    if reason := self.GetReason(); reason != nil {
+        resp.AppendHeader(reason)
+    }
+    return resp
+}
+
+func (self *SipParseError) GetReason() *sippy_header.SipReason {
+    if self.msg != "" {
+        return sippy_header.NewSipReason("SIP", strconv.Itoa(self.code), self.msg)
+    }
+    return nil
+}
+
+func (self *SipParseError) GetEvent(ctor sippy_types.GetEventCtor) sippy_types.CCEvent {
+    return ctor(self.code, self.scode, self.GetReason())
 }

@@ -92,7 +92,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
             code, reason, body = 180, "Ringing", nil
         }
         if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
-            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
             return nil, nil, nil
         }
         self.ua.SetLSDP(body)
@@ -101,7 +101,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
     case *CCEventPreConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
-            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
             return nil, nil, nil
         }
         self.ua.SetLSDP(body)
@@ -110,7 +110,7 @@ func (self *UasStateUpdating) RecvEvent(_event sippy_types.CCEvent) (sippy_types
     case *CCEventConnect:
         code, reason, body := event.scode, event.scode_reason, event.body
         if body != nil && body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
-            self.ua.OnLocalSdpChange(body, func(sippy_types.MsgBody) { self.ua.RecvEvent(event) })
+            self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
             return nil, nil, nil
         }
         self.ua.SetLSDP(body)

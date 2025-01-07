@@ -27,10 +27,10 @@
 package sippy
 
 import (
-    "errors"
-    "fmt"
     "strings"
 
+    "github.com/sippy/go-b2bua/sippy/exceptions"
+    "github.com/sippy/go-b2bua/sippy/fmt"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/types"
 )
@@ -53,18 +53,18 @@ func NewMsgBody(content, mtype string) *msgBody {
     }
 }
 
-func (self *msgBody) GetSdp() (sippy_types.Sdp, error) {
+func (self *msgBody) GetSdp() (sippy_types.Sdp, sippy_types.SipHandlingError) {
     err := self.parse()
     if err != nil {
         return nil, err
     }
     if self.sdp == nil {
-        return nil, errors.New("Not an SDP message")
+        return nil, sippy_exceptions.NewSdpParseError("Not an SDP message")
     }
     return self.sdp, nil
 }
 
-func (self *msgBody) parse() error {
+func (self *msgBody) parse() sippy_types.SipHandlingError {
     if self.parsed {
         return nil
     }
@@ -80,7 +80,7 @@ func (self *msgBody) parse() error {
             }
         }
         if mth_boundary == nil {
-            return errors.New("Error parsing the multipart message")
+            return sippy_exceptions.NewSdpParseError("Error parsing the multipart message")
         }
         boundary := "--" + *mth_boundary
         for _, subsection := range strings.Split(self.string_content, boundary) {
@@ -120,7 +120,8 @@ func (self *msgBody) parse() error {
         if err == nil {
             self.sdp = sdp
         } else {
-            return fmt.Errorf("error parsing the SDP: %s", err.Error())
+            emsg := sippy_fmt.Sprintf("error parsing the SDP: %s", err.Error())
+            return sippy_exceptions.NewSdpParseError(emsg)
         }
     }
     self.parsed = true

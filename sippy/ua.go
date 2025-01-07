@@ -517,10 +517,36 @@ func (self *Ua) IsYours(req sippy_types.SipRequest, br0k3n_to bool /*= False*/) 
     return true
 }
 
-func (self *Ua) DelayedRemoteSdpUpdate(event sippy_types.CCEvent, remote_sdp_body sippy_types.MsgBody) {
-    self.rSDP = remote_sdp_body.GetCopy()
+func ccEventFailCtor(scode int, scode_t string, reason sippy_header.SipHeader) sippy_types.CCEvent {
+    if reason != nil {
+        return NewCCEventFail(scode, scode_t, nil, "", reason)
+    }
+    return NewCCEventFail(scode, scode_t, nil, "")
+}
+
+func (self *Ua) DelayedRemoteSdpUpdate(event sippy_types.CCEvent, remote_sdp_body sippy_types.MsgBody, ex sippy_types.SipHandlingError) {
+    if ex != nil {
+        event = ex.GetEvent(ccEventFailCtor)
+    } else {
+        self.rSDP = remote_sdp_body.GetCopy()
+    }
     self.me().Enqueue(event)
     self.emitPendingEvents()
+    if ex != nil {
+        self.RecvEvent(event)
+    }
+}
+
+func (self *Ua) GetDelayedLocalSdpUpdate(event sippy_types.CCEvent) sippy_types.OnDelayedCB {
+    odc_cb := func(remote_sdp_body sippy_types.MsgBody, ex sippy_types.SipHandlingError) {
+        if ex != nil {
+            event = ex.GetEvent(ccEventFailCtor)
+            self.me().Enqueue(event)
+            self.emitPendingEvents()
+        }
+        self.RecvEvent(event)
+    }
+    return odc_cb
 }
 
 func (self *Ua) update_ua(msg sippy_types.SipMsg) {
@@ -615,7 +641,7 @@ func (self *Ua) SetOrigin(origin string) {
     self.origin = origin
 }
 
-func (self *Ua) OnLocalSdpChange(body sippy_types.MsgBody, cb func(sippy_types.MsgBody)) error {
+func (self *Ua) OnLocalSdpChange(body sippy_types.MsgBody, cb sippy_types.OnDelayedCB) error {
     if self.on_local_sdp_change == nil {
         return nil
     }
@@ -882,7 +908,7 @@ func (self *Ua) Enqueue(event sippy_types.CCEvent) {
     self.equeue = append(self.equeue, event)
 }
 
-func (self *Ua) OnRemoteSdpChange(body sippy_types.MsgBody, f func(x sippy_types.MsgBody)) error {
+func (self *Ua) OnRemoteSdpChange(body sippy_types.MsgBody, f sippy_types.OnDelayedCB) error {
     if self.on_remote_sdp_change != nil {
         return self.on_remote_sdp_change(body, f)
     }

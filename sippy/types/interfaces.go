@@ -126,7 +126,7 @@ type MsgBody interface {
     GetCopy() MsgBody
     NeedsUpdate() bool
     SetNeedsUpdate(bool)
-    GetSdp() (Sdp, error)
+    GetSdp() (Sdp, SipHandlingError)
     AppendAHeader(string)
 }
 
@@ -158,10 +158,10 @@ type UA interface {
     GetOrigin() string
     SetOrigin(string)
     HasOnLocalSdpChange() bool
-    OnLocalSdpChange(MsgBody, func(MsgBody)) error
+    OnLocalSdpChange(MsgBody, OnDelayedCB) error
     SetOnLocalSdpChange(OnLocalSdpChange)
     ResetOnLocalSdpChange()
-    OnRemoteSdpChange(MsgBody, func(MsgBody)) error
+    OnRemoteSdpChange(MsgBody, OnDelayedCB) error
     HasOnRemoteSdpChange() bool
     ResetOnRemoteSdpChange()
     SetCallId(*sippy_header.SipCallId)
@@ -252,7 +252,8 @@ type UA interface {
     SetP100Ts(*sippy_time.MonoTime)
     HasNoProgressTimer() bool
     CancelNoProgressTimer()
-    DelayedRemoteSdpUpdate(event CCEvent, remote_sdp_body MsgBody)
+    DelayedRemoteSdpUpdate(event CCEvent, remote_sdp_body MsgBody, ex SipHandlingError)
+    GetDelayedLocalSdpUpdate(event CCEvent) OnDelayedCB
     GetP1xxTs() *sippy_time.MonoTime
     SetP1xxTs(*sippy_time.MonoTime)
     UpdateRouting(SipResponse, bool, bool)
@@ -387,8 +388,9 @@ type OnDisconnectListener func(*sippy_time.MonoTime, string, int, SipRequest)
 type OnFailureListener func(*sippy_time.MonoTime, string, int)
 type OnConnectListener func(*sippy_time.MonoTime, string)
 type OnDeadListener func()
-type OnLocalSdpChange func(MsgBody, func(MsgBody)) error
-type OnRemoteSdpChange func(MsgBody, func(MsgBody)) error
+type OnLocalSdpChange func(MsgBody, OnDelayedCB) error
+type OnRemoteSdpChange func(MsgBody, OnDelayedCB) error
+type OnDelayedCB func(MsgBody, SipHandlingError)
 
 type RtpProxyClientOpts interface {
     GetNWorkers() *int
@@ -416,4 +418,13 @@ type Challenge interface {
     GenAuthHF(username, password, method, uri, entity_body string) (sippy_header.SipHeader, error)
     Algorithm() (string, error)
     SupportedAlgorithm() (bool, error)
+}
+
+type GetEventCtor func(scode int, scode_t string, reason sippy_header.SipHeader) CCEvent
+
+type SipHandlingError interface {
+    Error() string
+    GetResponse(req SipRequest) SipResponse
+    GetReason() *sippy_header.SipReason
+    GetEvent(GetEventCtor) CCEvent
 }

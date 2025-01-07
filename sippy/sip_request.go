@@ -31,6 +31,7 @@ import (
     "strings"
 
     "github.com/sippy/go-b2bua/sippy/conf"
+    "github.com/sippy/go-b2bua/sippy/exceptions"
     "github.com/sippy/go-b2bua/sippy/headers"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/time"
@@ -47,29 +48,28 @@ type sipRequest struct {
     nated   bool
 }
 
-func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipRequest, error) {
+func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipRequest, sippy_types.SipHandlingError) {
     self := &sipRequest{ nated : false }
-    super, err := ParseSipMsg(buf, rtime, config)
-    if err != nil {
-        return nil, err
+    super, perr := ParseSipMsg(buf, rtime, config)
+    if perr != nil {
+        return nil, perr
     }
     self.sipMsg = super
     arr := strings.Fields(self.startline)
     if len(arr) != 3 {
-        return nil, errors.New("SIP bad start line in SIP request: " + self.startline)
+        return nil, sippy_exceptions.NewSipParseError("SIP bad start line in SIP request: " + self.startline)
     }
     self.method, self.sipver = arr[0], arr[2]
+    var err error
     self.ruri, err = sippy_header.ParseSipURL(arr[1], false /* relaxedparser */, config)
     if err != nil {
-        return nil, errors.New("Bad SIP URL in SIP request: " + arr[1])
+        return nil, sippy_exceptions.NewSipParseError("Bad SIP URL in SIP request: " + arr[1])
     }
-    err = self.init_body(config.ErrorLogger())
-    if err != nil {
-        if e, ok := err.(*ESipParseException); ok {
-            e.sip_response = self.GenResponse(400, "Bad Request - " + e.Error(), nil, nil)
-        }
+    perr = self.init_body(config.ErrorLogger())
+    if perr != nil {
+        return self, perr
     }
-    return self, err
+    return self, nil
 }
 
 func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *sippy_header.SipTo,
