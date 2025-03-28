@@ -416,8 +416,10 @@ type RtpProxyUpdateResult interface {
 
 type Challenge interface {
     GenAuthHF(username, password, method, uri, entity_body string) (sippy_header.SipHeader, error)
+    GenAuthHF_HA1(username, HA1, method, uri, entity_body string) (sippy_header.SipHeader, error)
     Algorithm() (string, error)
     SupportedAlgorithm() (bool, error)
+    GetBody() (*sippy_header.SipWWWAuthenticateBody, error)
 }
 
 type GetEventCtor func(scode int, scode_t string, reason sippy_header.SipHeader) CCEvent

@@ -270,6 +270,15 @@ func (self *SipAuthorizationBody) GenResponse(password, method, entity_body stri
           self.nc, self.cnonce, self.qop, method, self.uri, entity_body)
 }
 
+func (self *SipAuthorizationBody) GenResponseHA1(HA1, method, entity_body string) {
+    alg := sippy_security.GetAlgorithm(self.algorithm)
+    if alg == nil {
+        return
+    }
+    self.response = DigestCalcResponse(alg, HA1, self.nonce,
+          self.nc, self.cnonce, self.qop, method, self.uri, entity_body)
+}
+
 func (self *SipAuthorization) GetCopyAsIface() SipHeader {
     return self.GetCopy()
 }

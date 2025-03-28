@@ -197,7 +197,7 @@ func (self *SipWWWAuthenticateBody) getCopy() *SipWWWAuthenticateBody {
     return &tmp
 }
 
-func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri, entity_body string) (SipHeader, error) {
+func (self *SipWWWAuthenticate) constructAuthHF(username, uri string) (*SipAuthorizationBody, error) {
     body, err := self.GetBody()
     if err != nil {
         return nil, err
@@ -213,7 +213,24 @@ func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri, entit
     if body.opaque != "" {
         auth.opaque = body.opaque
     }
+    return auth, nil
+}
+
+func (self *SipWWWAuthenticate) GenAuthHF(username, password, method, uri, entity_body string) (SipHeader, error) {
+    auth, err := self.constructAuthHF(username, uri)
+    if err != nil {
+        return nil, err
+    }
     auth.GenResponse(password, method, entity_body)
+    return self.aclass(auth), nil
+}
+
+func (self *SipWWWAuthenticate) GenAuthHF_HA1(username, HA1, method, uri, entity_body string) (SipHeader, error) {
+    auth, err := self.constructAuthHF(username, uri)
+    if err != nil {
+        return nil, err
+    }
+    auth.GenResponseHA1(HA1, method, entity_body)
     return self.aclass(auth), nil
 }
 
