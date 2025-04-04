@@ -430,3 +430,15 @@ type SipHandlingError interface {
     GetReason() *sippy_header.SipReason
     GetEvent(GetEventCtor) CCEvent
 }
+
+type AuthProvider interface {
+    HandleAuth(challenges []Challenge)
+}
+
+type RegistrationAgent interface {
+    DoRegister()
+    StopRegister()
+    AuthDone(auth sippy_header.SipHeader)
+    HandleAuth(challenges []Challenge)
+    RecvResponse(resp SipResponse, tr ClientTransaction)
+}
