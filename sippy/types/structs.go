@@ -33,3 +33,8 @@ type Ua_context struct {
     CancelCB   func(*sippy_time.MonoTime, SipRequest)
     NoAckCB    func(*sippy_time.MonoTime)
 }
+
+type NullString struct {
+    String string
+    Valid  bool
+}
