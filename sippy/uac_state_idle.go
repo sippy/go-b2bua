@@ -94,7 +94,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         }
         lUri.GetUrl().Port = nil
         lUri.SetTag(self.ua.GetLTag())
-        self.ua.SetLCSeq(200)
+        self.ua.SetLCSeq(sippy_header.GenerateSipCSeq())
         if self.ua.GetLContact() == nil {
             if src_addr := self.ua.GetSourceAddress(); src_addr != nil {
                 self.ua.SetLContact(sippy_header.NewSipContactFromHostPort(src_addr.Host, src_addr.Port))

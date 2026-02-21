@@ -62,7 +62,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
     self.ua.SetOrigin("caller")
     //print "INVITE received in the Idle state, going to the Trying state"
     self.ua.SetUasResp(req.GenResponse(100, "Trying", nil, self.ua.GetLocalUA().AsSipServer()))
-    self.ua.SetLCSeq(100) // XXX: 100 for debugging so that incorrect CSeq generation will be easily spotted
+    self.ua.SetLCSeq(sippy_header.GenerateSipCSeq())
     if self.ua.GetLContact() == nil {
         if src_addr := self.ua.GetSourceAddress(); src_addr != nil {
             self.ua.SetLContact(sippy_header.NewSipContactFromHostPort(src_addr.Host, src_addr.Port))

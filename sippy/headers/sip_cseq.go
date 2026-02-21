@@ -27,10 +27,18 @@
 package sippy_header
 
 import (
+    "crypto/rand"
+    "math/big"
     "strconv"
 
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/utils"
+)
+
+const (
+    sip_cseq_initial_min      = 1
+    sip_cseq_initial_max      = (1 << 31) - 1
+    sip_cseq_initial_headroom = 1024
 )
 
 type SipCSeqBody struct {
@@ -124,4 +132,14 @@ func (self *SipCSeq) StringBody() string {
 
 func (self *SipCSeqBody) String() string {
     return strconv.Itoa(self.CSeq) + " " + self.Method
+}
+
+func GenerateSipCSeq() int {
+    cseq_max := sip_cseq_initial_max - sip_cseq_initial_headroom
+    cseq_span := cseq_max - sip_cseq_initial_min + 1
+    idx, err := rand.Int(rand.Reader, big.NewInt(int64(cseq_span)))
+    if err != nil {
+        return sip_cseq_initial_min
+    }
+    return sip_cseq_initial_min + int(idx.Int64())
 }
