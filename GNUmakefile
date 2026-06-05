@@ -25,3 +25,5 @@ clean:
 test:
 	go test ./sippy
 	go test ./cmd/b2bua_radius
+	go test ./sippy/rtp_proxy
+	go test -race ./sippy/rtp_proxy

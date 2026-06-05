@@ -32,6 +32,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/sippy/go-b2bua/sippy"
 	"github.com/sippy/go-b2bua/sippy/net"
@@ -60,6 +61,8 @@ type Rtp_proxy_client_base struct {
 	active_streams   int64
 	preceived        int64
 	ptransmitted     int64
+	caps_in_progress bool
+	lock             sync.Mutex
 }
 
 func (self *Rtp_proxy_client_base) IsLocal() bool {
@@ -67,18 +70,26 @@ func (self *Rtp_proxy_client_base) IsLocal() bool {
 }
 
 func (self *Rtp_proxy_client_base) IsOnline() bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.online
 }
 
 func (self *Rtp_proxy_client_base) WdntSupported() bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.wdnt_supported
 }
 
 func (self *Rtp_proxy_client_base) SBindSupported() bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.sbind_supported
 }
 
 func (self *Rtp_proxy_client_base) TNotSupported() bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.tnot_supported
 }
 
@@ -117,8 +128,10 @@ func (self *Rtp_proxy_client_base) Start() error {
 	if !self.opts.no_version_check {
 		self.version_check()
 	} else {
+		self.lock.Lock()
 		self.caps_done = true
 		self.online = true
+		self.lock.Unlock()
 	}
 	return nil
 }
@@ -132,19 +145,26 @@ func (self *Rtp_proxy_client_base) Reconnect(addr net.Addr, bind_addr *sippy_net
 }
 
 func (self *Rtp_proxy_client_base) version_check() {
-	if self.shut_down {
+	self.lock.Lock()
+	shut_down := self.shut_down
+	self.lock.Unlock()
+	if shut_down {
 		return
 	}
 	self.transport.Send_command("V", self.version_check_reply)
 }
 
 func (self *Rtp_proxy_client_base) version_check_reply(version string) {
-	if self.shut_down {
+	self.lock.Lock()
+	shut_down := self.shut_down
+	online := self.online
+	self.lock.Unlock()
+	if shut_down {
 		return
 	}
 	if version == "20040107" {
 		self.me().GoOnline()
-	} else if self.online {
+	} else if online {
 		self.me().GoOffline()
 	} else {
 		sippy.StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.opts.logger, 0.1)
@@ -153,7 +173,10 @@ func (self *Rtp_proxy_client_base) version_check_reply(version string) {
 
 func (self *Rtp_proxy_client_base) heartbeat() {
 	//print "heartbeat", self, self.address
-	if self.shut_down {
+	self.lock.Lock()
+	shut_down := self.shut_down
+	self.lock.Unlock()
+	if shut_down {
 		return
 	}
 	self.transport.Send_command("Ib", self.heartbeat_reply)
@@ -161,11 +184,17 @@ func (self *Rtp_proxy_client_base) heartbeat() {
 
 func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
 	//print "heartbeat_reply", self.address, stats, self.online
-	if self.shut_down || !self.online {
+	self.lock.Lock()
+	shut_down := self.shut_down
+	online := self.online
+	self.lock.Unlock()
+	if shut_down || !online {
 		return
 	}
 	if stats == "" {
+		self.lock.Lock()
 		self.active_sessions = -1
+		self.lock.Unlock()
 		self.me().GoOffline()
 	} else {
 		sessions_created := int64(0)
@@ -198,31 +227,45 @@ func (self *Rtp_proxy_client_base) heartbeat_reply(stats string) {
 }
 
 func (self *Rtp_proxy_client_base) GoOnline() {
-	if self.shut_down {
+	self.lock.Lock()
+	if self.shut_down || self.online {
+		self.lock.Unlock()
 		return
 	}
-	if !self.online {
-		if !self.caps_done {
-			newRtppCapsChecker(self)
+	if !self.caps_done {
+		if self.caps_in_progress {
+			self.lock.Unlock()
 			return
 		}
-		self.online = true
-		self.heartbeat()
+		self.caps_in_progress = true
+		self.lock.Unlock()
+		newRtppCapsChecker(self)
+		return
 	}
+	self.online = true
+	self.lock.Unlock()
+	self.heartbeat()
 }
 
 func (self *Rtp_proxy_client_base) GoOffline() {
+	self.lock.Lock()
 	if self.shut_down {
+		self.lock.Unlock()
 		return
 	}
 	//print "go_offline", self.address, self.online
 	if self.online {
 		self.online = false
+		self.lock.Unlock()
 		sippy.StartTimeoutWithSpread(self.version_check, nil, self.opts.hrtb_retr_ival, 1, self.opts.logger, 0.1)
+		return
 	}
+	self.lock.Unlock()
 }
 
 func (self *Rtp_proxy_client_base) UpdateActive(active_sessions, sessions_created, active_streams, preceived, ptransmitted int64) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	self.sessions_created = sessions_created
 	self.active_sessions = active_sessions
 	self.active_streams = active_streams
@@ -231,34 +274,49 @@ func (self *Rtp_proxy_client_base) UpdateActive(active_sessions, sessions_create
 }
 
 func (self *Rtp_proxy_client_base) GetActiveSessions() int64 {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.active_sessions
 }
 
 func (self *Rtp_proxy_client_base) GetActiveStreams() int64 {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.active_streams
 }
 
 func (self *Rtp_proxy_client_base) GetPReceived() int64 {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.preceived
 }
 
 func (self *Rtp_proxy_client_base) GetSessionsCreated() int64 {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.sessions_created
 }
 
 func (self *Rtp_proxy_client_base) GetPTransmitted() int64 {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.ptransmitted
 }
 
 func (self *Rtp_proxy_client_base) Shutdown() {
+	self.lock.Lock()
 	if self.shut_down { // do not crash when shutdown() called twice
+		self.lock.Unlock()
 		return
 	}
 	self.shut_down = true
+	self.lock.Unlock()
 	self.transport.Shutdown()
 }
 
 func (self *Rtp_proxy_client_base) IsShutDown() bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	return self.shut_down
 }
 
@@ -274,13 +332,13 @@ type rtppCapsChecker struct {
 	caps_requested int
 	caps_received  int
 	rtpc           *Rtp_proxy_client_base
+	lock           sync.Mutex
 }
 
 func newRtppCapsChecker(rtpc *Rtp_proxy_client_base) *rtppCapsChecker {
 	self := &rtppCapsChecker{
 		rtpc: rtpc,
 	}
-	rtpc.caps_done = false
 	CAPSTABLE := []struct {
 		vers string
 		attr *bool
@@ -302,15 +360,35 @@ func newRtppCapsChecker(rtpc *Rtp_proxy_client_base) *rtppCapsChecker {
 }
 
 func (self *rtppCapsChecker) caps_query_done(result string, attr *bool) {
-	self.caps_received += 1
-	if result == "1" {
-		*attr = true
-	} else {
-		*attr = false
+	self.lock.Lock()
+	rtpc := self.rtpc
+	if rtpc == nil {
+		self.lock.Unlock()
+		return
 	}
-	if self.caps_received == self.caps_requested {
-		self.rtpc.caps_done = true
-		self.rtpc.me().GoOnline()
+	rtpc.setCapability(attr, result == "1")
+	self.caps_received += 1
+	complete := self.caps_received == self.caps_requested
+	if complete {
 		self.rtpc = nil
 	}
+	self.lock.Unlock()
+
+	if complete && rtpc.capsCheckDone() {
+		rtpc.me().GoOnline()
+	}
+}
+
+func (self *Rtp_proxy_client_base) setCapability(attr *bool, supported bool) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	*attr = supported
+}
+
+func (self *Rtp_proxy_client_base) capsCheckDone() bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.caps_done = true
+	self.caps_in_progress = false
+	return !self.shut_down && !self.online
 }
