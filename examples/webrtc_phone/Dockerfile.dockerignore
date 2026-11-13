@@ -1,0 +1,5 @@
+.git
+**/.git
+**/node_modules
+**/*.log
+**/CHECKPOINT.md

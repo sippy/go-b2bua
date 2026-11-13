@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1
+# go-webrtc-phone with the IN-PROCESS rtp.io engine (rtpio build tag,
+# statically linked upstream librtpproxy.a incl. the DTLS-gateway +
+# ICE-lite STATIC modules). No standalone rtpproxy process: the engine
+# starts inside the Go process on the same -rtpp control socket the
+# existing RtpProxyClient uses (external clients stay backward-compatible).
+#
+# Prerequisites (see sippy/rtp_proxy/embedded/build/):
+#   1. sippy/rtp_proxy/embedded/lib/librtpproxy.a     (pinned archive,
+#      built WITH libsrtp2-dev + libssl-dev so the static modules are in)
+#   2. sippy/rtp_proxy/embedded/include/librtpproxy.h
+# Build: docker build -f examples/webrtc_phone/Dockerfile.rtpio .
+ARG RTPPROXY_IMAGE=sippylabs/rtpproxy:latest
+FROM node:22-bookworm-slim AS web
+WORKDIR /assets
+RUN npm pack sip.js@0.21.2 && mkdir vendor && tar -xzf sip.js-0.21.2.tgz --strip-components=1 -C vendor
+
+FROM golang:1.25-bookworm AS build
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libsrtp2-dev libssl-dev \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY . .
+# whole-archive-equivalent single-member library (module registrations are
+# section data only; see build/make_whole.sh for the rationale).
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    bash sippy/rtp_proxy/embedded/build/make_whole.sh sippy/rtp_proxy/embedded/lib \
+ && GOMAXPROCS=8 go build -p 8 -tags rtpio -o /out/go-webrtc-phone ./cmd/webrtc_phone \
+ && nm /out/go-webrtc-phone | grep -cE " [tT] rtpp_" | sed 's/^/linked rtpp_* symbols: /'
+
+FROM ${RTPPROXY_IMAGE}
+USER root
+WORKDIR /opt/go-webrtc-phone
+COPY --from=build /out/go-webrtc-phone /usr/local/bin/go-webrtc-phone
+COPY --from=web /assets/vendor web/vendor
+COPY examples/webrtc_phone/web/ web/
+COPY examples/webrtc_phone/run_rtpio.sh ./run.sh
+RUN mkdir -p /opt/go-webrtc-phone/tls && \
+    openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+      -subj /CN=localhost -addext 'subjectAltName=DNS:localhost,DNS:phone,IP:127.0.0.1' \
+      -keyout tls/server.key -out tls/server.crt && chmod 600 tls/server.key && chmod +x run.sh
+ENV HTTPS_ADDRESS=0.0.0.0:18443 WSS_ADDRESS=0.0.0.0:19876 \
+    SIP_ADDRESS=127.0.0.1:15060 OUTBOUND_PROXY=127.0.0.1:15070 \
+    RTP_ADDRESS=127.0.0.1 MIN_RTP_PORT=35000 MAX_RTP_PORT=35100
+EXPOSE 18443/tcp 19876/tcp 15060/udp 35000-35100/udp
+ENTRYPOINT ["./run.sh"]

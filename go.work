@@ -1,6 +1,7 @@
 go 1.19
 
 use (
+  ./cmd/webrtc_phone
   ./cmd/b2bua_simple
   ./cmd/b2bua_radius
   ./examples/call_transfer

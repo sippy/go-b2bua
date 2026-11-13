@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Sippy Go WebRTC Phone</title>
+<style>body{font:17px system-ui;max-width:760px;margin:6vh auto;padding:24px;background:#102031;color:#e4edf5}label{display:block;margin:18px 0}input{display:block;width:95%;padding:10px;margin-top:6px}button{padding:12px 20px;margin:8px 8px 8px 0;cursor:pointer}pre{white-space:pre-wrap;background:#192e42;padding:20px;border-radius:8px}a{color:#8fd5ff}</style>
+<h1>Sippy Go WebRTC Phone</h1>
+<p>SIP over secure WebSocket → Go B2BUA → RTPProxy DTLS/ICE gateway → SIP/RTP.</p>
+<label>WebSocket server<input id="server"></label>
+<label>SIP identity<input id="identity" value="sip:alice@localhost"></label>
+<label>Authorization username<input id="username" value="alice"></label>
+<label>Password<input id="password" type="password" autocomplete="off"></label>
+<label>Call destination<input id="destination" value="sip:echo@localhost"></label>
+<button id="connect">Connect</button><button id="register" disabled>Register</button>
+<button id="call" disabled>Call</button><button id="hangup" disabled>Hang up</button>
+<button id="disconnect" disabled>Disconnect</button>
+<audio id="remote" autoplay controls></audio><pre id="status" aria-live="polite">Ready</pre>
+<p>Local demo uses a self-signed certificate. Open the <a id="certificate">WSS certificate endpoint</a> once if your browser requires trust before connecting. Echo is provided by the optional Docker test SIP peer.</p>
+<script type="module" src="phone.js"></script></html>
