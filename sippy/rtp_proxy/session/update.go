@@ -31,6 +31,7 @@ import (
     "strings"
     "strconv"
 
+    "github.com/sippy/go-b2bua/sippy/sdp"
     "github.com/sippy/go-b2bua/sippy/types"
     "github.com/sippy/go-b2bua/sippy/exceptions"
 )
@@ -43,19 +44,25 @@ type UpdateParams struct {
     options         string
     index           int
     atype           string
-    subcommands     []*Subcommand
-}
-
-type UpdateResult struct {
-    rtpproxy_address    string
-    rtpproxy_port       int
-    family              string
-    sendonly            bool
+    subcommands     []SubcommandHandler
 }
 
 type Subcommand struct {
-    commands []string
-    handleResults func([]string, *UpdateResult) (sippy_types.SipHandlingError)
+    Name     string
+    Commands []string
+}
+
+// GetCommands exposes the command list through the SubcommandHandler
+// interface (concrete subcommands embed *Subcommand).
+func (self *Subcommand) GetCommands() []string {
+    return self.Commands
+}
+
+// SubcommandHandler is implemented by the base Subcommand and its DTLS/ICE
+// variants; UpdateParams carries heterogeneous subcommands through it.
+type SubcommandHandler interface {
+    GetCommands() []string
+    HandleResults(results []string, ur *UpdateResult) sippy_types.SipHandlingError
 }
 
 func NewUpdateParams(rtpps *Rtp_proxy_session, index int, result_cb func(*UpdateResult, *Rtp_proxy_session, sippy_types.SipHandlingError)) *UpdateParams {
@@ -66,8 +73,17 @@ func NewUpdateParams(rtpps *Rtp_proxy_session, index int, result_cb func(*Update
         remote_ip:       "0.0.0.0",
         remote_port:     "0",
         atype:           "IP4",
-        subcommands:     []*Subcommand{},
+        subcommands:     []SubcommandHandler{},
     }
+}
+
+type UpdateResult struct {
+    rtpproxy_address    string
+    rtpproxy_port       int
+    family              string
+    sendonly            bool
+    // Per-section SDP finalizers populated by subcommand result handlers.
+    SdpSectFins []func(sdp sippy_types.Sdp, sect *sippy_sdp.SdpMediaDescription)
 }
 
 func (up *UpdateParams) ProcessRtppResult(result string) *UpdateResult {
@@ -101,7 +117,7 @@ func (up *UpdateParams) ProcessRtppResult(result string) *UpdateResult {
         actual := len(subcRess)
         expected := 0
         for _, subc := range up.subcommands {
-            expected += len(subc.commands)
+            expected += len(subc.GetCommands())
         }
 
         if actual > expected {
@@ -113,11 +129,11 @@ func (up *UpdateParams) ProcessRtppResult(result string) *UpdateResult {
         if actual > 0 && subcRess[len(subcRess)-1] == "-1" {
             foff := len(subcRess)
             for _, subc := range up.subcommands {
-                if foff > len(subc.commands) {
-                    foff -= len(subc.commands)
+                if foff > len(subc.GetCommands()) {
+                    foff -= len(subc.GetCommands())
                     continue
                 }
-                ex := sippy_exceptions.NewRtpProxyError("RTPProxy errored: " + subc.commands[foff-1] + ": -1")
+                ex := sippy_exceptions.NewRtpProxyError("RTPProxy errored: " + subc.GetCommands()[foff-1] + ": -1")
                 up.result_callback(nil, up.rtpps, ex)
                 return nil
             }
@@ -132,12 +148,12 @@ func (up *UpdateParams) ProcessRtppResult(result string) *UpdateResult {
         }
 
         for _, subc := range up.subcommands {
-            results := subcRess[:len(subc.commands)]
-            if ex := subc.handleResults(results, ur); ex != nil {
+            results := subcRess[:len(subc.GetCommands())]
+            if ex := subc.HandleResults(results, ur); ex != nil {
                 up.result_callback(nil, up.rtpps, ex)
                 return nil
             }
-            subcRess = subcRess[len(subc.commands):]
+            subcRess = subcRess[len(subc.GetCommands()):]
             if len(subcRess) == 0 {
                 break
             }

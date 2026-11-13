@@ -142,6 +142,8 @@ type Sdp interface {
     GetOHeader() *sippy_sdp.SdpOrigin
     SetOHeader(*sippy_sdp.SdpOrigin)
     AppendAHeader(string)
+    GetAHeaders() []string
+    SetAHeaders([]string)
 }
 
 type UA interface {

@@ -47,6 +47,10 @@ type _rtpps_side struct {
     after_sdp_change func(sippy_types.RtpProxyUpdateResult)
     from_tag        string
     to_tag          string
+    // "pass" (zero value, ordinary RTP), "rtp", or "dtls"; Python _rtpps_side.gateway_dtls
+    gateway_dtls    string
+    // Python _rtpps_side.deice: this side runs ICE-lite toward rtpproxy
+    deice           bool
 }
 
 func (self *_rtpps_side) _play(prompt_name string, times int, result_callback func(string), index int, rtpps *Rtp_proxy_session) {
@@ -108,6 +112,13 @@ func (self *_rtpps_side) update(up *UpdateParams) {
     if up.rtpps.notify_socket != "" && up.index == 0 && tnot_supported {
         command += " " + up.rtpps.notify_socket + " " + up.rtpps.notify_tag
     }
+    if len(up.subcommands) > 0 {
+        parts := []string{command}
+        for _, subc := range up.subcommands {
+            parts = append(parts, subc.GetCommands()...)
+        }
+        command = strings.Join(parts, " && ")
+    }
     up.rtpps.send_command(command, func(r string) { self.update_result(r, up) })
 }
 
@@ -126,7 +137,8 @@ func (self *_rtpps_side) _on_sdp_change(rtpps *Rtp_proxy_session, sdp_body sippy
     sects := []*sippy_sdp.SdpMediaDescription{}
     for _, sect := range parsed_body.GetSections() {
         switch strings.ToLower(sect.GetMHeader().GetTransport()) {
-        case "udp", "udptl", "rtp/avp", "rtp/savp", "udp/bfcp":
+        case "udp", "udptl", "rtp/avp", "rtp/savp", "rtp/savpf", "udp/bfcp",
+             "udp/tls/rtp/savp", "udp/tls/rtp/savpf":
             sects = append(sects, sect)
         default:
         }
@@ -155,6 +167,28 @@ func (self *_rtpps_side) _on_sdp_change(rtpps *Rtp_proxy_session, sdp_body sippy
         up.atype = sect.GetCHeader().GetAType()
         up.options = sect_options
 
+        // Python side.py _on_sdp_change: subcommand selection by side flags.
+        if self.otherside.gateway_dtls == "dtls" {
+            up.subcommands = append(up.subcommands, NewSubcommandDtls())
+        }
+        if self.otherside.deice {
+            up.subcommands = append(up.subcommands, NewSubcommandIce())
+        }
+        if self.gateway_dtls == "dtls" && containsStr(dtlsTransports, sect.GetMHeader().GetTransport()) {
+            subc, err := NewSubcommandDeDtls(parsed_body, sect)
+            if err != nil {
+                return err
+            }
+            up.subcommands = append(up.subcommands, subc)
+        }
+        if self.deice {
+            subc, err := NewSubcommandDeIce(parsed_body, sect)
+            if err != nil {
+                return err
+            }
+            up.subcommands = append(up.subcommands, subc)
+        }
+
         self.update(up)
     }
     return nil
@@ -172,6 +206,9 @@ func (self *_rtpps_side) _sdp_change_finish(sdp_body sippy_types.MsgBody, parsed
     if ur != nil {
         if self.after_sdp_change != nil {
             self.after_sdp_change(ur)
+        }
+        for _, fin := range ur.SdpSectFins {
+            fin(parsed_body, sect)
         }
         sect.GetCHeader().SetAType(ur.family)
         sect.GetCHeader().SetAddr(ur.rtpproxy_address)

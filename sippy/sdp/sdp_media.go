@@ -85,6 +85,10 @@ func (self *SdpMedia) GetTransport() string {
     return self.transport
 }
 
+func (self *SdpMedia) SetTransport(transport string) {
+    self.transport = transport
+}
+
 func (self *SdpMedia) GetPort() string {
     return self.port
 }

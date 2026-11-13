@@ -341,3 +341,11 @@ func (self *sdpBody) SetOHeader(o_header *sippy_sdp.SdpOrigin) {
 func (self *sdpBody) AppendAHeader(hdr string) {
     self.a_headers = append(self.a_headers, hdr)
 }
+
+func (self *sdpBody) GetAHeaders() []string {
+    return self.a_headers
+}
+
+func (self *sdpBody) SetAHeaders(headers []string) {
+    self.a_headers = headers
+}
