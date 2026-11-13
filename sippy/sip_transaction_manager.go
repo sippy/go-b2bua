@@ -308,7 +308,19 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
         }
     }
     host, port := address.Host.String(), address.Port.String()
-    resp.source = sippy_net.NewHostPort(host, port)
+    // RFC 7118: for SIP-over-WebSocket the response must be sent back on
+    // the same open connection; rewrite any Contact host to the connection
+    // identifier so later requests in the dialog target it.
+    rreceived := ""
+    if address.Received != "" && check7118(address.Received) {
+        rreceived = address.Received
+        if len(resp.contacts) > 0 && !resp.contacts[0].Asterisk {
+            if cbody, err := resp.contacts[0].GetBody(self.config); err == nil {
+                cbody.GetUrl().Host = sippy_net.NewMyAddress(rreceived)
+            }
+        }
+    }
+    resp.source = sippy_net.NewHostPortWithReceived(host, port, rreceived)
     sippy_utils.SafeCall(func() { t.IncomingResponse(resp, checksum) }, nil, self.config.ErrorLogger())
 }
 
@@ -341,11 +353,23 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     }
     ahost, aport := via0.GetAddr(self.config)
     rhost, rport := address.Host.String(), address.Port.String()
+    // RFC 7118: for SIP-over-WebSocket the received parameter carries the
+    // connection identifier (not the client IP) so that every response of
+    // the dialog is routed back to exactly the open connection it came
+    // from, even when several connections share the same client IP.
+    rreceived := ""
+    if address.Received != "" && check7118(address.Received) {
+        rreceived = address.Received
+    }
     if self.nat_traversal && rport != aport && (check1918(ahost) || check7118(ahost)) {
         req.nated = true
     }
     if ahost != rhost {
-        via0.SetReceived(rhost)
+        if rreceived != "" {
+            via0.SetReceived(rreceived)
+        } else {
+            via0.SetReceived(rhost)
+        }
     }
     if via0.HasRport() || req.nated {
         via0.SetRport(&rport)
@@ -366,8 +390,16 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
             req.nated = true
         }
     }
+    // RFC 7118: rewrite the Contact host to the connection identifier so
+    // that all subsequent requests of the dialog (ACK, BYE, re-INVITE)
+    // are routed to the same open WebSocket connection.
+    if rreceived != "" && len(req.contacts) > 0 && len(req.vias) == 1 && !req.contacts[0].Asterisk {
+        if cbody, err := req.contacts[0].GetBody(self.config); err == nil {
+            cbody.GetUrl().Host = sippy_net.NewMyAddress(rreceived)
+        }
+    }
     host, port := address.Host.String(), address.Port.String()
-    req.source = sippy_net.NewHostPort(host, port)
+    req.source = sippy_net.NewHostPortWithReceived(host, port, rreceived)
     self.incomingRequest(req, checksum, tids, server, data)
 }
 
@@ -398,6 +430,14 @@ func (self *sipTransactionManager) CreateClientTransaction(req sippy_types.SipRe
     }
     if userv == nil {
         return nil, errors.New("BUG: cannot get userv from local4remote!!!")
+    }
+    // RFC 7118: server-generated requests sent over a WebSocket connection
+    // must carry SIP/2.0/WSS (TLS) or SIP/2.0/WS (plaintext) in the top
+    // Via instead of the default UDP.
+    if ws, is_wss := userv.(sippy_net.WebSocketTransport); is_wss && len(req.GetVias()) > 0 {
+        if via0, verr := req.GetVias()[0].GetBody(); verr == nil {
+            via0.SetSipVer("SIP/2.0/" + ws.WssProtocol())
+        }
     }
     tid, err = req.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
     if err != nil {
@@ -534,13 +574,17 @@ func (self *sipTransactionManager) new_server_transaction(server sippy_net.Trans
     var rval *sippy_types.Ua_context = nil
     //print 'new transaction', req.GetMethod()
     userv := server
-    if server.GetLAddress().Host.String() == "0.0.0.0" || server.GetLAddress().Host.String() == "[::]" {
-        // For messages received on the wildcard interface find
-        // or create more specific server.
-        userv = self.l4r.getServer(req.GetSource(), /*is_local*/ false)
-        if userv == nil {
-            self.logError("BUG! cannot create more specific server for transaction")
-            userv = server
+    if _, is_wss := server.(sippy_net.WebSocketTransport); !is_wss {
+        if server.GetLAddress().Host.String() == "0.0.0.0" || server.GetLAddress().Host.String() == "[::]" {
+            // For messages received on the wildcard interface find
+            // or create more specific server. (Not applicable to SIP over
+            // WebSocket: RFC 7118 requires every response of the dialog to
+            // go back on the same open connection.)
+            userv = self.l4r.getServer(req.GetSource(), /*is_local*/ false)
+            if userv == nil {
+                self.logError("BUG! cannot create more specific server for transaction")
+                userv = server
+            }
         }
     }
     t, err = NewServerTransaction(req, checksum, tid, userv, self)

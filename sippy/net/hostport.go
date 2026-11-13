@@ -125,12 +125,24 @@ func (self *MyPort) GetCopy() *MyPort {
 type HostPort struct {
     Host    *MyAddress
     Port    *MyPort
+    // Received holds the RFC 7118 connection identifier for
+    // connection-oriented transports (SIP over WSS, Wss_server.received
+    // equivalent). Empty for plain UDP.
+    Received string
 }
 
 func NewHostPort(host, port string) *HostPort {
     return &HostPort{
         Host : NewMyAddress(host),
         Port : NewMyPort(port),
+    }
+}
+
+func NewHostPortWithReceived(host, port, received string) *HostPort {
+    return &HostPort{
+        Host     : NewMyAddress(host),
+        Port     : NewMyPort(port),
+        Received : received,
     }
 }
 
@@ -155,8 +167,9 @@ func (self *HostPort) String() string {
 
 func (self *HostPort) GetCopy() *HostPort {
     return &HostPort{
-        Host : self.Host.GetCopy(),
-        Port : self.Port.GetCopy(),
+        Host     : self.Host.GetCopy(),
+        Port     : self.Port.GetCopy(),
+        Received : self.Received,
     }
 }
 

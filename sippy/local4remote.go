@@ -42,6 +42,7 @@ type local4remote struct {
     handleIncoming  sippy_net.DataPacketReceiver
     fixed           bool
     tfactory        sippy_net.SipTransportFactory
+    conn_server     sippy_net.Transport
     lock            sync.Mutex
 }
 
@@ -88,6 +89,16 @@ func NewLocal4Remote(config sippy_conf.Config, handleIncoming sippy_net.DataPack
     if len(self.cache_l2s) == 0 && last_error != nil {
         return nil, last_error
     }
+    // Start the optional connection-oriented transport (SIP over WSS,
+    // RFC 7118) if the factory provides one. It is shared by every
+    // local4remote and is the only path for .invalid connection aliases.
+    if ctf, ok := self.tfactory.(sippy_net.ConnectionTransportFactory); ok {
+        srv, err := ctf.NewConnectionTransport(self.handleIncoming)
+        if err != nil {
+            return nil, err
+        }
+        self.conn_server = srv
+    }
     return self, nil
 }
 
@@ -98,6 +109,12 @@ func (self *local4remote) getServer(address *sippy_net.HostPort, is_local bool /
     self.lock.Lock()
     defer self.lock.Unlock()
 
+    // RFC 7118: a host ending in .invalid is a WebSocket connection
+    // identifier; route it to the WSS transport only. There is never a
+    // UDP fallback for a stale WS alias.
+    if check7118(address.Host.String()) {
+        return self.conn_server
+    }
     if self.fixed {
         for _, server := range self.cache_l2s {
             return server
@@ -180,5 +197,9 @@ func (self *local4remote) shutdown() {
         userv.Shutdown()
     }
     self.cache_l2s = make(map[string]sippy_net.Transport)
+    if self.conn_server != nil {
+        self.conn_server.Shutdown()
+        self.conn_server = nil
+    }
 }
 

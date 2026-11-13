@@ -43,3 +43,24 @@ type Transport interface {
     SendTo([]byte, *HostPort)
     SendToWithCb([]byte, *HostPort, func())
 }
+
+// ConnectionTransportFactory is an optional interface implemented by
+// transport factories that also provide a connection-oriented RFC 7118
+// transport (SIP over WSS) in addition to the packet transport. The
+// local4remote layer calls NewConnectionTransport exactly once when the
+// transaction manager starts.
+type ConnectionTransportFactory interface {
+    SipTransportFactory
+    NewConnectionTransport(handler DataPacketReceiver) (Transport, error)
+}
+
+// WebSocketTransport is an optional marker interface implemented by
+// connection-oriented SIP over WebSocket transports (RFC 7118). The
+// transaction manager uses it to serialize server-generated requests' top
+// Via with the correct protocol (SIP/2.0/WSS or SIP/2.0/WS).
+type WebSocketTransport interface {
+    Transport
+    // WssProtocol returns "WSS" for TLS-secured connections or "WS"
+    // for plaintext.
+    WssProtocol() string
+}

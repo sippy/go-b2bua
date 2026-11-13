@@ -291,6 +291,10 @@ func (self *SipViaBody) SetReceived(v string) {
     self.received = &v
 }
 
+func (self *SipViaBody) SetSipVer(v string) {
+    self.sipver = v
+}
+
 func (self *SipViaBody) HasRport() bool {
     return self.rport_exists
 }
