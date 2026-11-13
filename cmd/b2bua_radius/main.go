@@ -27,7 +27,9 @@
 package main
 
 import (
+    "fmt"
     "os"
+    "path/filepath"
     "strconv"
     "strings"
 
@@ -36,6 +38,7 @@ import (
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/types"
     "github.com/sippy/go-b2bua/sippy/rtp_proxy"
+    sippy_rtp_proxy_embedded "github.com/sippy/go-b2bua/sippy/rtp_proxy/embedded"
     "github.com/sippy/go-b2bua/sippy/utils"
 )
 
@@ -63,6 +66,61 @@ func main() {
     if ! global_config.Foreground {
         sippy_utils.Daemonize(global_config.Logfile, -1, -1, global_config.ErrorLogger())
     }
+
+    // In-process rtp.io engine (Python-B2BUA-compatible selection): an
+    // rtp_proxy_clients entry starting with "rtp.io:" runs the statically
+    // linked RTPProxy engine inside this process (librtpproxy.a, -tags rtpio
+    // build) instead of an external rtpproxy. The engine is process-global
+    // (at most one, no restart), so at most one rtp.io: entry is allowed.
+    // The rtp.io: entry is replaced by the generated engine control socket,
+    // so the existing RtpProxyClient below connects to the in-process engine
+    // exactly like an external one (see sippy/rtp_proxy/embedded/README.md).
+    nRtpIO := 0
+    rtpioIdx := -1
+    for i, a := range global_config.Rtp_proxy_clients_arr {
+        if internal, _, err := sippy_rtp_proxy_embedded.ParseRtpIO(a); err != nil {
+            println("Cannot parse rtp_proxy_clients entry: " + err.Error())
+            return
+        } else if internal {
+            nRtpIO++
+            rtpioIdx = i
+        }
+    }
+    if nRtpIO > 1 {
+        println("ERROR: rtp_proxy_clients: at most one in-process rtp.io: engine is " +
+            "allowed per process (process-global engine, no restart); found " +
+            strconv.Itoa(nRtpIO) + " rtp.io: entries")
+        return
+    }
+    if nRtpIO == 1 {
+        if !sippy_rtp_proxy_embedded.Available() {
+            println("ERROR: rtp_proxy_clients selects the in-process rtp.io engine, but " +
+                "this binary was built without the rtpio build tag / librtpproxy.a. " +
+                "Rebuild with 'go build -tags rtpio' (see sippy/rtp_proxy/embedded/README.md) " +
+                "or use an external rtpproxy control socket instead.")
+            return
+        }
+        entryAddr := global_config.Rtp_proxy_clients_arr[rtpioIdx]
+        _, spec, _ := sippy_rtp_proxy_embedded.ParseRtpIO(entryAddr)
+        ctlSock := "unix:" + filepath.Join(os.TempDir(), fmt.Sprintf("go-b2bua-rtpp-%d.sock", os.Getpid()))
+        // Default RTP port range unless the rtp.io: tokens set -m/-M themselves.
+        portMin, portMax := 0, 0
+        if !sippy_rtp_proxy_embedded.HasArg(spec.ExtraArgs, "-m") &&
+            !sippy_rtp_proxy_embedded.HasArg(spec.ExtraArgs, "-M") {
+            portMin, portMax = 12000, 15000
+        }
+        // No-media timeout notifications go to the B2BUA's own command socket
+        // (the same target an external rtpproxy is given via its -n option).
+        notify := global_config.B2bua_socket
+        argv := sippy_rtp_proxy_embedded.EngineArgv(spec, []string{ctlSock}, notify, portMin, portMax)
+        if err := sippy_rtp_proxy_embedded.Start(argv); err != nil {
+            println("Cannot start in-process rtp.io engine: " + err.Error())
+            return
+        }
+        defer sippy_rtp_proxy_embedded.Stop()
+        global_config.Rtp_proxy_clients_arr[rtpioIdx] = ctlSock
+    }
+
     rtp_proxy_clients := make([]sippy_types.RtpProxyClient, len(global_config.Rtp_proxy_clients_arr))
     for i, address := range global_config.Rtp_proxy_clients_arr {
         opts, err := rtp_proxy.NewRtpProxyClientOpts(address, nil /*bind_address*/, global_config, global_config.ErrorLogger())

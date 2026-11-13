@@ -190,7 +190,12 @@ func NewMyConfigParser() *myConfigParser {
                              "unmodified (comma-separated list)", &self.Pass_headers, "" },
         { "rtp_proxy_clients", "comma-separated list of paths or addresses of the " +
                              "RTPproxy control socket. Address in the format " +
-                             "\"udp:host[:port]\" (comma-separated list)", &self.Rtp_proxy_clients, "" },
+                             "\"udp:host[:port]\" (comma-separated list). An entry " +
+                             "\"rtp.io:[modules=<m1>+<m2>;<arg>;<arg>...]\" runs the " +
+                             "RTPProxy engine IN-PROCESS (requires -tags rtpio build); " +
+                             "modules are static module names (dtls_gw, ice_lite), " +
+                             "the remaining tokens are raw engine arguments; at most " +
+                             "one rtp.io: entry per process (see sippy/rtp_proxy/embedded/README.md)", &self.Rtp_proxy_clients, "" },
     }
     return self
 }
