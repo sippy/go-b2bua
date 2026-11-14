@@ -20,7 +20,7 @@ A="${DIR}/librtpproxy.a"
 test -f "${A}" || { echo "missing ${A} (build it with build/rtpproxy/Dockerfile first)"; exit 1; }
 TMP=$(mktemp -d)
 trap 'rm -rf "${TMP}"' EXIT
-( cd "${TMP}" && ar x "${A}" && gcc -r *.o -o "${TMP}/librtpproxy_whole.o" \
+( cd "${TMP}" && ar x "${A}" && ${CC:-gcc} ${LDFLAGS:-} -r *.o -o "${TMP}/librtpproxy_whole.o" \
  && ar rcs "${DIR}/librtpproxy_whole.a" "${TMP}/librtpproxy_whole.o" )
 echo "wrote ${DIR}/librtpproxy_whole.a"
 nm "${DIR}/librtpproxy_whole.a" | grep -cE "rtpp_dtls|rtpp_ice" | sed 's/^/  dtls+ice symbols: /'

@@ -1,0 +1,16 @@
+--- a/test_run.sh
++++ b/test_run.sh
+@@ -53,6 +53,13 @@
+   MM_CFG=""
+   case "${MM_TYPE}" in
+   go-b2bua)
++    # Pass the same ports, timeouts and stats socket as the external backend.
++    # RTPPC_TYPE=rtp.io already suppresses external RTPProxy startup/teardown.
++    if [ "${RTPPC_TYPE}" = "rtp.io" ]
++    then
++      ST_PARAMS="$(echo "${RTPP_PORTS} ${RTPP_TO_PARAMS} ${RTPP_LISTEN}" | sed 's/  / /g ; s/ /;/g')"
++      RTPP_SOCK_TEST="${RTPP_SOCK_TEST}${ST_PARAMS}"
++    fi
+     MM_LOG="${BUILDDIR}/b2bua.log"
+     test -e ${MM_LOG} && rm ${MM_LOG}
+     ${MM_ROOT}/b2bua_radius -L ${MM_LOG} \

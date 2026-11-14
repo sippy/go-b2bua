@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1
+ARG RTPPROXY_IMAGE=sippylabs/rtpproxy:latest
+FROM golang:1.25-bookworm AS golang
+FROM ${RTPPROXY_IMAGE}
+USER root
+COPY --from=golang /usr/local/go /usr/local/go
+ENV PATH=/usr/local/go/bin:$PATH
+ENV DEBIAN_FRONTEND=noninteractive PIP_BREAK_SYSTEM_PACKAGES=1 PYTHON_CMD=python3
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip gpp gdb tcpdump gcc libc6-dev git make ca-certificates libssl-dev flex bison \
+ && rm -rf /var/lib/apt/lists/*
+ARG VOIPTESTS_REF=58b5517033c0bcbd56a1e529cea1a87ec9278dc1
+ARG RTPPROXY_REF=640f71a1fd6e346f728f3e498e2e96517e2ba406
+WORKDIR /opt/voiptests
+RUN git init . && git remote add origin https://github.com/sippy/voiptests.git \
+ && git fetch --depth 1 origin ${VOIPTESTS_REF} && git checkout FETCH_HEAD \
+ && git init dist/rtpproxy && cd dist/rtpproxy \
+ && git remote add origin https://github.com/sippy/rtpproxy.git \
+ && git fetch --depth 1 origin ${RTPPROXY_REF} && git checkout FETCH_HEAD
+RUN ln -sf /usr/bin/python3 /usr/local/bin/voiptests-python \
+ && ln -sf /usr/bin/python3 /usr/local/bin/python \
+ && python3 -m pip install -r requirements.txt
+COPY . /opt/voiptests/dist/go-b2bua/
+# The harness natively supports rtp.io lifecycle/statistics; its Go launcher
+# needs the same embedded-engine parameters already used by its Python launcher.
+COPY docker/voiptests-rtpio.patch /tmp/voiptests-rtpio.patch
+RUN git apply --check /tmp/voiptests-rtpio.patch && git apply /tmp/voiptests-rtpio.patch
+ARG RTPPC_TYPE=unix
+RUN if [ "${RTPPC_TYPE}" = "rtp.io" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends clang lld libsrtp2-dev \
+      && rm -rf /var/lib/apt/lists/* \
+      && cd dist/go-b2bua \
+      && cp /usr/local/lib/librtpproxy.a sippy/rtp_proxy/embedded/lib/ \
+      && cp /usr/local/include/librtpproxy.h sippy/rtp_proxy/embedded/include/ \
+      && CC=clang LDFLAGS=-fuse-ld=lld bash sippy/rtp_proxy/embedded/build/make_whole.sh sippy/rtp_proxy/embedded/lib \
+      && go build -tags rtpio -o b2bua_radius ./cmd/b2bua_radius; \
+    else make -C dist/go-b2bua all; fi
+ENV MM_TYPE=go-b2bua MM_BRANCH=master MM_AUTH=simple RTPP_BRANCH=DOCKER \
+    BASEDIR=/opt/voiptests BUILDDIR=/opt/voiptests ARTIFACT_FILES=b2bua.log
+ENTRYPOINT ["sh", "/opt/voiptests/.github/docker/run_ssut_tests.sh"]

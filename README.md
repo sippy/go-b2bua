@@ -48,8 +48,15 @@ The repository uses a Go workspace (`go.work`). The standard `make` and
 `make test` targets build the existing command examples and run the selected
 SIP/RTP-proxy test suites; they do not build the tagged embedded engine or run
 WebRTC browser tests. GitHub Actions runs those standard targets on Go 1.21.1
-through 1.25.x. Use the Docker recipes and functional-test instructions in the
-linked guides for the WebRTC and embedded-engine paths.
+through 1.25.x. A separate Docker CI job uses the static RTPProxy archive
+from the published Docker Hub image, builds both embedded commands on Go 1.25, and runs
+the tagged engine and command tests (including the real engine lifecycle).
+VoIPTests CI also runs the upstream debug and production SIP call batteries
+against this checkout with external RTPProxy over Unix, UDP, and TCP control
+sockets, plus the in-process `rtp.io:` backend linked from the Docker Hub
+archive (no separate RTPProxy process), uploading logs for each backend.
+Browser call tests remain separate; use the Docker functional-test instructions
+in the linked WebRTC guide.
 
 The in-process Docker demo has been verified with two outbound calls and one
 inbound call, DTLS connected and bidirectional RTP packet flow on every call.

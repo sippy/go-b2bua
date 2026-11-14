@@ -35,3 +35,57 @@ jobs:
 
     - name: Test
       run: make test
+
+  embedded_build_and_test:
+    name: Embedded rtp.io (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Build embedded B2BUA and WebRTC phone
+      run: docker build --progress=plain -t go-b2bua-embedded:ci -f sippy/rtp_proxy/embedded/build/Dockerfile.ci .
+
+    - name: Test embedded engine and command integration
+      run: docker run --rm go-b2bua-embedded:ci
+
+  voiptests:
+    name: VoIPTests (${{ matrix.rtppc-type }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        rtppc-type: [unix, udp, tcp, rtp.io]
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Build Go B2BUA and upstream VoIPTests harness
+      run: docker build --progress=plain --build-arg RTPPC_TYPE=${{ matrix.rtppc-type }} -t go-b2bua-voiptests:ci -f docker/Dockerfile.voiptests .
+
+    - name: Run debug and production test batteries
+      timeout-minutes: 7
+      env:
+        RTPPC_TYPE: ${{ matrix.rtppc-type }}
+      run: |
+        trap 'docker rm -f voiptests-ci >/dev/null 2>&1 || true' EXIT
+        docker create --name voiptests-ci --privileged \
+          --sysctl net.ipv6.conf.all.disable_ipv6=0 \
+          -e RTPPC_TYPE go-b2bua-voiptests:ci
+        result=0
+        docker start -a voiptests-ci || result=$?
+        docker cp voiptests-ci:/opt/voiptests/test.logs ./test.logs || true
+        exit "$result"
+
+    - name: Upload VoIPTests logs
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: voiptests-${{ matrix.rtppc-type }}
+        path: test.logs
+        if-no-files-found: warn

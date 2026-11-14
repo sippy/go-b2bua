@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+ARG RTPPROXY_IMAGE=sippylabs/rtpproxy:latest
+FROM golang:1.25-bookworm AS golang
+FROM ${RTPPROXY_IMAGE}
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+COPY --from=golang /usr/local/go /usr/local/go
+ENV PATH=/usr/local/go/bin:$PATH
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential clang lld libsrtp2-dev libssl-dev ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY . .
+# Use the published archive; never build RTPProxy from source here.
+RUN cp /usr/local/lib/librtpproxy.a sippy/rtp_proxy/embedded/lib/ \
+ && cp /usr/local/include/librtpproxy.h sippy/rtp_proxy/embedded/include/ \
+ && CC=clang LDFLAGS=-fuse-ld=lld bash sippy/rtp_proxy/embedded/build/make_whole.sh sippy/rtp_proxy/embedded/lib \
+ && go build -tags rtpio -o /out/b2bua_radius ./cmd/b2bua_radius \
+ && go build -tags rtpio -o /out/go-webrtc-phone ./cmd/webrtc_phone
+ENTRYPOINT []
+# Run on every invocation, rather than caching a successful test layer.
+CMD ["go", "test", "-count=1", "-timeout=120s", "-v", "-tags", "rtpio", "./sippy/rtp_proxy/embedded", "./cmd/b2bua_radius", "./cmd/webrtc_phone"]

@@ -63,6 +63,26 @@ socket (`nsetup_f`); here the engine *dials* the B2BUA's command socket via
 timeout notifications on its socket) is identical, and it matches the
 external-rtpproxy topology the Go B2BUA already implements.
 
+## Docker CI using the published RTPProxy archive
+
+GitHub Actions uses the archive and header shipped in
+`sippylabs/rtpproxy:latest` at `/usr/local/lib/librtpproxy.a` and
+`/usr/local/include/librtpproxy.h`; it does not build RTPProxy from source.
+The Go build runs in that same base image to match native dependencies.
+The published archive can contain LLVM bitcode, so the whole-object conversion
+uses Clang/LLD (`CC=clang LDFLAGS=-fuse-ld=lld`).
+
+From the repository root:
+
+```sh
+docker build -t go-b2bua-embedded:ci -f sippy/rtp_proxy/embedded/build/Dockerfile.ci .
+docker run --rm go-b2bua-embedded:ci
+```
+
+This builds both tagged commands and runs engine lifecycle, parser, and command
+integration tests. It is not a browser media test. The source-build instructions
+below remain available for pinned upstream development builds.
+
 ## Building
 
 ### 1. Pinned upstream archive (with DTLS/ICE static modules)
