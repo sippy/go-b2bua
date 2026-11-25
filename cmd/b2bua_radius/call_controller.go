@@ -120,7 +120,7 @@ func (self *callController) RecvEvent(event sippy_types.CCEvent, ua sippy_types.
                 return
             }
             body := ev_try.GetBody()
-            if body != nil && len(self.global_config.Allowed_pts) > 0 {
+            if len(self.global_config.Allowed_pts) > 0 && sippy.IsSdpBody(body) {
                 sdp_body, err := body.GetSdp()
                 if err != nil {
                     self.uaA.RecvEvent(sippy.NewCCEventFail(400, "Malformed SDP Body", event.GetRtime(), ""))

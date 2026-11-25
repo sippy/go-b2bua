@@ -32,6 +32,7 @@ import (
     "strings"
     "sync/atomic"
 
+    "github.com/sippy/go-b2bua/sippy"
     "github.com/sippy/go-b2bua/sippy/net"
     "github.com/sippy/go-b2bua/sippy/sdp"
     "github.com/sippy/go-b2bua/sippy/types"
@@ -130,6 +131,13 @@ func (self *_rtpps_side) update_result(result string, up *UpdateParams) {
 }
 
 func (self *_rtpps_side) _on_sdp_change(rtpps *Rtp_proxy_session, sdp_body sippy_types.MsgBody, result_callback sippy_types.OnDelayedCB) error {
+    if !sippy.IsSdpBody(sdp_body) {
+        if sdp_body != nil {
+            sdp_body.SetNeedsUpdate(false)
+        }
+        result_callback(sdp_body, nil)
+        return nil
+    }
     parsed_body, err := sdp_body.GetSdp()
     if err != nil {
         return err

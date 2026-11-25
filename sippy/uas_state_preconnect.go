@@ -170,7 +170,7 @@ func (self *UasStatePreConnect) RecvACK(req sippy_types.SipRequest) {
         self.ua.SetConnectTs(rtime)
         self.ua.ConnCb(rtime, origin)
         if body != nil {
-            if self.ua.HasOnRemoteSdpChange() {
+            if self.ua.HasOnRemoteSdpChange() && IsSdpBody(body) {
                 ev := event
                 event = nil // do not send this event via EmitEvent below
                 self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody, ex sippy_types.SipHandlingError) { self.ua.DelayedRemoteSdpUpdate(ev, x, ex) })

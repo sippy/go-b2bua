@@ -122,7 +122,7 @@ func (self *UasStateIdle) RecvRequest(req sippy_types.SipRequest, t sippy_types.
         self.ua.StartExpireTimer(req.GetRtime())
     }
     if body != nil {
-        if self.ua.HasOnRemoteSdpChange() {
+        if self.ua.HasOnRemoteSdpChange() && IsSdpBody(body) {
             self.ua.OnRemoteSdpChange(body, func (x sippy_types.MsgBody, ex sippy_types.SipHandlingError) { self.ua.DelayedRemoteSdpUpdate(event, x, ex) })
             self.ua.SetSetupTs(req.GetRtime())
             return NewUasStateTrying(self.ua, self.config), nil

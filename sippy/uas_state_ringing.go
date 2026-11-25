@@ -58,7 +58,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
             if code == 100 {
                 return nil, nil, nil
             }
-            if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
+            if self.ua.HasOnLocalSdpChange() && IsSdpBody(body) && body.NeedsUpdate() {
                 self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
                 return nil, nil, nil
             }
@@ -72,7 +72,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         return nil, nil, nil
     case *CCEventConnect:
         body := event.body
-        if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
+        if self.ua.HasOnLocalSdpChange() && IsSdpBody(body) && body.NeedsUpdate() {
             self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
             return nil, nil, nil
         }
@@ -84,7 +84,7 @@ func (self *UasStateRinging) RecvEvent(_event sippy_types.CCEvent) (sippy_types.
         return NewUasStatePreConnect(self.ua, self.config, /*confirm_connect*/ false), func() { self.ua.ConnCb(event.GetRtime(), event.GetOrigin()) }, nil
     case *CCEventPreConnect:
         body := event.body
-        if body != nil && self.ua.HasOnLocalSdpChange() && body.NeedsUpdate() {
+        if self.ua.HasOnLocalSdpChange() && IsSdpBody(body) && body.NeedsUpdate() {
             self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
             return nil, nil, nil
         }

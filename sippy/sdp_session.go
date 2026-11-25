@@ -41,7 +41,7 @@ func NewSdpSession() *SdpSession {
 }
 
 func (self *SdpSession) FixupVersion(body sippy_types.MsgBody) error {
-    if body == nil {
+    if !IsSdpBody(body) {
         return nil
     }
     sdp, err := body.GetSdp()

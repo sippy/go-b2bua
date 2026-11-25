@@ -30,6 +30,7 @@ import (
     "errors"
     "strconv"
     "strings"
+    "unicode/utf8"
 
     "github.com/sippy/go-b2bua/sippy/conf"
     "github.com/sippy/go-b2bua/sippy/exceptions"
@@ -100,21 +101,21 @@ func NewSipMsg(rtime *sippy_time.MonoTime, config sippy_conf.Config) *sipMsg {
 func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipMsg, sippy_types.SipHandlingError) {
     self := NewSipMsg(rtime, config)
     buf := string(_buf)
-    // Locate a body
-    for _, bdel := range []string{ "\r\n\r\n", "\r\r", "\n\n" } {
-        boff := strings.Index(buf, bdel)
-        if boff != -1 {
-            tmp := buf[boff + len(bdel):]
-            self.__mbody = &tmp
-            buf = buf[:boff]
-            if len(*self.__mbody) == 0 {
-                self.__mbody = nil
-            }
-            break
+    // Frame the datagram at the first empty line. A Go string can carry
+    // arbitrary octets; locating the separator does not decode the body.
+    bodyOffset, delimiterLen := len(buf), 0
+    for _, delimiter := range []string{"\r\n\r\n", "\r\r", "\n\n"} {
+        if offset := strings.Index(buf, delimiter); offset >= 0 && offset < bodyOffset {
+            bodyOffset, delimiterLen = offset, len(delimiter)
         }
     }
-    // Split message into lines and put aside start line
-    lines := strings.FieldsFunc(buf, func(c rune) bool { return c == '\n' || c == '\r' })
+    if body := buf[bodyOffset+delimiterLen:]; body != "" {
+        self.__mbody = &body
+    }
+    lines := strings.FieldsFunc(buf[:bodyOffset], func(c rune) bool { return c == '\n' || c == '\r' })
+    if len(lines) == 0 {
+        return nil, sippy_exceptions.NewSipParseError("Missing SIP start line")
+    }
     self.startline = lines[0]
     header_lines := make([]string, 0)
     prev_l := ""
@@ -250,62 +251,46 @@ func (self *sipMsg) AppendHeader(hdr sippy_header.SipHeader) {
 }
 
 func (self *sipMsg) init_body(logger sippy_log.ErrorLogger) sippy_types.SipHandlingError {
-    var blen_hf *sippy_header.SipNumericHF
-    if self.content_length != nil {
-        blen_hf, _ = self.content_length.GetBody()
-    }
-    if blen_hf != nil {
-        blen := blen_hf.Number
-        mblen := 0
-        if self.__mbody != nil {
-            mblen = len([]byte(*self.__mbody)) // length in bytes, not runes
-        }
-        if blen == 0 {
-            self.__mbody = nil
-            mblen = 0
-        } else if self.__mbody == nil {
-            // XXX: Should generate 400 Bad Request if such condition
-            // happens with request
-            emsg := sippy_fmt.Sprintf("Missed SIP body, %d bytes expected", blen)
-            return sippy_exceptions.NewSipParseError(emsg)
-        } else if blen > mblen {
-            if blen - mblen < 7 && mblen > 7 && (*self.__mbody)[len(*self.__mbody)-4:] == "\r\n\r\n" {
-                // XXX: we should not really be doing this, but it appears to be
-                // a common off-by-one/two/.../six problem with SDPs generates by
-                // the consumer-grade devices.
-                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
-                blen = mblen
-            } else if blen - mblen == 2 && (*self.__mbody)[len(*self.__mbody)-2:] == "\r\n" {
-                // Missed last 2 \r\n is another common problem.
-                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
-                (*self.__mbody) += "\r\n"
-            } else if blen - mblen == 1 && (*self.__mbody)[len(*self.__mbody)-3:] == "\r\n\n" {
-                // Another possible mishap
-                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
-                (*self.__mbody) = (*self.__mbody)[:len(*self.__mbody)-3] + "\r\n\r\n"
-            } else if blen - mblen == 1 && (*self.__mbody)[len(*self.__mbody)-2:] == "\r\n" {
-                // One more
-                logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
-                (*self.__mbody) += "\r\n"
-                blen += 1
-                mblen += 2
-            } else {
-                // XXX: Should generate 400 Bad Request if such condition
-                // happens with request
-                emsg := sippy_fmt.Sprintf("Truncated SIP body, %d bytes expected, %d received", blen, mblen)
-                return sippy_exceptions.NewSipParseError(emsg)
-            }
-        } else if blen < mblen {
-            *self.__mbody = (*self.__mbody)[:blen]
-            mblen = blen
-        }
-    }
+    body := ""
     if self.__mbody != nil {
-        if self.content_type != nil {
-            self.body = NewMsgBody(*self.__mbody, strings.ToLower(self.content_type.StringBody()))
-        } else {
-            self.body = NewMsgBody(*self.__mbody, "application/sdp")
+        body = *self.__mbody
+    }
+    self.__mbody = nil
+    if self.content_length != nil {
+        length, err := self.content_length.GetBody()
+        if err != nil || length.Number < 0 {
+            return sippy_exceptions.NewSipParseError("Invalid Content-Length")
         }
+        blen, mblen := length.Number, len(body)
+        switch {
+        case blen <= mblen:
+            body = body[:blen]
+        case mblen == 0:
+            return sippy_exceptions.NewSipParseError(sippy_fmt.Sprintf("Missed SIP body, %d bytes expected", blen))
+        default:
+            // Preserve the existing CRLF repairs for legacy peers.
+            switch {
+            case blen-mblen < 7 && mblen > 7 && strings.HasSuffix(body, "\r\n\r\n"):
+            case blen-mblen == 2 && strings.HasSuffix(body, "\r\n"):
+                body += "\r\n"
+            case blen-mblen == 1 && strings.HasSuffix(body, "\r\n\n"):
+                body = body[:mblen-1] + "\r\n"
+            case blen-mblen == 1 && strings.HasSuffix(body, "\r\n"):
+                body += "\r\n"
+            default:
+                return sippy_exceptions.NewSipParseError(sippy_fmt.Sprintf("Truncated SIP body, %d bytes expected, %d received", blen, mblen))
+            }
+            logger.Debugf("Truncated SIP body, %d bytes expected, %d received, fixing...", blen, mblen)
+        }
+    }
+    if body != "" {
+        contentType := "application/sdp"
+        if self.content_type != nil {
+            contentType = self.content_type.StringBody()
+        } else if !utf8.ValidString(body) {
+            contentType = "application/octet-stream"
+        }
+        self.body = NewMsgBody(body, contentType)
     }
     return nil
 }

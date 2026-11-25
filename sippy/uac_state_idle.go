@@ -67,7 +67,7 @@ func (self *UacStateIdle) RecvEvent(_event sippy_types.CCEvent) (sippy_types.UaS
         self.ua.SetOrigin("callee")
         body := event.GetBody()
         if body != nil {
-            if body.NeedsUpdate() && self.ua.HasOnLocalSdpChange() {
+            if self.ua.HasOnLocalSdpChange() && IsSdpBody(body) && body.NeedsUpdate() {
                 self.ua.OnLocalSdpChange(body, self.ua.GetDelayedLocalSdpUpdate(event))
                 return nil, nil, nil
             }
