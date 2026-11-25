@@ -49,27 +49,39 @@ type sipRequest struct {
 }
 
 func ParseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipRequest, sippy_types.SipHandlingError) {
-    self := &sipRequest{ nated : false }
-    super, perr := ParseSipMsg(buf, rtime, config)
-    if perr != nil {
-        return nil, perr
+    req, err := parseSipRequest(buf, rtime, config)
+    if err != nil && req != nil && req.ruri == nil {
+        // Keep partial header/start-line parses private to the transaction manager.
+        return nil, err
     }
-    self.sipMsg = super
-    arr := strings.Fields(self.startline)
-    if len(arr) != 3 {
-        return nil, sippy_exceptions.NewSipParseError("SIP bad start line in SIP request: " + self.startline)
+    return req, err
+}
+
+func parseSipRequest(buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipRequest, sippy_types.SipHandlingError) {
+    msg, parseErr := parseSipMsg(buf, rtime, config)
+    if msg == nil {
+        return nil, parseErr
     }
-    self.method, self.sipver = arr[0], arr[2]
-    var err error
-    self.ruri, err = sippy_header.ParseSipURL(arr[1], false /* relaxedparser */, config)
+    fields := strings.Fields(msg.startline)
+    if len(fields) == 0 {
+        if parseErr != nil {
+            return nil, parseErr
+        }
+        return nil, sippy_exceptions.NewSipParseError("Missing method in SIP request line")
+    }
+    req := &sipRequest{sipMsg: msg, method: fields[0], sipver: "SIP/2.0"}
+    if parseErr != nil {
+        return req, parseErr
+    }
+    if len(fields) != 3 {
+        return req, sippy_exceptions.NewSipParseError("SIP bad start line in SIP request: " + msg.startline)
+    }
+    ruri, err := sippy_header.ParseSipURL(fields[1], false /* relaxedparser */, config)
     if err != nil {
-        return nil, sippy_exceptions.NewSipParseError("Bad SIP URL in SIP request: " + arr[1])
+        return req, sippy_exceptions.NewSipParseError("Bad SIP URL in SIP request: " + fields[1])
     }
-    perr = self.init_body(config.ErrorLogger())
-    if perr != nil {
-        return self, perr
-    }
-    return self, nil
+    req.ruri, req.sipver = ruri, fields[2]
+    return req, req.init_body(config.ErrorLogger())
 }
 
 func NewSipRequest(method string, ruri *sippy_header.SipURL, sipver string, to *sippy_header.SipTo,

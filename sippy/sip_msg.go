@@ -99,6 +99,16 @@ func NewSipMsg(rtime *sippy_time.MonoTime, config sippy_conf.Config) *sipMsg {
 }
 
 func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipMsg, sippy_types.SipHandlingError) {
+    msg, err := parseSipMsg(_buf, rtime, config)
+    if err != nil {
+        return nil, err
+    }
+    return msg, nil
+}
+
+// parseSipMsg can return a partial message with the required transaction
+// headers intact, for error replies. It never looks for headers in the body.
+func parseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Config) (*sipMsg, sippy_types.SipHandlingError) {
     self := NewSipMsg(rtime, config)
     buf := string(_buf)
     // Frame the datagram at the first empty line. A Go string can carry
@@ -134,10 +144,14 @@ func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Conf
     }
 
     // Parse headers
+    var parseErr sippy_types.SipHandlingError
     for _, line := range header_lines {
         headers, err := ParseSipHeader(line)
         if err != nil {
-            return nil, err
+            if parseErr == nil {
+                parseErr = err
+            }
+            continue
         }
         for _, header := range headers {
             if contact, ok := header.(*sippy_header.SipContact); ok {
@@ -163,7 +177,7 @@ func ParseSipMsg(_buf []byte, rtime *sippy_time.MonoTime, config sippy_conf.Conf
     if self.call_id == nil {
         return nil, sippy_exceptions.NewSipParseError("Call-ID HF is missed")
     }
-    return self, nil
+    return self, parseErr
 }
 
 func (self *sipMsg) appendHeaders(hdrs []sippy_header.SipHeader) {

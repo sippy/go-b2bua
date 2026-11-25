@@ -31,9 +31,12 @@ import (
     "encoding/hex"
     "errors"
     "net"
+    "strconv"
     "strings"
     "sync"
     "time"
+    "unicode"
+    "unicode/utf8"
 
     "github.com/sippy/go-b2bua/sippy/conf"
     "github.com/sippy/go-b2bua/sippy/headers"
@@ -181,22 +184,70 @@ func (self *sipTransactionManager) rcache_set_call_id(checksum, call_id string) 
     }
 }
 
-func (self *sipTransactionManager) logMsg(rtime *sippy_time.MonoTime, call_id string,
-  direction string, address *sippy_net.HostPort, data []byte) {
-    var ft string
-    if direction == "SENDING" {
-        ft = " message to "
-    } else {
-        ft = " message from "
+// sipLogText is a display-only view. SIP framing, transport, and the
+// retransmission cache continue to use the original octets.
+func sipLogText(data []byte) string {
+    const digits = "0123456789abcdef"
+    var text strings.Builder
+    start := 0
+    for i := 0; i < len(data); {
+        b := data[i]
+        if (b >= ' ' && b <= '~') || b == '\r' || b == '\n' || b == '\t' {
+            i++
+            continue
+        }
+        r, size := rune(b), 1
+        if b >= utf8.RuneSelf {
+            r, size = utf8.DecodeRune(data[i:])
+            if unicode.IsPrint(r) && !(r == utf8.RuneError && size == 1) {
+                i += size
+                continue
+            }
+        }
+        if start == 0 {
+            text.Grow(len(data))
+        }
+        text.Write(data[start:i])
+        if r == utf8.RuneError && size == 1 {
+            text.WriteString(`\x`)
+            text.WriteByte(digits[b>>4])
+            text.WriteByte(digits[b&15])
+        } else {
+            quoted := strconv.QuoteRune(r)
+            text.WriteString(quoted[1 : len(quoted)-1])
+        }
+        i += size
+        start = i
     }
-    msg := direction + ft + address.String() + ":\n" + string(data) + "\n"
+    if start == 0 {
+        return string(data)
+    }
+    text.Write(data[start:])
+    return text.String()
+}
+
+type sipLogDirection bool
+
+const (
+    sipLogIncoming sipLogDirection = false
+    sipLogOutgoing sipLogDirection = true
+)
+
+func (self *sipTransactionManager) logMsg(rtime *sippy_time.MonoTime, call_id string,
+  direction sipLogDirection, discarded bool, address *sippy_net.HostPort, data []byte) {
+    action, peer := "RECEIVED", " from "
+    if direction == sipLogOutgoing {
+        action, peer = "SENDING", " to "
+    }
+    if discarded {
+        action = "DISCARDING"
+    }
+    msg := action + " message" + peer + address.String() + ":\n" + sipLogText(data) + "\n"
     self.config.SipLogger().Write(rtime, call_id, msg)
 }
 
 func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_net.HostPort, server sippy_net.Transport, rtime *sippy_time.MonoTime) {
     if len(data) < 32 {
-        //self.logMsg(rtime, retrans.call_id, "RECEIVED", address, data)
-        //self.logError("The message is too short from " + address.String() + ":\n" + string(data))
         return
     }
     sum := md5.Sum(data)
@@ -204,8 +255,11 @@ func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_ne
     self.rcache_lock.Lock()
     retrans, ok := self.rcache_get_no_lock(checksum)
     if ok {
+        // The call ID can be filled in by the first receive path.
+        cached := *retrans
         self.rcache_lock.Unlock()
-        self.logMsg(rtime, retrans.call_id, "RECEIVED", address, data)
+        retrans = &cached
+        self.logMsg(rtime, retrans.call_id, sipLogIncoming, false, address, data)
         if retrans.data == nil {
             return
         }
@@ -233,20 +287,20 @@ func (self *sipTransactionManager) process_response(rtime *sippy_time.MonoTime, 
 
     resp, err = ParseSipResponse(data, rtime, self.config)
     if err != nil {
-        self.logMsg(rtime, "", "RECEIVED", address, data)
+        self.logMsg(rtime, "", sipLogIncoming, false, address, data)
         self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
         return
     }
     tid, err = resp.GetTId(true /*wCSM*/, true/*wBRN*/, false /*wTTG*/)
     if err != nil {
-        self.logMsg(rtime, "", "RECEIVED", address, data)
+        self.logMsg(rtime, "", sipLogIncoming, false, address, data)
         self.logBadMessage("can't parse SIP response from " + address.String() + ":" + err.Error(), data)
         return
     }
-    self.logMsg(rtime, tid.CallId, "RECEIVED", address, data)
+    self.logMsg(rtime, tid.CallId, sipLogIncoming, false, address, data)
 
     if resp.scode < 100 || resp.scode > 999 {
-        self.logBadMessage("invalid status code in SIP response" + address.String() + ":\n" + string(data), data)
+        self.logBadMessage("invalid status code in SIP response from " + address.String(), data)
         self.rcache_set_call_id(checksum, tid.CallId)
         return
     }
@@ -329,23 +383,39 @@ func (self *sipTransactionManager) process_request(rtime *sippy_time.MonoTime, d
     var tids []*sippy_header.TID
     var via0 *sippy_header.SipViaBody
 
-    req, perr := ParseSipRequest(data, rtime, self.config)
+    req, perr := parseSipRequest(data, rtime, self.config)
     if perr != nil {
-        if req != nil {
-            sip_response := perr.GetResponse(req)
-            self.transmitMsg(server, sip_response, address, checksum, sip_response.GetCallId().CallId)
-        }
-        self.logMsg(rtime, "", "RECEIVED", address, data)
+        self.logMsg(rtime, "", sipLogIncoming, false, address, data)
         self.logBadMessage("can't parse SIP request from " + address.String() + ": " + perr.Error(), data)
+        // Reply only if the transaction headers can be parsed and agree
+        // with the request line. ACK never gets a response.
+        if req == nil {
+            return
+        }
+        method := req.GetMethod()
+        if strings.EqualFold(method, "ACK") {
+            return
+        }
+        tid, err := req.GetTId(true, true, true)
+        if err != nil || tid.CallId == "" || tid.CSeqMethod != method {
+            return
+        }
+        var response sippy_types.SipResponse
+        if req.ruri != nil {
+            response = perr.GetResponse(req)
+        } else {
+            response = req.GenResponse(400, "Bad Request", nil, nil)
+        }
+        self.transmitMsg(server, response, address, checksum, tid.CallId)
         return
     }
     tids, err = req.getTIds()
     if err != nil {
-        self.logMsg(rtime, "", "RECEIVED", address, data)
+        self.logMsg(rtime, "", sipLogIncoming, false, address, data)
         self.logBadMessage(err.Error(), data)
         return
     }
-    self.logMsg(rtime, tids[0].CallId, "RECEIVED", address, data)
+    self.logMsg(rtime, tids[0].CallId, sipLogIncoming, false, address, data)
     via0, err = req.vias[0].GetBody()
     if err != nil {
         self.logBadMessage(err.Error(), data)
@@ -720,13 +790,11 @@ func (self *sipTransactionManager) transmitData(userv sippy_net.Transport, data 
 }
 
 func (self *sipTransactionManager) transmitDataWithCb(userv sippy_net.Transport, data []byte, address *sippy_net.HostPort, cachesum, call_id string, lossemul int /*=0*/, on_complete func()) {
-    logop := "SENDING"
-    if lossemul == 0 {
+    discarded := lossemul != 0
+    if !discarded {
         userv.SendToWithCb(data, address, on_complete)
-    } else {
-        logop = "DISCARDING"
     }
-    self.logMsg(nil, call_id, logop, address, data)
+    self.logMsg(nil, call_id, sipLogOutgoing, discarded, address, data)
     if len(cachesum) > 0 {
         if lossemul > 0 {
             lossemul--
@@ -745,12 +813,22 @@ func (self *sipTransactionManager) logError(msg string) {
     self.config.ErrorLogger().Error(msg)
 }
 
+// Bound each untrusted field before escaping it, including parser errors that
+// may quote input. This limit applies to error logs, not to SIP processing.
+const sipBadLogFieldLimit = 4096
+
 func (self *sipTransactionManager) logBadMessage(msg string, data []byte) {
-    self.config.ErrorLogger().Error(msg)
-    arr := strings.Split(string(data), "\n")
-    for _, l := range arr {
-        self.config.ErrorLogger().Error(l)
+    const truncated = " … [truncated]"
+    var msgSuffix, dataSuffix string
+    if len(msg) > sipBadLogFieldLimit {
+        msg = msg[:sipBadLogFieldLimit]
+        msgSuffix = truncated
     }
+    if len(data) > sipBadLogFieldLimit {
+        data = data[:sipBadLogFieldLimit]
+        dataSuffix = truncated
+    }
+    self.config.ErrorLogger().Error(sipLogText([]byte(msg)) + msgSuffix + "\n" + sipLogText(data) + dataSuffix)
 }
 
 func (self *sipTransactionManager) tclient_del(tid *sippy_header.TID) {
