@@ -34,6 +34,7 @@ import (
     "strconv"
     "strings"
     "sync"
+    "sync/atomic"
     "time"
     "unicode"
     "unicode/utf8"
@@ -65,6 +66,7 @@ type sipTransactionManager struct {
     before_response_sent func(sippy_types.SipResponse)
     rtid2tid        map[sippy_header.RTID]*sippy_header.TID
     rtid2tid_lock   sync.Mutex
+    loss_emul       atomic.Pointer[sipLossBudget]
 }
 
 type sipTMRetransmitO struct {
@@ -248,6 +250,10 @@ func (self *sipTransactionManager) logMsg(rtime *sippy_time.MonoTime, call_id st
 
 func (self *sipTransactionManager) handleIncoming(data []byte, address *sippy_net.HostPort, server sippy_net.Transport, rtime *sippy_time.MonoTime) {
     if len(data) < 32 {
+        return
+    }
+    if budget := self.loss_emul.Load(); budget != nil && consumeSipLoss(&budget.recv) {
+        self.logMsg(rtime, "", sipLogIncoming, true, address, data)
         return
     }
     sum := md5.Sum(data)
@@ -791,6 +797,10 @@ func (self *sipTransactionManager) transmitData(userv sippy_net.Transport, data 
 
 func (self *sipTransactionManager) transmitDataWithCb(userv sippy_net.Transport, data []byte, address *sippy_net.HostPort, cachesum, call_id string, lossemul int /*=0*/, on_complete func()) {
     discarded := lossemul != 0
+    if !discarded {
+        budget := self.loss_emul.Load()
+        discarded = budget != nil && consumeSipLoss(&budget.send)
+    }
     if !discarded {
         userv.SendToWithCb(data, address, on_complete)
     }
